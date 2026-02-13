@@ -1,0 +1,7 @@
+---
+- name: Configure Proxmox nodes
+  hosts: proxmox
+  roles:
+    - proxmox-base
+    - proxmox-network
+    - monitoring-agent

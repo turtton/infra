@@ -1,0 +1,7 @@
+# Managed by Ansible
+{% if proxmox_dns_search_domain %}
+search {{ proxmox_dns_search_domain }}
+{% endif %}
+{% for ns in proxmox_dns_nameservers %}
+nameserver {{ ns }}
+{% endfor %}

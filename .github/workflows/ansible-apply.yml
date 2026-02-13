@@ -1,0 +1,149 @@
+name: Ansible Apply
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      playbook:
+        description: "Playbook to run"
+        required: true
+        type: choice
+        options:
+          - site.yml
+          - network-update.yml
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  apply-from-comment:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      github.event.comment.body == '/apply'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add reaction to comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Get PR branch
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('ref', pr.data.head.ref);
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.ref }}
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Write vault password
+        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/.vault-pass
+
+      - name: Run ansible-playbook
+        id: apply
+        working-directory: ansible
+        run: |
+          set +e
+          OUTPUT=$(ansible-playbook playbooks/site.yml \
+            --diff \
+            --vault-password-file /tmp/.vault-pass 2>&1)
+          EXIT_CODE=$?
+          echo "$OUTPUT"
+          {
+            echo "output<<ANSIBLE_EOF"
+            echo "$OUTPUT" | tail -80
+            echo "ANSIBLE_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit $EXIT_CODE
+
+      - name: Comment apply result on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const exitCode = '${{ steps.apply.outputs.exit_code }}';
+            const status = exitCode === '0' ? '✅ Apply succeeded' : '❌ Apply failed';
+            const output = `${{ steps.apply.outputs.output }}`;
+            const body = `### ${status}\n\n<details><summary>Ansible output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/.vault-pass ~/.ssh/id_ed25519
+
+  apply-manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Write vault password
+        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/.vault-pass
+
+      - name: Run ansible-playbook
+        working-directory: ansible
+        run: |
+          ansible-playbook playbooks/${{ inputs.playbook }} \
+            --diff \
+            --vault-password-file /tmp/.vault-pass
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/.vault-pass ~/.ssh/id_ed25519

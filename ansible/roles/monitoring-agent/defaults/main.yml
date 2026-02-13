@@ -1,0 +1,13 @@
+---
+# prometheus-pve-exporter
+pve_exporter_version: "3.5.1"
+pve_exporter_listen_port: 9221
+pve_exporter_install_dir: /opt/pve-exporter
+pve_exporter_user: pve-exporter
+pve_exporter_group: pve-exporter
+
+# PVE API Token authentication
+# These MUST be overridden (e.g. via ansible-vault encrypted group_vars)
+pve_exporter_api_user: "monitoring@pve!exporter"
+pve_exporter_api_token_value: ""
+pve_exporter_verify_ssl: false

@@ -1,0 +1,75 @@
+name: Ansible Dry-Run
+
+on:
+  pull_request:
+    paths:
+      - "ansible/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Write vault password
+        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/.vault-pass
+        working-directory: ansible
+
+      - name: Run dry-run
+        id: dry_run
+        working-directory: ansible
+        run: |
+          set +e
+          OUTPUT=$(ansible-playbook playbooks/site.yml \
+            --check --diff \
+            --vault-password-file /tmp/.vault-pass 2>&1)
+          EXIT_CODE=$?
+          echo "$OUTPUT"
+          {
+            echo "output<<ANSIBLE_EOF"
+            echo "$OUTPUT" | tail -80
+            echo "ANSIBLE_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit $EXIT_CODE
+
+      - name: Comment dry-run result on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const exitCode = '${{ steps.dry_run.outputs.exit_code }}';
+            const status = exitCode === '0' ? '✅ Dry-run passed' : '❌ Dry-run failed';
+            const output = `${{ steps.dry_run.outputs.output }}`;
+            const body = `### ${status}\n\n<details><summary>Ansible output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>\n\nComment \`/apply\` to apply these changes.`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/.vault-pass ~/.ssh/id_ed25519

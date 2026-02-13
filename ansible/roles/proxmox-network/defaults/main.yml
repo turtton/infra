@@ -1,0 +1,8 @@
+---
+# These should be overridden per-host in inventory/host_vars/
+proxmox_network_interface: ""
+proxmox_network_address: ""
+proxmox_network_cidr: 24
+proxmox_network_gateway: ""
+
+proxmox_network_bridge: vmbr0

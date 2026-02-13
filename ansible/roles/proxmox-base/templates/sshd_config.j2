@@ -1,0 +1,5 @@
+# Managed by Ansible
+PasswordAuthentication {{ 'yes' if proxmox_ssh_password_auth else 'no' }}
+PermitRootLogin {{ proxmox_ssh_permit_root_login }}
+ChallengeResponseAuthentication no
+UsePAM yes

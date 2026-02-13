@@ -1,0 +1,14 @@
+# Managed by Ansible
+auto lo
+iface lo inet loopback
+
+auto {{ proxmox_network_interface }}
+iface {{ proxmox_network_interface }} inet manual
+
+auto {{ proxmox_network_bridge }}
+iface {{ proxmox_network_bridge }} inet static
+    address {{ proxmox_network_address }}/{{ proxmox_network_cidr }}
+    gateway {{ proxmox_network_gateway }}
+    bridge-ports {{ proxmox_network_interface }}
+    bridge-stp off
+    bridge-fd 0

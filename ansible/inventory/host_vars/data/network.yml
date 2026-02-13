@@ -1,0 +1,5 @@
+---
+proxmox_network_interface: enp4s0
+proxmox_network_address: 192.168.11.40
+proxmox_network_cidr: 24
+proxmox_network_gateway: 192.168.11.1

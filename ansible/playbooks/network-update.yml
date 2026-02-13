@@ -1,0 +1,6 @@
+---
+- name: Update network configuration on Proxmox nodes
+  hosts: proxmox
+  serial: 1
+  roles:
+    - proxmox-network
