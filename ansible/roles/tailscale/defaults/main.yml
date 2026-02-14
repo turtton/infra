@@ -1,0 +1,8 @@
+---
+# Auth key (must be overridden via ansible-vault)
+tailscale_auth_key: ""
+
+# Tailscale options
+tailscale_accept_routes: true
+tailscale_advertise_tags: []
+tailscale_extra_args: ""
