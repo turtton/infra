@@ -2,7 +2,7 @@
 # prometheus-pve-exporter
 pve_exporter_version: "3.5.1"
 pve_exporter_listen_port: 9221
-pve_exporter_install_dir: /opt/pve-exporter
+pve_exporter_config_dir: /etc/pve-exporter
 pve_exporter_user: pve-exporter
 pve_exporter_group: pve-exporter
 

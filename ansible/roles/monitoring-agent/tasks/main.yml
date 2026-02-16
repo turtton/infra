@@ -17,7 +17,7 @@
     group: "{{ pve_exporter_group }}"
     system: true
     shell: /usr/sbin/nologin
-    home: "{{ pve_exporter_install_dir }}"
+    home: "{{ pve_exporter_config_dir }}"
     create_home: false
 
 - name: Install uv
@@ -25,30 +25,25 @@
     cmd: curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
     creates: /usr/local/bin/uv
 
-- name: Create install directory
+- name: Install prometheus-pve-exporter via uv tool
+  ansible.builtin.command:
+    cmd: >-
+      /usr/local/bin/uv tool install
+      prometheus-pve-exporter=={{ pve_exporter_version }}
+    creates: /root/.local/bin/pve_exporter
+
+- name: Create config directory
   ansible.builtin.file:
-    path: "{{ pve_exporter_install_dir }}"
+    path: "{{ pve_exporter_config_dir }}"
     state: directory
     owner: "{{ pve_exporter_user }}"
     group: "{{ pve_exporter_group }}"
-    mode: "0755"
-
-- name: Install prometheus-pve-exporter via uv
-  ansible.builtin.command:
-    cmd: >-
-      /usr/local/bin/uv pip install
-      --python /usr/bin/python3
-      -p {{ pve_exporter_install_dir }}/venv
-      prometheus-pve-exporter=={{ pve_exporter_version }}
-  become: true
-  become_user: "{{ pve_exporter_user }}"
-  register: uv_install
-  changed_when: "'Installed' in uv_install.stdout"
+    mode: "0750"
 
 - name: Deploy pve-exporter config
   ansible.builtin.template:
     src: pve-exporter.yml.j2
-    dest: "{{ pve_exporter_install_dir }}/pve-exporter.yml"
+    dest: "{{ pve_exporter_config_dir }}/pve-exporter.yml"
     owner: "{{ pve_exporter_user }}"
     group: "{{ pve_exporter_group }}"
     mode: "0600"
