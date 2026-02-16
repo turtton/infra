@@ -59,16 +59,32 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const marker = '<!-- ansible-dry-run -->';
             const exitCode = '${{ steps.dry_run.outputs.exit_code }}';
             const status = exitCode === '0' ? '✅ Dry-run passed' : '❌ Dry-run failed';
             const output = `${{ steps.dry_run.outputs.output }}`;
-            const body = `### ${status}\n\n<details><summary>Ansible output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>\n\nComment \`/apply\` to apply these changes.`;
-            github.rest.issues.createComment({
+            const body = `${marker}\n### ${status}\n\n<details><summary>Ansible output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>\n\nComment \`/apply\` to apply these changes.`;
+            const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
             });
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
 
       - name: Cleanup
         if: always()

@@ -96,16 +96,32 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const marker = '<!-- ansible-apply -->';
             const exitCode = '${{ steps.apply.outputs.exit_code }}';
             const status = exitCode === '0' ? '✅ Apply succeeded' : '❌ Apply failed';
             const output = `${{ steps.apply.outputs.output }}`;
-            const body = `### ${status}\n\n<details><summary>Ansible output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>`;
-            github.rest.issues.createComment({
+            const body = `${marker}\n### ${status}\n\n<details><summary>Ansible output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>`;
+            const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
             });
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
 
       - name: Cleanup
         if: always()
