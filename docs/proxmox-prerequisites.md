@@ -13,10 +13,8 @@ Ansibleはroot SSHでノードに接続する。CI/CDランナー（GitHub Actio
 各Proxmoxノードで以下を実行:
 
 ```bash
-mkdir -p ~/.ssh && chmod 700 ~/.ssh
 # CI/CD用の公開鍵を追記
-echo "<CI/CDランナーの公開鍵>" >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
+echo $(cat ~/.ssh/infra-ci) >> /etc/pve/priv/authorized_keys
 ```
 
 ### 確認
