@@ -130,7 +130,7 @@ data "talos_cluster_health" "this" {
 }
 
 # kubeconfig取得
-data "talos_cluster_kubeconfig" "this" {
+resource "talos_cluster_kubeconfig" "this" {
   client_configuration = talos_machine_secrets.this.client_configuration
   node                 = values(var.control_planes)[0].ip
 
