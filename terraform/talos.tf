@@ -1,4 +1,6 @@
-resource "talos_machine_secrets" "this" {}
+resource "talos_machine_secrets" "this" {
+  talos_version = var.talos_version
+}
 
 locals {
   # 共通config patches
