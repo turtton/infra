@@ -103,11 +103,14 @@ infra-repo/
 │       └── network-update.yml        # IP変更時の一括更新
 │
 ├── terraform/
-│   ├── main.tf                       # Provider設定
-│   ├── variables.tf
-│   ├── k8s-nodes.tf                  # K8s用VM定義
-│   ├── other-vms.tf                  # K8s以外のVM/LXC
-│   └── terraform.tfvars
+│   ├── versions.tf                   # Provider設定 + state暗号化
+│   ├── providers.tf                  # Proxmox/Talosプロバイダ
+│   ├── variables.tf                  # 変数定義
+│   ├── terraform.tfvars              # 変数値
+│   ├── talos-image.tf                # Talosイメージ管理
+│   ├── vms.tf                        # K8s用VM定義
+│   ├── talos.tf                      # Talos設定・ブートストラップ
+│   └── outputs.tf                    # 出力定義
 │
 ├── talos/
 │   ├── controlplane.yaml             # Talos control plane設定

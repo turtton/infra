@@ -19,8 +19,14 @@
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             bashInteractive
+            # Ansible
             ansible
             ansible-lint
+            # OpenTofu
+            opentofu
+            # Kubernetes / Talos
+            talosctl
+            kubectl
           ];
         };
       }
