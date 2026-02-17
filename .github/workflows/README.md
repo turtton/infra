@@ -1,41 +1,67 @@
 # CI/CD Workflows
 
-Ansible playbookをGitHub Actions経由で実行するためのワークフロー。
+Ansible playbookとOpenTofuをGitHub Actions経由で実行するためのワークフロー。
 
 ## Workflows
 
-### ansible-check.yml (Dry-Run)
+### Ansible
+
+#### ansible-check.yml (Dry-Run)
 
 PRで `ansible/` 配下のファイルが変更された場合に自動実行。
 
 - `--check --diff` でdry-runを実行
 - 結果をPRにコメントとして投稿
-- コメント末尾に `/apply` の案内を表示
+- コメント末尾に `/ansible-apply` の案内を表示
 
-### ansible-apply.yml (Apply)
+#### ansible-apply.yml (Apply)
 
 2つのトリガーを持つ:
 
-**1. PRコメント `/apply`**
+**1. PRコメント `/ansible-apply`**
 
-PRにコメント `/apply` を投稿すると実行される。
+PRにコメント `/ansible-apply` を投稿すると実行される。
 
 ```
-PR作成 → dry-run自動実行 → 結果確認 → `/apply` コメント → 本番適用 → 結果確認 → マージ
+PR作成 → dry-run自動実行 → 結果確認 → `/ansible-apply` コメント → 本番適用 → 結果確認 → マージ
 ```
 
 **2. workflow_dispatch (手動実行)**
 
 GitHub Actions UIから手動で実行。playbook (`site.yml` / `network-update.yml`) を選択可能。
 
+### OpenTofu
+
+#### terraform-check.yml (Plan)
+
+PRで `terraform/` 配下のファイルが変更された場合に自動実行。
+
+- `tofu plan` を実行
+- 結果をPRにコメントとして投稿
+- コメント末尾に `/tf-apply` の案内を表示
+
+#### terraform-apply.yml (Apply)
+
+PRにコメント `/tf-apply` を投稿すると実行される（`turtton`ユーザー限定）。
+
+```
+PR作成 → plan自動実行 → 結果確認 → `/tf-apply` コメント → apply実行 → 暗号化stateをcommit → 結果確認 → マージ
+```
+
+apply成功後、暗号化されたstateファイルを自動的にgit commit & pushする。
+
 ## Required Secrets
 
-| Secret | 内容 |
-|---|---|
-| `TAILSCALE_OAUTH_CLIENT_ID` | Tailscale OAuth Client ID |
-| `TAILSCALE_OAUTH_SECRET` | Tailscale OAuth Client Secret |
-| `SSH_PRIVATE_KEY` | Proxmoxノード接続用SSH秘密鍵 (ed25519) |
-| `ANSIBLE_VAULT_PASSWORD` | ansible-vaultの復号パスワード |
+| Secret | 内容 | 用途 |
+|---|---|---|
+| `TAILSCALE_OAUTH_CLIENT_ID` | Tailscale OAuth Client ID | Ansible / OpenTofu共通 |
+| `TAILSCALE_OAUTH_SECRET` | Tailscale OAuth Client Secret | Ansible / OpenTofu共通 |
+| `SSH_PRIVATE_KEY` | Proxmoxノード接続用SSH秘密鍵 (ed25519) | Ansible / OpenTofu共通 |
+| `ANSIBLE_VAULT_PASSWORD` | ansible-vaultの復号パスワード | Ansible |
+| `PROXMOX_VE_ENDPOINT` | Proxmox APIエンドポイント | OpenTofu |
+| `PROXMOX_VE_API_TOKEN` | OpenTofu用APIトークン | OpenTofu |
+| `TOFU_STATE_PASSPHRASE` | State暗号化パスフレーズ | OpenTofu |
+| `TAILSCALE_AUTHKEY` | Talosノード用reusable authkey | OpenTofu |
 
 ## Tailscale Setup
 
@@ -51,3 +77,5 @@ GitHub ActionsランナーがProxmoxノードにSSH接続するため、Tailscal
 - SSH秘密鍵とvaultパスワードはジョブ終了時に必ず削除 (`Cleanup` ステップ)
 - Tailscale接続はephemeralノードとして扱われる
 - PRコメントトリガーは `issue_comment` イベントで、PRに紐づくコメントのみ反応
+- OpenTofuのstateはPBKDF2+AES-GCMで暗号化されており、パスフレーズなしでは復号不可
+- `/tf-apply` コマンドは `turtton` ユーザーのみ実行可能
