@@ -81,14 +81,6 @@ data "talos_machine_configuration" "worker" {
         }
       }
     }),
-    # swap設定（低メモリノード用）
-    yamlencode({
-      machine = {
-        swap = {
-          size = "2GB"
-        }
-      }
-    }),
   ])
 }
 
