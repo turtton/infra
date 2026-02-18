@@ -48,10 +48,13 @@ data "talos_machine_configuration" "controlplane" {
   kubernetes_version = var.kubernetes_version
 
   config_patches = concat(local.common_patches, [
-    # CPでワークロード実行を許可
+    # CPでワークロード実行を許可 + etcdをLANサブネットに制限
     yamlencode({
       cluster = {
         allowSchedulingOnControlPlanes = true
+        etcd = {
+          advertisedSubnets = ["192.168.11.0/24"]
+        }
       }
     }),
   ])
