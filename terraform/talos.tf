@@ -17,10 +17,16 @@ locals {
       }
     }),
     # DNSネームサーバー設定（静的IP使用のため明示的に指定）
+    # kubeletノードIPをLANに制限（Tailscale IP使用を防止）
     yamlencode({
       machine = {
         network = {
           nameservers = [var.gateway, "1.1.1.1", "8.8.8.8"]
+        }
+        kubelet = {
+          nodeIP = {
+            validSubnets = ["192.168.11.0/24"]
+          }
         }
       }
     }),

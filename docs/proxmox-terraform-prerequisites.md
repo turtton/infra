@@ -242,6 +242,27 @@ tofu apply
 
 ---
 
+## 9. ネットワーク設計上の注意事項
+
+### Tailscale併用時のクラスタ内通信
+
+Talos VMにTailscale拡張を導入すると、各ノードにLAN IP（192.168.11.x）とTailscale IP（100.x.x.x）の2つのアドレスが付与される。etcdやkubeletがTailscale IPを使用するとクラスタの整合性に問題が生じるため、以下の設定でLAN IPに制限している。
+
+- `cluster.etcd.advertisedSubnets`: etcdメンバーの広告IPをLANに制限（CPのみ）
+- `machine.kubelet.nodeIP.validSubnets`: kubeletのノードIPをLANに制限（全ノード）
+
+### リモートノード追加時の制約
+
+現在の構成では全ノードが同一LAN（192.168.11.0/24）上にある前提で設計されている。Tailscale経由でしか到達できないリモートノード（別拠点・クラウドVM等）を追加する場合、以下の変更が必要になる。
+
+1. `advertisedSubnets`/`validSubnets`にTailscaleサブネット（100.64.0.0/10）を追加
+2. ヘルスチェックのIPをTailscale IPベースに変更
+3. ただしetcd/kubeletがどちらのIPを選択するか不定になるため、全ノードをTailscale IPに統一するか、`tailscale_device` data sourceでIP解決する仕組みが必要
+
+現時点では同一LAN構成を前提とし、リモートノードの追加は将来の拡張として扱う。
+
+---
+
 ## チェックリスト
 
 | 項目 | 完了 |
