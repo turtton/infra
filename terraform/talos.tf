@@ -44,14 +44,6 @@ data "talos_machine_configuration" "controlplane" {
   kubernetes_version = var.kubernetes_version
 
   config_patches = concat(local.common_patches, [
-    # ホスト名設定
-    yamlencode({
-      machine = {
-        network = {
-          hostname = each.key
-        }
-      }
-    }),
     # CPでワークロード実行を許可
     yamlencode({
       cluster = {
@@ -73,14 +65,6 @@ data "talos_machine_configuration" "worker" {
   kubernetes_version = var.kubernetes_version
 
   config_patches = concat(local.common_patches, [
-    # ホスト名設定
-    yamlencode({
-      machine = {
-        network = {
-          hostname = each.key
-        }
-      }
-    }),
     # kubeletでswap使用を許可
     yamlencode({
       machine = {
