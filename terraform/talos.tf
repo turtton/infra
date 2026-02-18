@@ -24,19 +24,15 @@ locals {
         }
       }
     }),
-    # Tailscale authkey設定
-    yamlencode({
-      machine = {
-        files = [
-          {
-            content     = "TS_AUTHKEY=${var.tailscale_authkey}"
-            path        = "/var/etc/tailscale/auth.env"
-            op          = "create"
-            permissions = 384 # 0600
-          },
-        ]
-      }
-    }),
+    # Tailscale ExtensionServiceConfig（configuration依存を満たすために必須）
+    <<-EOT
+    apiVersion: v1alpha1
+    kind: ExtensionServiceConfig
+    name: tailscale
+    environment:
+      - TS_AUTHKEY=${var.tailscale_authkey}
+    EOT
+    ,
   ]
 }
 
