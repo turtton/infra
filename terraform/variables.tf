@@ -38,6 +38,13 @@ variable "kubernetes_version" {
   default     = "1.35.0"
 }
 
+variable "proxmox_nodes" {
+  description = "Proxmox node SSH addresses (Tailscale FQDN)"
+  type = map(object({
+    ssh_address = string
+  }))
+}
+
 variable "gateway" {
   description = "Default gateway IP"
   type        = string
