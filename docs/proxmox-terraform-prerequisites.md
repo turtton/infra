@@ -31,7 +31,7 @@ OpenTofuがVM/リソースを管理するために必要な権限を持つロー
 CLI:
 
 ```bash
-pveum role add TerraformRole -privs "VM.Allocate VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Migrate VM.Monitor VM.PowerMgmt Datastore.AllocateSpace Datastore.AllocateTemplate Datastore.Audit SDN.Use Sys.Audit Sys.Modify"
+pveum role add TerraformRole -privs "VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Migrate VM.Monitor VM.PowerMgmt Datastore.AllocateSpace Datastore.AllocateTemplate Datastore.Audit SDN.Use Sys.Audit Sys.Modify"
 ```
 
 ### 権限一覧
@@ -39,6 +39,7 @@ pveum role add TerraformRole -privs "VM.Allocate VM.Clone VM.Config.CDROM VM.Con
 | 権限 | 用途 |
 |---|---|
 | `VM.Allocate` | VM作成・削除 |
+| `VM.Audit` | VM構成・ステータス参照 |
 | `VM.Clone` | VMクローン |
 | `VM.Config.CDROM` | CD/DVDドライブ設定 |
 | `VM.Config.CPU` | CPU設定変更 |
