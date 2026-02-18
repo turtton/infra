@@ -29,13 +29,20 @@ variable "cluster_endpoint" {
 variable "talos_version" {
   description = "Talos Linux version"
   type        = string
-  default     = "v1.9.5"
+  default     = "v1.12.1"
 }
 
 variable "kubernetes_version" {
   description = "Kubernetes version"
   type        = string
-  default     = "1.32.3"
+  default     = "1.35.0"
+}
+
+variable "proxmox_nodes" {
+  description = "Proxmox node SSH addresses (Tailscale FQDN)"
+  type = map(object({
+    ssh_address = string
+  }))
 }
 
 variable "gateway" {

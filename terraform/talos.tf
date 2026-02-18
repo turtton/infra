@@ -16,19 +16,29 @@ locals {
         }
       }
     }),
-    # Tailscale authkey設定
+    # DNSネームサーバー設定（静的IP使用のため明示的に指定）
+    # kubeletノードIPをLANに制限（Tailscale IP使用を防止）
     yamlencode({
       machine = {
-        files = [
-          {
-            content     = "TS_AUTHKEY=${var.tailscale_authkey}"
-            path        = "/var/etc/tailscale/auth.env"
-            op          = "create"
-            permissions = 384 # 0600
-          },
-        ]
+        network = {
+          nameservers = [var.gateway, "1.1.1.1", "8.8.8.8"]
+        }
+        kubelet = {
+          nodeIP = {
+            validSubnets = ["192.168.11.0/24"]
+          }
+        }
       }
     }),
+    # Tailscale ExtensionServiceConfig（configuration依存を満たすために必須）
+    <<-EOT
+    apiVersion: v1alpha1
+    kind: ExtensionServiceConfig
+    name: tailscale
+    environment:
+      - TS_AUTHKEY=${var.tailscale_authkey}
+    EOT
+    ,
   ]
 }
 
@@ -44,18 +54,13 @@ data "talos_machine_configuration" "controlplane" {
   kubernetes_version = var.kubernetes_version
 
   config_patches = concat(local.common_patches, [
-    # ホスト名設定
-    yamlencode({
-      machine = {
-        network = {
-          hostname = each.key
-        }
-      }
-    }),
-    # CPでワークロード実行を許可
+    # CPでワークロード実行を許可 + etcdをLANサブネットに制限
     yamlencode({
       cluster = {
         allowSchedulingOnControlPlanes = true
+        etcd = {
+          advertisedSubnets = ["192.168.11.0/24"]
+        }
       }
     }),
   ])
@@ -73,22 +78,13 @@ data "talos_machine_configuration" "worker" {
   kubernetes_version = var.kubernetes_version
 
   config_patches = concat(local.common_patches, [
-    # ホスト名設定
-    yamlencode({
-      machine = {
-        network = {
-          hostname = each.key
-        }
-      }
-    }),
-    # swap設定（低メモリノード用）
-    yamlencode({
-      machine = {
-        swap = {
-          size = "2GB"
-        }
-      }
-    }),
+    # zswap（メモリの20%を圧縮キャッシュとして使用）
+    <<-EOT
+    apiVersion: v1alpha1
+    kind: ZswapConfig
+    maxPoolPercent: 20
+    EOT
+    ,
   ])
 }
 

@@ -6,6 +6,14 @@ provider "proxmox" {
     agent       = false
     username    = "root"
     private_key = file(pathexpand("~/.ssh/id_ed25519"))
+
+    dynamic "node" {
+      for_each = var.proxmox_nodes
+      content {
+        name    = node.key
+        address = node.value.ssh_address
+      }
+    }
   }
 }
 

@@ -31,7 +31,7 @@ OpenTofuがVM/リソースを管理するために必要な権限を持つロー
 CLI:
 
 ```bash
-pveum role add TerraformRole -privs "VM.Allocate VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Migrate VM.Monitor VM.PowerMgmt Datastore.AllocateSpace Datastore.AllocateTemplate Datastore.Audit SDN.Use Sys.Audit Sys.Modify"
+pveum role add TerraformRole -privs "VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Migrate VM.Monitor VM.PowerMgmt Datastore.AllocateSpace Datastore.AllocateTemplate Datastore.Audit SDN.Use Sys.Audit Sys.Modify"
 ```
 
 ### 権限一覧
@@ -39,6 +39,7 @@ pveum role add TerraformRole -privs "VM.Allocate VM.Clone VM.Config.CDROM VM.Con
 | 権限 | 用途 |
 |---|---|
 | `VM.Allocate` | VM作成・削除 |
+| `VM.Audit` | VM構成・ステータス参照 |
 | `VM.Clone` | VMクローン |
 | `VM.Config.CDROM` | CD/DVDドライブ設定 |
 | `VM.Config.CPU` | CPU設定変更 |
@@ -104,7 +105,44 @@ pveum user token add terraform@pve tofu --privsep 0
 
 ---
 
-## 5. 環境変数の設定
+## 5. Tailscaleサブネットルーティング
+
+OpenTofu実行マシンからTalos VM（LAN IP）に到達するため、Proxmoxノードの1台でサブネットルーティングを有効にする。
+
+Talos VMは初回起動時にはTailscaleが未設定のため、LAN IP経由でしかTalos API（port 50000）にアクセスできない。Proxmoxノードをサブネットルーターとして機能させることで、Tailscale経由でLANに到達可能にする。
+
+### 手順
+
+Proxmoxノード（main）で実行:
+
+```bash
+# サブネットルートを広告
+tailscale set --advertise-routes=192.168.11.0/24
+
+# IP forwardingが有効であることを確認
+sysctl net.ipv4.ip_forward
+# 0の場合は有効化
+echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.d/99-tailscale.conf
+sysctl -p /etc/sysctl.d/99-tailscale.conf
+```
+
+### Tailscale管理画面でルートを承認
+
+1. [Tailscale Admin Console](https://login.tailscale.com/admin/machines) を開く
+2. mainノードの「...」→「Edit route settings」
+3. `192.168.11.0/24` のルートを承認
+
+### 確認
+
+OpenTofu実行マシンから到達確認:
+
+```bash
+ping 192.168.11.110
+```
+
+---
+
+## 6. 環境変数の設定
 
 ### ローカル実行
 
@@ -128,7 +166,7 @@ export TF_VAR_tailscale_authkey="tskey-auth-..."
 
 ---
 
-## 6. State Commitリカバリ手順
+## 7. State Commitリカバリ手順
 
 `tofu apply`は成功したが、暗号化stateのgit commit/pushに失敗した場合のリカバリ手順。
 
@@ -156,6 +194,75 @@ git push
 
 ---
 
+## 8. Apply失敗時のクリーンアップ
+
+`tofu apply`が途中で失敗した場合、stateに記録されていないリソースがProxmox上に残ることがある。再applyの前にクリーンアップが必要。
+
+### VMの削除
+
+```bash
+# VM IDを確認
+ssh root@<node> qm list
+
+# 停止 & 削除（--purgeで紐づくディスクも削除）
+ssh root@<node> qm stop <vm-id> --skiplock
+ssh root@<node> qm destroy <vm-id> --purge
+```
+
+### Talosイメージの削除（必要な場合）
+
+バージョン変更時などに旧イメージが残る場合:
+
+```bash
+# 確認
+ssh root@<node> ls /var/lib/vz/template/iso/talos-*
+
+# 不要なイメージを削除
+ssh root@<node> rm /var/lib/vz/template/iso/talos-<old-version>-nocloud-amd64.img
+```
+
+Proxmox WebUIからも Datacenter → Storage → local → ISO Images で確認・削除可能。
+
+### stateの不整合解消
+
+一部のリソースだけがstateに記録された場合:
+
+```bash
+cd terraform/
+
+# stateに記録されているリソースを確認
+tofu state list
+
+# stateから不整合なリソースを削除（Proxmox側は手動削除済みの前提）
+tofu state rm <resource-address>
+
+# クリーンな状態でapply
+tofu apply
+```
+
+---
+
+## 9. ネットワーク設計上の注意事項
+
+### Tailscale併用時のクラスタ内通信
+
+Talos VMにTailscale拡張を導入すると、各ノードにLAN IP（192.168.11.x）とTailscale IP（100.x.x.x）の2つのアドレスが付与される。etcdやkubeletがTailscale IPを使用するとクラスタの整合性に問題が生じるため、以下の設定でLAN IPに制限している。
+
+- `cluster.etcd.advertisedSubnets`: etcdメンバーの広告IPをLANに制限（CPのみ）
+- `machine.kubelet.nodeIP.validSubnets`: kubeletのノードIPをLANに制限（全ノード）
+
+### リモートノード追加時の制約
+
+現在の構成では全ノードが同一LAN（192.168.11.0/24）上にある前提で設計されている。Tailscale経由でしか到達できないリモートノード（別拠点・クラウドVM等）を追加する場合、以下の変更が必要になる。
+
+1. `advertisedSubnets`/`validSubnets`にTailscaleサブネット（100.64.0.0/10）を追加
+2. ヘルスチェックのIPをTailscale IPベースに変更
+3. ただしetcd/kubeletがどちらのIPを選択するか不定になるため、全ノードをTailscale IPに統一するか、`tailscale_device` data sourceでIP解決する仕組みが必要
+
+現時点では同一LAN構成を前提とし、リモートノードの追加は将来の拡張として扱う。
+
+---
+
 ## チェックリスト
 
 | 項目 | 完了 |
@@ -165,6 +272,8 @@ git push
 | ロール割り当て済み（`/`パス） | [ ] |
 | APIトークン(`tofu`)作成済み | [ ] |
 | トークン値を控えた | [ ] |
+| Tailscaleサブネットルーティング設定済み | [ ] |
+| サブネットルート承認済み（管理画面） | [ ] |
 | ローカル環境変数設定済み | [ ] |
 | GitHub Secrets登録済み | [ ] |
 
