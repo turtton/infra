@@ -105,7 +105,44 @@ pveum user token add terraform@pve tofu --privsep 0
 
 ---
 
-## 5. 環境変数の設定
+## 5. Tailscaleサブネットルーティング
+
+OpenTofu実行マシンからTalos VM（LAN IP）に到達するため、Proxmoxノードの1台でサブネットルーティングを有効にする。
+
+Talos VMは初回起動時にはTailscaleが未設定のため、LAN IP経由でしかTalos API（port 50000）にアクセスできない。Proxmoxノードをサブネットルーターとして機能させることで、Tailscale経由でLANに到達可能にする。
+
+### 手順
+
+Proxmoxノード（main）で実行:
+
+```bash
+# サブネットルートを広告
+tailscale set --advertise-routes=192.168.11.0/24
+
+# IP forwardingが有効であることを確認
+sysctl net.ipv4.ip_forward
+# 0の場合は有効化
+echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.d/99-tailscale.conf
+sysctl -p /etc/sysctl.d/99-tailscale.conf
+```
+
+### Tailscale管理画面でルートを承認
+
+1. [Tailscale Admin Console](https://login.tailscale.com/admin/machines) を開く
+2. mainノードの「...」→「Edit route settings」
+3. `192.168.11.0/24` のルートを承認
+
+### 確認
+
+OpenTofu実行マシンから到達確認:
+
+```bash
+ping 192.168.11.110
+```
+
+---
+
+## 6. 環境変数の設定
 
 ### ローカル実行
 
@@ -129,7 +166,7 @@ export TF_VAR_tailscale_authkey="tskey-auth-..."
 
 ---
 
-## 6. State Commitリカバリ手順
+## 7. State Commitリカバリ手順
 
 `tofu apply`は成功したが、暗号化stateのgit commit/pushに失敗した場合のリカバリ手順。
 
@@ -157,6 +194,54 @@ git push
 
 ---
 
+## 8. Apply失敗時のクリーンアップ
+
+`tofu apply`が途中で失敗した場合、stateに記録されていないリソースがProxmox上に残ることがある。再applyの前にクリーンアップが必要。
+
+### VMの削除
+
+```bash
+# VM IDを確認
+ssh root@<node> qm list
+
+# 停止 & 削除（--purgeで紐づくディスクも削除）
+ssh root@<node> qm stop <vm-id> --skiplock
+ssh root@<node> qm destroy <vm-id> --purge
+```
+
+### Talosイメージの削除（必要な場合）
+
+バージョン変更時などに旧イメージが残る場合:
+
+```bash
+# 確認
+ssh root@<node> ls /var/lib/vz/template/iso/talos-*
+
+# 不要なイメージを削除
+ssh root@<node> rm /var/lib/vz/template/iso/talos-<old-version>-nocloud-amd64.img
+```
+
+Proxmox WebUIからも Datacenter → Storage → local → ISO Images で確認・削除可能。
+
+### stateの不整合解消
+
+一部のリソースだけがstateに記録された場合:
+
+```bash
+cd terraform/
+
+# stateに記録されているリソースを確認
+tofu state list
+
+# stateから不整合なリソースを削除（Proxmox側は手動削除済みの前提）
+tofu state rm <resource-address>
+
+# クリーンな状態でapply
+tofu apply
+```
+
+---
+
 ## チェックリスト
 
 | 項目 | 完了 |
@@ -166,6 +251,8 @@ git push
 | ロール割り当て済み（`/`パス） | [ ] |
 | APIトークン(`tofu`)作成済み | [ ] |
 | トークン値を控えた | [ ] |
+| Tailscaleサブネットルーティング設定済み | [ ] |
+| サブネットルート承認済み（管理画面） | [ ] |
 | ローカル環境変数設定済み | [ ] |
 | GitHub Secrets登録済み | [ ] |
 
