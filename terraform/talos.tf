@@ -123,6 +123,10 @@ resource "talos_machine_configuration_apply" "controlplane" {
   machine_configuration_input = data.talos_machine_configuration.controlplane[each.key].machine_configuration
   node                        = each.value.ip
 
+  timeouts {
+    create = "5m"
+  }
+
   depends_on = [proxmox_virtual_environment_vm.talos_node]
 }
 
@@ -132,6 +136,10 @@ resource "talos_machine_configuration_apply" "worker" {
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.worker[each.key].machine_configuration
   node                        = each.value.ip
+
+  timeouts {
+    create = "5m"
+  }
 
   depends_on = [proxmox_virtual_environment_vm.talos_node]
 }
