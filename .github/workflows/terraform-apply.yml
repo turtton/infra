@@ -79,12 +79,11 @@ jobs:
         working-directory: terraform
         run: |
           set +e
-          OUTPUT=$(tofu apply -auto-approve -no-color 2>&1)
-          EXIT_CODE=$?
-          echo "$OUTPUT"
+          tofu apply -auto-approve -no-color 2>&1 | tee /tmp/tofu-apply.log
+          EXIT_CODE=${PIPESTATUS[0]}
           {
             echo "output<<TOFU_EOF"
-            echo "$OUTPUT" | tail -80
+            tail -80 /tmp/tofu-apply.log
             echo "TOFU_EOF"
           } >> "$GITHUB_OUTPUT"
           echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
