@@ -16,6 +16,14 @@ locals {
         }
       }
     }),
+    # DNSネームサーバー設定（静的IP使用のため明示的に指定）
+    yamlencode({
+      machine = {
+        network = {
+          nameservers = [var.gateway, "1.1.1.1", "8.8.8.8"]
+        }
+      }
+    }),
     # Tailscale authkey設定
     yamlencode({
       machine = {
