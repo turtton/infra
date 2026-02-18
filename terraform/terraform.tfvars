@@ -2,8 +2,8 @@ cluster_name     = "homelab"
 cluster_endpoint = "192.168.11.110"
 
 proxmox_nodes = {
-  main = { ssh_address = "main.CHANGEME.ts.net" }
-  data = { ssh_address = "data.CHANGEME.ts.net" }
+  main = { ssh_address = "main" }
+  data = { ssh_address = "data" }
 }
 
 control_planes = {
