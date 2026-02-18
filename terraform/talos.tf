@@ -81,6 +81,37 @@ data "talos_machine_configuration" "worker" {
         }
       }
     }),
+    # kubeletでswap使用を許可
+    yamlencode({
+      machine = {
+        kubelet = {
+          extraConfig = {
+            memorySwap = {
+              swapBehavior = "LimitedSwap"
+            }
+          }
+        }
+      }
+    }),
+    # ディスクswap（システムディスク上に2GiBパーティション）
+    <<-EOT
+    apiVersion: v1alpha1
+    kind: SwapVolumeConfig
+    name: swap0
+    provisioning:
+        diskSelector:
+            match: system_disk
+        minSize: 2GiB
+        maxSize: 2GiB
+    EOT
+    ,
+    # zswap（メモリの20%を圧縮キャッシュとして使用）
+    <<-EOT
+    apiVersion: v1alpha1
+    kind: ZswapConfig
+    maxPoolPercent: 20
+    EOT
+    ,
   ])
 }
 
