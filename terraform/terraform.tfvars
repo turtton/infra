@@ -13,7 +13,7 @@ control_planes = {
     ip           = "192.168.11.110"
     cpu          = 4
     ram          = 24576 # 24GB - schedulable CP, ワークロード実行兼用
-    disk_size    = 6
+    disk_size    = 32
     datastore_id = "toshibassd"
   }
 }
