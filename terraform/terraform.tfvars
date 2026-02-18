@@ -24,7 +24,7 @@ workers = {
     vm_id        = 1010
     ip           = "192.168.11.120"
     cpu          = 1
-    ram          = 2048 # 2GB - Longhornストレージ専用
+    ram          = 4096 # 4GB - Longhornストレージ専用
     disk_size    = 100
     datastore_id = "data-pve"
   }
