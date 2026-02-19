@@ -33,6 +33,7 @@
     creates: /usr/local/bin/pve_exporter
   environment:
     UV_TOOL_BIN_DIR: /usr/local/bin
+    UV_TOOL_DIR: /opt/uv-tools
 
 - name: Create config directory
   ansible.builtin.file:
