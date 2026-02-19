@@ -33,6 +33,12 @@
             sops
             age
           ];
+          env = {
+            SOPS_AGE_KEY_CMD = "rbw get infra-age-key";
+          };
+          shellHook = ''
+            export TF_VAR_state_encryption_passphrase="$(rbw get infra-tohu-state-passphrase)"
+          '';
         };
       }
     );
