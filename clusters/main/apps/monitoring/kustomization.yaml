@@ -5,3 +5,12 @@ resources:
   - helmrepository.yaml
   - grafana-admin.sops.yaml
   - helmrelease.yaml
+configMapGenerator:
+  - name: grafana-dashboard-pve
+    namespace: monitoring
+    options:
+      labels:
+        grafana_dashboard: "1"
+      disableNameSuffixHash: true
+    files:
+      - pve.json=dashboards/pve.json
