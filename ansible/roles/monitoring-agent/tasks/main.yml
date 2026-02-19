@@ -29,8 +29,9 @@
   ansible.builtin.command:
     cmd: >-
       /usr/local/bin/uv tool install
+      --bin-dir /usr/local/bin
       prometheus-pve-exporter=={{ pve_exporter_version }}
-    creates: /root/.local/bin/pve_exporter
+    creates: /usr/local/bin/pve_exporter
 
 - name: Create config directory
   ansible.builtin.file:
