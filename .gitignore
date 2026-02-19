@@ -12,6 +12,10 @@ result
 # Ansible
 *.retry
 
+# Age private keys
+age.key
+*.agekey
+
 # Editor
 *.swp
 *~

@@ -29,6 +29,9 @@
             kubectl
             # Flux CD
             fluxcd
+            # Secret management
+            sops
+            age
           ];
         };
       }

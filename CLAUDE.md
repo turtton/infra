@@ -9,7 +9,7 @@ Proxmox VE上にTalos Linux Kubernetesクラスタを構築・運用するホー
 ## Development Environment
 
 Nix Flakeで開発環境を提供。`direnv allow` または `nix develop` で以下のツールが利用可能になる:
-- `ansible`, `ansible-lint`, `opentofu`, `talosctl`, `kubectl`, `flux`
+- `ansible`, `ansible-lint`, `opentofu`, `talosctl`, `kubectl`, `flux`, `sops`, `age`
 
 Nixフォーマッタ: `nix fmt` (`nixfmt-tree`)
 
@@ -57,6 +57,27 @@ flux get kustomizations
 flux reconcile kustomization flux-system
 ```
 
+### SOPS (Secret管理)
+
+```bash
+# Age鍵ペア生成
+age-keygen -o age.key
+
+# Secretファイルの暗号化（新規作成）
+sops --encrypt --in-place path/to/secret.sops.yaml
+
+# 暗号化済みファイルの編集（エディタで開いて保存時に再暗号化）
+sops path/to/secret.sops.yaml
+
+# 復号して標準出力に表示
+sops --decrypt path/to/secret.sops.yaml
+
+# クラスタにAge秘密鍵Secretを作成
+kubectl create secret generic sops-age \
+  --namespace=flux-system \
+  --from-file=age.agekey=age.key
+```
+
 ## Architecture
 
 ```
@@ -80,6 +101,13 @@ docs/        → Proxmoxの事前設定手順など運用ドキュメント
 - `.terraform.lock.hcl` はgitignoreされている — `tofu init` で再生成
 - Talos拡張: qemu-guest-agent, tailscale, iscsi-tools, util-linux-tools
 - マシン設定パッチ: Longhornカーネルモジュール、DNS、kubelet nodeIP制限(LAN帯域のみ)、Tailscale
+
+### SOPS + Age構成
+
+- SOPS + Ageを使用してKubernetes Secretを暗号化しGit管理する
+- `.sops.yaml`: 暗号化ルール定義。`*.sops.yaml` / `*.sops.yml` ファイルの `data` / `stringData` フィールドのみ暗号化
+- Flux Kustomizationの `decryption` ブロックでSOPS復号を有効化し、`sops-age` Secretから秘密鍵を参照
+- Age秘密鍵はリポジトリ外に保管すること（`.gitignore` で除外済み）
 
 ### Flux CD構成
 
@@ -105,3 +133,5 @@ Apply権限は `turtton` ユーザーのみ。CIからのTailscale接続でProxm
 - Ansible VaultパスワードはCI上 `/tmp/.vault-pass` に一時書き出しされ、always stepで削除される
 - Proxmoxプロバイダは自己署名証明書のため `insecure = true` で接続する
 - ドキュメントは日本語で記述する
+- `flux bootstrap` を再実行した場合、`gotk-sync.yaml` の `decryption` ブロックが上書きで消えるため再追加が必要
+- Age秘密鍵(`age.key`)はリポジトリ外の安全な場所に保管すること
