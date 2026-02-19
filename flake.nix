@@ -38,6 +38,7 @@
           };
           shellHook = ''
             export TF_VAR_state_encryption_passphrase="$(command -v rbw >/dev/null 2>&1 && rbw get infra-tohu-state-passphrase)"
+            export PROXMOX_VE_API_TOKEN="$(command -v rbw >/dev/null 2>&1 && rbw get proxmox-tohu-token)"
           '';
         };
       }
