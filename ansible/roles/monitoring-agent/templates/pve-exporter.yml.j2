@@ -1,5 +1,5 @@
 default:
-  user: {{ pve_exporter_api_user }}
-  token_name: {{ pve_exporter_api_user.split('!')[-1] }}
+  user: {{ pve_exporter_api_user.split('!')[0] }}
+  token_name: {{ pve_exporter_api_user.split('!')[1] }}
   token_value: {{ pve_exporter_api_token_value }}
   verify_ssl: {{ pve_exporter_verify_ssl | lower }}
