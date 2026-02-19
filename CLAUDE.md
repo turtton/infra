@@ -116,7 +116,10 @@ docs/        → Proxmoxの事前設定手順など運用ドキュメント
   - `gotk-sync.yaml` — GitRepository + Kustomization（このリポジトリの自己参照）
   - `kustomization.yaml` — kustomize エントリポイント
 - Fluxが監視するパス: `clusters/main/`
-- infrastructure層やテナント定義は `clusters/main/` 配下に追加していく
+- `clusters/main/infrastructure/controllers/` — Longhorn, cloudflaredなどの基盤コンポーネント
+- `clusters/main/apps/` — kube-prometheus-stackなどのアプリケーション
+- 依存チェーン: `infra-controllers` (wait: true) → `apps` (dependsOn: infra-controllers)
+- Grafanaアクセス: `https://grafana.turtton.net` (Cloudflare Access SSO) または `kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80`
 
 ## CI/CD
 

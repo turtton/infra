@@ -1,0 +1,112 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring
+spec:
+  interval: 30m0s
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "82.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+      interval: 12h0m0s
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    prometheus:
+      prometheusSpec:
+        retention: 7d
+        nodeSelector:
+          kubernetes.io/hostname: cp-1
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            memory: 2Gi
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: longhorn
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 5Gi
+        additionalScrapeConfigs:
+          - job_name: pve-main
+            metrics_path: /pve
+            params:
+              module: [default]
+              target: ["192.168.11.100"]
+            static_configs:
+              - targets: ["192.168.11.100:9221"]
+                labels:
+                  pve_node: main
+          - job_name: pve-data
+            metrics_path: /pve
+            params:
+              module: [default]
+              target: ["192.168.11.40"]
+            static_configs:
+              - targets: ["192.168.11.40:9221"]
+                labels:
+                  pve_node: data
+
+    grafana:
+      admin:
+        existingSecret: grafana-admin
+        userKey: admin-user
+        passwordKey: admin-password
+      nodeSelector:
+        kubernetes.io/hostname: cp-1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          memory: 256Mi
+      persistence:
+        enabled: true
+        storageClassName: longhorn
+        size: 2Gi
+      grafana.ini:
+        server:
+          root_url: https://grafana.turtton.net
+        auth.proxy:
+          enabled: true
+          header_name: Cf-Access-Authenticated-User-Email
+          header_property: email
+          auto_sign_up: true
+        users:
+          auto_assign_org: true
+          auto_assign_org_role: Editor
+
+    alertmanager:
+      alertmanagerSpec:
+        nodeSelector:
+          kubernetes.io/hostname: cp-1
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: longhorn
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 1Gi
+
+    prometheusOperator:
+      nodeSelector:
+        kubernetes.io/hostname: cp-1
