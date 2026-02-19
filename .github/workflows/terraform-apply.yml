@@ -84,7 +84,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "main,192.168.11.100 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkCTXlzg8cpMVYdAEU22ZPFJfImi+sGrriOV6WL9V7P" >> ~/.ssh/known_hosts
+          echo "data,192.168.11.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID6rwVVKY/hjjO8ACNkvd1F3HjBX6xfpIv7be/Bvqxbn" >> ~/.ssh/known_hosts
 
       - name: OpenTofu Init
         working-directory: terraform
@@ -207,7 +208,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "main,192.168.11.100 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkCTXlzg8cpMVYdAEU22ZPFJfImi+sGrriOV6WL9V7P" >> ~/.ssh/known_hosts
+          echo "data,192.168.11.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID6rwVVKY/hjjO8ACNkvd1F3HjBX6xfpIv7be/Bvqxbn" >> ~/.ssh/known_hosts
 
       - name: OpenTofu Init
         working-directory: terraform
