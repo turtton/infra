@@ -9,7 +9,7 @@ Git (このリポジトリ)
  ├── ansible/     → Proxmoxノードの構成管理
  ├── terraform/   → Talos Linux VM作成 + クラスタブートストラップ
  ├── talos/       → Kubernetesクラスタ設定 (予定)
- └── clusters/    → Flux CD マニフェスト (予定)
+ └── clusters/    → Flux CD マニフェスト (GitOps)
 ```
 
 全体のアーキテクチャ設計は [gitops-architecture.md](gitops-architecture.md) を参照。
@@ -22,7 +22,7 @@ Git (このリポジトリ)
 | CI/CD (GitHub Actions) | **実装済み** |
 | OpenTofu (Talos VM + ブートストラップ) | **実装済み** |
 | Kubernetes (Talos) | **稼働中** |
-| Flux CD | 未着手 |
+| Flux CD | **Bootstrap済み** |
 
 ## Cluster
 
@@ -71,6 +71,29 @@ tofu output -raw kubeconfig > ~/.kube/config
 tofu output -raw talosconfig > ~/.talos/config
 ```
 
+### Flux CD
+
+クラスタへのkubeconfig接続が設定済みであること。
+
+```bash
+# 前提条件チェック
+flux check --pre
+
+# Bootstrap（GitHub PATが必要）
+export GITHUB_TOKEN=<personal-access-token>
+flux bootstrap github \
+  --owner=turtton \
+  --repository=infra \
+  --path=clusters/main \
+  --personal \
+  --branch=main
+
+# 状態確認
+flux check
+flux get sources git
+flux get kustomizations
+```
+
 ### CI/CD
 
 - PRで `ansible/` 配下を変更すると自動dry-runが実行される。`/ansible-apply` コメントで本番適用。
@@ -88,6 +111,9 @@ tofu output -raw talosconfig > ~/.talos/config
 │   ├── playbooks/         # 実行エントリポイント
 │   └── roles/             # Ansibleロール
 ├── terraform/             # OpenTofu (Talos VM + クラスタ)
+├── clusters/              # Flux CD マニフェスト (GitOps)
+│   └── main/              # メインクラスタ定義
+│       └── flux-system/   # Flux コンポーネント (bootstrap生成)
 ├── docs/                  # 運用ドキュメント
 └── gitops-architecture.md # 全体アーキテクチャ設計
 ```

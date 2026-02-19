@@ -9,7 +9,7 @@ Proxmox VE上にTalos Linux Kubernetesクラスタを構築・運用するホー
 ## Development Environment
 
 Nix Flakeで開発環境を提供。`direnv allow` または `nix develop` で以下のツールが利用可能になる:
-- `ansible`, `ansible-lint`, `opentofu`, `talosctl`, `kubectl`
+- `ansible`, `ansible-lint`, `opentofu`, `talosctl`, `kubectl`, `flux`
 
 Nixフォーマッタ: `nix fmt` (`nixfmt-tree`)
 
@@ -43,11 +43,26 @@ tofu output -raw talosconfig > ~/.talos/config
 
 State暗号化パスフレーズは環境変数 `TF_VAR_state_encryption_passphrase` で渡す。
 
+### Flux CD
+
+```bash
+# 前提条件チェック
+flux check --pre
+# コンポーネント状態確認
+flux check
+# GitRepository / Kustomization の同期状態
+flux get sources git
+flux get kustomizations
+# 特定の Kustomization を手動で再同期
+flux reconcile kustomization flux-system
+```
+
 ## Architecture
 
 ```
 ansible/     → Proxmox VEノード(main: 192.168.11.100, data: 192.168.11.40)の構成管理
 terraform/   → Talos Linux VM作成 + Kubernetesクラスタブートストラップ (OpenTofu)
+clusters/    → Flux CD マニフェスト (GitOps)
 docs/        → Proxmoxの事前設定手順など運用ドキュメント
 ```
 
@@ -65,6 +80,15 @@ docs/        → Proxmoxの事前設定手順など運用ドキュメント
 - `.terraform.lock.hcl` はgitignoreされている — `tofu init` で再生成
 - Talos拡張: qemu-guest-agent, tailscale, iscsi-tools, util-linux-tools
 - マシン設定パッチ: Longhornカーネルモジュール、DNS、kubelet nodeIP制限(LAN帯域のみ)、Tailscale
+
+### Flux CD構成
+
+- `clusters/main/flux-system/` — bootstrap で自動生成されたFluxコンポーネント
+  - `gotk-components.yaml` — Flux CRD・コントローラ定義
+  - `gotk-sync.yaml` — GitRepository + Kustomization（このリポジトリの自己参照）
+  - `kustomization.yaml` — kustomize エントリポイント
+- Fluxが監視するパス: `clusters/main/`
+- infrastructure層やテナント定義は `clusters/main/` 配下に追加していく
 
 ## CI/CD
 

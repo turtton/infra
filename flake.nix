@@ -27,6 +27,8 @@
             # Kubernetes / Talos
             talosctl
             kubectl
+            # Flux CD
+            fluxcd
           ];
         };
       }
