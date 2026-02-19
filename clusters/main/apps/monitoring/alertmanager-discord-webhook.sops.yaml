@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: alertmanager-discord-webhook
+    namespace: monitoring
+type: Opaque
+stringData:
+    webhook-url: ENC[AES256_GCM,data:JZgGpWgoRQUuKFDaUhcX7o2yaTi2HeaShPlbIosDB/d6jvyz5qmp8yEuf34IzSuVI0CSWGgnNb2eOdku+lnew0r0GmrNFuAOffnDY7FQbF7WAe1FVKrH8Jeil+dP0W9s7UkHDVHryTcD3nixa7/9aT1R5ZpR9wUK8A==,iv:6rt6HBL8UGRfZTMvJxWdNR+y5z8Y/ie729QfZ+QnAEE=,tag:jW/FoYw77+DzABSEa2xbnQ==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBVeGJwczlPclNmV0UydlN0
+            RnpCZXhFMTRGd2I4aDl1ekNmaUtDeEEvVFY0CkQwUGpTeGk4WWpzV1dpUEVIVWRM
+            Ulc5VkFDR0ZLNHJDWlYxZVlPOGxBZkkKLS0tIHhqNEdMT3E3VmtVeUJzT0xsMTE3
+            NDZ5SlliRVFITnZBbTAxVy9nekNtRjAKrl30uVBw1qGWmVbTX/Pr+nGYIpzrTWdX
+            IWdpmOeZ/0W5XUs+/5n4qBSOuTMXAEwD7Alx8LQ3tj8vjLEd1ai6zQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-02-19T12:55:17Z"
+    mac: ENC[AES256_GCM,data:YCEfAkRRWD9rSKCGBc+AucD7cHa4hZLXQ56h3QyR1qh9fmyjF+Q+22ZiG3TwDojVO5V1bkCrnH93FM129Rpj3+wWlXxOFhRogwTyD+zPVVpvZZqNq/oJ0qpUiSefQpPZ3oelNbZPpHw/FQaMc3O5yoZKqK/bKY8m8zVxPamkNVU=,iv:8f441NPRKfNR5t9eU1f2rdWkqi38tVar4bljtLenHNA=,tag:xYIdvrMrhhiDwGIAO0fMrA==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0
