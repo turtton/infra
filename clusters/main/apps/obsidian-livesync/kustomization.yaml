@@ -8,4 +8,5 @@ resources:
   - livesync-bridge-scripts.yaml
   - pvc.yaml
   - deployment.yaml
+  - livesync-bridge-deployment.yaml
   - service.yaml

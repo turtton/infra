@@ -6,7 +6,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: obsidian-livesync
+    app: couchdb
   ports:
     - name: couchdb
       port: 5984
