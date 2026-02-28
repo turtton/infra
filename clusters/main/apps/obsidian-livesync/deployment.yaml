@@ -54,14 +54,12 @@ spec:
             - name: couchdb-config-writable
               mountPath: /opt/couchdb/etc/local.d
           livenessProbe:
-            httpGet:
-              path: /_up
+            tcpSocket:
               port: couchdb
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
-            httpGet:
-              path: /_up
+            tcpSocket:
               port: couchdb
             initialDelaySeconds: 5
             periodSeconds: 10
