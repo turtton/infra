@@ -34,7 +34,7 @@
             age
           ];
           env = {
-            SOPS_AGE_KEY_CMD = "command -v rbw >/dev/null 2>&1 && rbw get infra-age-key";
+            SOPS_AGE_KEY_CMD = "rbw get infra-age-key";
           };
           shellHook = ''
             export TF_VAR_state_encryption_passphrase="$(command -v rbw >/dev/null 2>&1 && rbw get infra-tohu-state-passphrase)"
