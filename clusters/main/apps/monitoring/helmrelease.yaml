@@ -111,6 +111,13 @@ spec:
           global:
             resolveTimeout: 5m
 
+    kubeProxy:
+      enabled: false
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+
     prometheusOperator:
       nodeSelector:
         kubernetes.io/hostname: cp-1
