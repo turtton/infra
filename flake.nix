@@ -29,6 +29,8 @@
             kubectl
             # Flux CD
             fluxcd
+            # Helm
+            kubernetes-helm
             # Secret management
             sops
             age
