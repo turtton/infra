@@ -1,0 +1,49 @@
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: global
+  namespace: monitoring
+spec:
+  route:
+    receiver: discord
+    groupBy: ['alertname', 'namespace']
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    routes:
+      - receiver: 'null'
+        matchers:
+          - name: alertname
+            matchType: "="
+            value: InfoInhibitor
+      - receiver: 'null'
+        matchers:
+          - name: alertname
+            matchType: "="
+            value: Watchdog
+      - receiver: discord
+        matchers:
+          - name: severity
+            matchType: "=~"
+            value: "critical|warning"
+  receivers:
+    - name: 'null'
+    - name: discord
+      discordConfigs:
+        - apiURL:
+            name: alertmanager-discord-webhook
+            key: webhook-url
+          sendResolved: true
+  inhibitRules:
+    - sourceMatch:
+        - name: severity
+          matchType: "="
+          value: critical
+      targetMatch:
+        - name: severity
+          matchType: "="
+          value: warning
+      equal:
+        - alertname
+        - namespace
