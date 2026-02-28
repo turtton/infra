@@ -39,7 +39,9 @@ spec:
             - name: couchdb-data
               mountPath: /opt/couchdb/data
             - name: couchdb-config
-              mountPath: /opt/couchdb/etc/local.d
+              mountPath: /opt/couchdb/etc/local.d/local.ini
+              subPath: local.ini
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /_up
