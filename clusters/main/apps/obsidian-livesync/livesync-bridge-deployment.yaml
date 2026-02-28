@@ -38,7 +38,7 @@ spec:
             - name: GIT_USER_EMAIL
               value: livesync-bridge@localhost
             - name: VAULT_DIR
-              value: /app/vault
+              value: /app/vault/private
           resources:
             requests:
               cpu: 50m

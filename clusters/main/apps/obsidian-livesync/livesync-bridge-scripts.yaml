@@ -21,6 +21,11 @@ data:
     COMMIT_FILE="${VAULT_DIR}/commit.md"
     BRANCH="${GIT_BRANCH:-main}"
 
+    # .gitをVAULT_DIRの親ディレクトリに配置し、bridgeの監視範囲外にする
+    GIT_ROOT="$(dirname "$VAULT_DIR")"
+    export GIT_DIR="${GIT_ROOT}/.git"
+    export GIT_WORK_TREE="$VAULT_DIR"
+
     # commit=true も pull=true も無ければ終了
     DO_COMMIT=false
     DO_PULL=false
@@ -37,7 +42,7 @@ data:
     cd "$VAULT_DIR"
 
     # Gitリポジトリの初期化（初回のみ）
-    if [ ! -d ".git" ]; then
+    if [ ! -d "$GIT_DIR" ]; then
         echo "[commit.sh] Initializing git repository..."
         git init -b "$BRANCH"
     fi
