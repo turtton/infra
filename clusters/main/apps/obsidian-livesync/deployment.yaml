@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: obsidian-livesync
+  namespace: obsidian-livesync
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: obsidian-livesync
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: obsidian-livesync
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: cp-1
+      containers:
+        - name: couchdb
+          image: couchdb:3
+          env:
+            - name: COUCHDB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-credentials
+                  key: COUCHDB_USER
+            - name: COUCHDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-credentials
+                  key: COUCHDB_PASSWORD
+          ports:
+            - name: couchdb
+              containerPort: 5984
+              protocol: TCP
+          volumeMounts:
+            - name: couchdb-data
+              mountPath: /opt/couchdb/data
+            - name: couchdb-config
+              mountPath: /opt/couchdb/etc/local.d
+          livenessProbe:
+            httpGet:
+              path: /_up
+              port: couchdb
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /_up
+              port: couchdb
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+        - name: livesync-bridge
+          image: ghcr.io/turtton/livesync-bridge:latest
+          env:
+            - name: GIT_REPO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: livesync-bridge-config
+                  key: GIT_REPO_URL
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: livesync-bridge-config
+                  key: GITHUB_TOKEN
+            - name: GIT_BRANCH
+              value: main
+            - name: GIT_USER_NAME
+              value: livesync-bridge
+            - name: GIT_USER_EMAIL
+              value: livesync-bridge@localhost
+            - name: VAULT_DIR
+              value: /app/vault
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: livesync-bridge-config
+              mountPath: /app/dat/config.json
+              subPath: config.json
+              readOnly: true
+            - name: livesync-bridge-scripts
+              mountPath: /app/dat/script/commit.sh
+              subPath: commit.sh
+            - name: bridge-vault
+              mountPath: /app/vault
+            - name: bridge-data
+              mountPath: /app/data
+      volumes:
+        - name: couchdb-data
+          persistentVolumeClaim:
+            claimName: couchdb-data
+        - name: couchdb-config
+          configMap:
+            name: couchdb-config
+        - name: livesync-bridge-config
+          secret:
+            secretName: livesync-bridge-config
+            items:
+              - key: config.json
+                path: config.json
+        - name: livesync-bridge-scripts
+          configMap:
+            name: livesync-bridge-scripts
+            defaultMode: 0755
+        - name: bridge-vault
+          emptyDir: {}
+        - name: bridge-data
+          emptyDir: {}

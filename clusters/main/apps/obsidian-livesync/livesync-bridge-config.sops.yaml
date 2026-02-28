@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: livesync-bridge-config
+    namespace: obsidian-livesync
+stringData:
+    config.json: ENC[AES256_GCM,data:4WPPbedISsNo+QyE0i3Ksg2LSeOnLxZ21pWNphOX0XnLxp5pQ22YDdKGKUCd0S5TF1MNtMkDReb4c5sRzcbiePEGZO6V1bbWS8yBt14rcXd5X6ZViKWpV5bgRngiBC4X9IhpxdFoCQD4xSVTOTq60D17ZHbh/5WPBCJS2rdqP0ml+GfURd9NJaby3hD1oDBJIAHcmMmOY2XomrVGhjNjbkU0wox8bd9b7oxbUiaBp3foUqCIo4d7GfDTAat/kyTbkBDNyUi67vi0UMrNL/oyh7vBxn2WBUfMo8iirNhSH5JpqR6ObWwDY5EzWjiP8gqH9jRW+Fm/S2H03x0XSB/W3RFegkGTo3sOx/PflPRLcU8ECMUq1Q7pTdVjnDbIGNa1ZL/jUkhk/MrQQcFrj1YOF09xkT4t3BYFmq3SZrm774AMu1HxGrbkn4duM2OZ+RNsUu+mhGogP+I7i7vdkyfqox0SWqqDuxZHT/uMLbRzXg9DkpljyYUI1Zm1nKk2bZyJ6e/0+pkhEDOP+QEqEdWofXSvGOP9N8A3D5txNAjyKsU0IsgBsDg3cke41MnDBJKz5eM1Z/DLpJgeSvRl2WcNC9G7Mqf+RFR/aEQ8xLZWp3r9kMXPI3JHpIwdVtQN7baUQ+UsDyqspuqiUM6JuvLHkzWpekKDyNSWTamN0jbUm9nDbhy5lSmTMWDc/C5cM/6UFfOr3h047u0sAui0pNYIbTfjgWlf1cqE0yNx8qu/Zlx+y8IlHl+ztaEeV1hez4ipBAdrmVMHjsptnPPiOXm3weBP+p/UGpRbISYwy8jJcNJUW9vH0JPgG7ZDuP3gssDwicZQM9kq0GDVDztKuG5/FKmsYuBmAZzcqHWM0Ract7K+khAatQg4rqKVUyLO6wCwAGyDQNY0Eni2DGLZMV4ax6HEY7dM6PQdHf3LNi2faFmEVOD/r9IuLujMvUiO4FJ1eDgIFWsfJWBwNw2v5QwVca8//dN2BebcxQqnhX9qd9H/sbI+zWUYJD+pQjnHNE5yQj0qV4ZQZnwQz6d4Rze/CCz6+Sk9RDssc3I=,iv:WJEYEvhfnXVzDoEWSrtXs6wUQx2DuDx2ywC3DoKMsx0=,tag:yqJ2Qpmjf1NK9m7SB6glYg==,type:str]
+    GIT_REPO_URL: ENC[AES256_GCM,data:ciDAVTi8iO7uVoq1EQ1nGeOj0DFHs8IAAE2sWjl3D+o1w2l772JEs9iaTeE/,iv:6z+d14Vyw3W2z4yFftOB0voIarvtYzTgbORpZz+wdio=,tag:A6l/eB6uqyLWJqxGofAr8g==,type:str]
+    GITHUB_TOKEN: ENC[AES256_GCM,data:bCFMPO9Y7KWyg74CdhRpyJFjzpUIcNXu67gBihB0zMRWVIPUbiWsyImHOfdyOF3SIqfqpXnvdVF69iwt8e9lCjN/SZHfVPJ8KIP2fI3Plh7wUy0V/J46m48SnCPL,iv:VeSnM76bhBHl8Y4bd50K67/VWVTKiBlqOlyBi1BPxnA=,tag:8rF3qKWUWEusVqWv6fvzNw==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB5d2pKS2V0YlJlbnZUQWVq
+            NWlQV3Q0azB0WnpUb3dZL1Vhd29VWjNMRG5vCkY4WkRnb1dlTjdwMHVKbVA2RStD
+            ZjNUbk1PZEtPZ3grbEZTbTBpb3VxeVUKLS0tIDM4Q0ZnOTBYa3BzMklDRHBCeHFa
+            dzdtOVZTZVE2RGNjSUR6WnR4NG1IRm8KNOux2qzogCqoCDgQOiiill6KiTEXbdA9
+            K6G3JCvqMY6vR8ggj/v9SCftl1TTGIUJkS59Cl67uZVYqqoUjlf/SQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-02-28T05:47:50Z"
+    mac: ENC[AES256_GCM,data:OU7MIX/rraP/sR8MnW5OoSKmykUiSw8b8Os3DButqGxc9X90X1x5YUyonYBcJEs+c0h+JNpTTec8rOzWB0o0lZbB+WA35s2mcDk8yNgvlop464i5w5ZSHUU/q6C3loUmFG6fsOG4TsnwrfCS937h3LxL50N1gU4m8eiJlOmSaMA=,iv:XsXyhdYDuzX9Ji5YGM7tPB1rWNN7iCxIuV95Um3vp6Q=,tag:27dw8N2AjZj2L16IPXV3RA==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0
