@@ -17,6 +17,19 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: cp-1
+      initContainers:
+        - name: copy-couchdb-config
+          image: couchdb:3
+          command:
+            - sh
+            - -c
+            - cp /tmp/couchdb-config/local.ini /opt/couchdb/etc/local.d/local.ini
+          volumeMounts:
+            - name: couchdb-config
+              mountPath: /tmp/couchdb-config
+              readOnly: true
+            - name: couchdb-config-writable
+              mountPath: /opt/couchdb/etc/local.d
       containers:
         - name: couchdb
           image: couchdb:3
@@ -38,10 +51,8 @@ spec:
           volumeMounts:
             - name: couchdb-data
               mountPath: /opt/couchdb/data
-            - name: couchdb-config
-              mountPath: /opt/couchdb/etc/local.d/local.ini
-              subPath: local.ini
-              readOnly: true
+            - name: couchdb-config-writable
+              mountPath: /opt/couchdb/etc/local.d
           livenessProbe:
             httpGet:
               path: /_up
@@ -116,6 +127,8 @@ spec:
           configMap:
             name: livesync-bridge-scripts
             defaultMode: 0755
+        - name: couchdb-config-writable
+          emptyDir: {}
         - name: bridge-vault
           emptyDir: {}
         - name: bridge-data
