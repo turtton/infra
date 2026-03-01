@@ -75,12 +75,56 @@ tofu output -raw talosconfig > ~/.talos/config
 
 クラスタへのkubeconfig接続が設定済みであること。
 
+#### CNI（Cilium）の手動インストール
+
+Talosの構成で `cni.name = "none"`（Flannel無効化）としているため、クラスタ初期状態ではノードが `NotReady` になる。
+Flux CDのPod自体がネットワークを必要とするため、bootstrap前にCiliumを手動でインストールする必要がある。
+
+```bash
+helm repo add cilium https://helm.cilium.io/
+helm install cilium cilium/cilium --version 1.19.1 --namespace kube-system \
+  --set ipam.mode=kubernetes \
+  --set kubeProxyReplacement=true \
+  --set k8sServiceHost=localhost \
+  --set k8sServicePort=7445 \
+  --set cgroup.autoMount.enabled=false \
+  --set cgroup.hostRoot=/sys/fs/cgroup \
+  --set 'securityContext.capabilities.ciliumAgent={CHOWN,KILL,NET_ADMIN,NET_RAW,IPC_LOCK,SYS_ADMIN,SYS_RESOURCE,DAC_OVERRIDE,FOWNER,SETGID,SETUID}' \
+  --set 'securityContext.capabilities.cleanCiliumState={NET_ADMIN,SYS_ADMIN,SYS_RESOURCE}' \
+  --set operator.replicas=1 \
+  --set hubble.enabled=true \
+  --set hubble.relay.enabled=true
+
+# ノードがReadyになるまで待機
+kubectl wait --for=condition=Ready nodes --all --timeout=300s
+```
+
+bootstrap後はFluxのHelmReleaseがCiliumの管理を引き継ぐ。
+
+#### SOPS Age鍵のSecret作成
+
+Flux CDが暗号化されたSecretを復号するために、Age秘密鍵のSecretを作成する。
+
+```bash
+# SOPS_AGE_KEY_CMD が設定済みの場合
+kubectl create secret generic sops-age \
+  --namespace=flux-system \
+  --from-literal=age.agekey="$(eval $SOPS_AGE_KEY_CMD)"
+
+# age.keyファイルがある場合
+kubectl create secret generic sops-age \
+  --namespace=flux-system \
+  --from-file=age.agekey=age.key
+```
+
+#### Bootstrap
+
 ```bash
 # 前提条件チェック
 flux check --pre
 
 # Bootstrap（GitHub PATが必要）
-export GITHUB_TOKEN=<personal-access-token>
+GITHUB_TOKEN=$(gh auth token) \
 flux bootstrap github \
   --owner=turtton \
   --repository=infra \
