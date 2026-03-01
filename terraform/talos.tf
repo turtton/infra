@@ -55,11 +55,21 @@ data "talos_machine_configuration" "controlplane" {
 
   config_patches = concat(local.common_patches, [
     # CPでワークロード実行を許可 + etcdをLANサブネットに制限
+    # デフォルトCNI(Flannel)無効化 → Cilium(Flux CDでデプロイ)に移行
+    # kube-proxy無効化 → CiliumのeBPFで代替
     yamlencode({
       cluster = {
         allowSchedulingOnControlPlanes = true
         etcd = {
           advertisedSubnets = ["192.168.11.0/24"]
+        }
+        network = {
+          cni = {
+            name = "none"
+          }
+        }
+        proxy = {
+          disabled = true
         }
       }
     }),
@@ -118,11 +128,14 @@ resource "talos_machine_bootstrap" "this" {
 }
 
 # クラスタヘルスチェック
+# CNI=noneのため、Cilium(Flux CD)デプロイ前はNodeがNotReadyになる
+# skip_kubernetes_checksでノード到達性とetcdのみ検証し、K8sレベルのReadyチェックをスキップ
 data "talos_cluster_health" "this" {
-  client_configuration = talos_machine_secrets.this.client_configuration
-  control_plane_nodes  = [for cp in var.control_planes : cp.ip]
-  worker_nodes         = [for w in var.workers : w.ip]
-  endpoints            = [for cp in var.control_planes : cp.ip]
+  client_configuration   = talos_machine_secrets.this.client_configuration
+  control_plane_nodes    = [for cp in var.control_planes : cp.ip]
+  worker_nodes           = [for w in var.workers : w.ip]
+  endpoints              = [for cp in var.control_planes : cp.ip]
+  skip_kubernetes_checks = true
 
   depends_on = [talos_machine_bootstrap.this]
 }

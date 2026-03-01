@@ -1,0 +1,72 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium
+  namespace: kube-system
+spec:
+  interval: 30m0s
+  chart:
+    spec:
+      chart: cilium
+      version: "1.19.1"
+      sourceRef:
+        kind: HelmRepository
+        name: cilium
+        namespace: flux-system
+      interval: 12h0m0s
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    # Talos Linux向け設定
+    # ref: https://docs.siderolabs.com/kubernetes-guides/cni/deploying-cilium
+    ipam:
+      mode: kubernetes
+
+    # kube-proxy代替（eBPF）
+    kubeProxyReplacement: true
+    # KubePrism経由でK8s APIに接続
+    k8sServiceHost: localhost
+    k8sServicePort: 7445
+
+    # Talosはcgroupv2とbpffsを標準提供するため自動マウント不要
+    cgroup:
+      autoMount:
+        enabled: false
+      hostRoot: /sys/fs/cgroup
+
+    # Talosではカーネルモジュールのロードが制限されるためSYS_MODULEを除外
+    securityContext:
+      capabilities:
+        ciliumAgent:
+          - CHOWN
+          - KILL
+          - NET_ADMIN
+          - NET_RAW
+          - IPC_LOCK
+          - SYS_ADMIN
+          - SYS_RESOURCE
+          - DAC_OVERRIDE
+          - FOWNER
+          - SETGID
+          - SETUID
+        cleanCiliumState:
+          - NET_ADMIN
+          - SYS_ADMIN
+          - SYS_RESOURCE
+
+    # ホームラボ向けリソース設定
+    operator:
+      replicas: 1
+
+    # Hubble（ネットワーク可視化・NetworkPolicyデバッグ用）
+    hubble:
+      enabled: true
+      relay:
+        enabled: true
