@@ -33,7 +33,7 @@ metadata:
   name: lepinoid-workloads
   namespace: flux-system
 spec:
-  suspend: true
+  suspend: false
   interval: 10m0s
   sourceRef:
     kind: GitRepository
