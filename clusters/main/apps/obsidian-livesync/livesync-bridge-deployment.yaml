@@ -19,7 +19,7 @@ spec:
         kubernetes.io/hostname: cp-1
       containers:
         - name: livesync-bridge
-          image: ghcr.io/turtton/livesync-bridge:latest
+          image: ghcr.io/turtton/livesync-bridge:latest-patched
           env:
             - name: GIT_REPO_URL
               valueFrom:
