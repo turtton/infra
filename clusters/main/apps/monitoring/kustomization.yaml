@@ -6,8 +6,6 @@ resources:
   - grafana-admin.sops.yaml
   - alertmanager-discord-webhook.sops.yaml
   - helmrelease.yaml
-  - alertmanager-config.yaml
-  - flux-podmonitor.yaml
 configMapGenerator:
   - name: grafana-dashboard-pve
     namespace: monitoring

@@ -4,5 +4,6 @@ resources:
   - flux-system
   - infrastructure.yaml
   - apps.yaml
+  - monitoring-config.yaml
   - notifications.yaml
   - tenants.yaml
