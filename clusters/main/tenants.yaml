@@ -1,0 +1,19 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tenants
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: infra-controllers
+  interval: 10m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/main/tenants
+  prune: true
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

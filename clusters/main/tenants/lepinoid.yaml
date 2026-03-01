@@ -1,0 +1,50 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: lepinoid-infra
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  url: https://github.com/Lepinoid/infra
+  ref:
+    branch: main
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: lepinoid-tenant-setup
+  namespace: flux-system
+spec:
+  wait: true
+  interval: 10m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/main/tenants/base
+  prune: true
+  postBuild:
+    substitute:
+      tenant_name: lepinoid
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: lepinoid-workloads
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m0s
+  sourceRef:
+    kind: GitRepository
+    name: lepinoid-infra
+  path: ./
+  prune: true
+  targetNamespace: lepinoid
+  serviceAccountName: lepinoid-deployer
+  dependsOn:
+    - name: lepinoid-tenant-setup
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age-lepinoid
