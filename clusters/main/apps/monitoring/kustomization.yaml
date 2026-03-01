@@ -17,14 +17,6 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - pve.json=dashboards/pve.json
-  - name: grafana-dashboard-flux-cluster
-    namespace: monitoring
-    options:
-      labels:
-        grafana_dashboard: "1"
-      disableNameSuffixHash: true
-    files:
-      - flux-cluster.json=dashboards/flux-cluster.json
   - name: grafana-dashboard-flux-control-plane
     namespace: monitoring
     options:
