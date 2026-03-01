@@ -112,12 +112,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase
           git add terraform.tfstate
           if git diff --cached --quiet; then
             echo "No state changes to commit"
           else
             git commit -m "Update encrypted terraform state"
+            git pull --rebase
             git push
           fi
 
@@ -225,12 +225,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase
           git add terraform.tfstate
           if git diff --cached --quiet; then
             echo "No state changes to commit"
           else
             git commit -m "Update encrypted terraform state"
+            git pull --rebase
             git push
           fi
 
