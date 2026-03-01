@@ -72,4 +72,5 @@ spec:
           persistentVolumeClaim:
             claimName: bridge-vault
         - name: bridge-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: bridge-data
