@@ -28,4 +28,13 @@ workers = {
     disk_size    = 100
     datastore_id = "data-pve"
   }
+  worker-2 = {
+    host_node    = "data"
+    vm_id        = 1011
+    ip           = "192.168.11.121"
+    cpu          = 1
+    ram          = 4096 # 4GB - Longhornストレージ専用
+    disk_size    = 350
+    datastore_id = "data-pve"
+  }
 }

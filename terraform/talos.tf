@@ -132,9 +132,9 @@ resource "talos_machine_bootstrap" "this" {
 # skip_kubernetes_checksでノード到達性とetcdのみ検証し、K8sレベルのReadyチェックをスキップ
 data "talos_cluster_health" "this" {
   client_configuration   = talos_machine_secrets.this.client_configuration
-  control_plane_nodes    = [for cp in var.control_planes : cp.ip]
-  worker_nodes           = [for w in var.workers : w.ip]
-  endpoints              = [for cp in var.control_planes : cp.ip]
+  control_plane_nodes    = [for k, v in talos_machine_configuration_apply.controlplane : v.node]
+  worker_nodes           = [for k, v in talos_machine_configuration_apply.worker : v.node]
+  endpoints              = [for k, v in talos_machine_configuration_apply.controlplane : v.node]
   skip_kubernetes_checks = true
 
   depends_on = [talos_machine_bootstrap.this]
