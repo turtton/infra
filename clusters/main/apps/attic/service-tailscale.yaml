@@ -8,6 +8,7 @@ metadata:
     tailscale.com/expose: "true"
     tailscale.com/hostname: "attic-ci"
     tailscale.com/tags: "tag:attic"
+    tailscale.com/proxy-class: "userspace"
 spec:
   type: ClusterIP
   selector:
