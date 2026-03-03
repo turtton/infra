@@ -1,0 +1,88 @@
+name: Flux CD Validate
+
+on:
+  pull_request:
+    paths:
+      - "clusters/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.6.0/kustomize_v5.6.0_linux_amd64.tar.gz" | tar xz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Install kubeconform
+        run: |
+          curl -sL "https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz" | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate manifests
+        id: validate
+        run: |
+          set +e
+          kustomize build clusters/main/ 2>&1 | kubeconform \
+            -strict \
+            -ignore-missing-schemas \
+            -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            2>&1 | tee /tmp/validate.log
+          KUSTOMIZE_EXIT=${PIPESTATUS[0]}
+          KUBECONFORM_EXIT=${PIPESTATUS[1]}
+          if [ "$KUSTOMIZE_EXIT" -ne 0 ]; then
+            EXIT_CODE=$KUSTOMIZE_EXIT
+          else
+            EXIT_CODE=$KUBECONFORM_EXIT
+          fi
+          {
+            echo "output<<VALIDATE_EOF"
+            tail -80 /tmp/validate.log
+            echo "VALIDATE_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit $EXIT_CODE
+
+      - name: Comment validation result on PR
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          VALIDATE_OUTPUT: ${{ steps.validate.outputs.output }}
+          VALIDATE_EXIT_CODE: ${{ steps.validate.outputs.exit_code }}
+        with:
+          script: |
+            const marker = '<!-- flux-validate -->';
+            const exitCode = process.env.VALIDATE_EXIT_CODE;
+            const status = exitCode === '0' ? '✅ Validation passed' : '❌ Validation failed';
+            const output = process.env.VALIDATE_OUTPUT;
+            const body = `${marker}\n### ${status}\n\n<details><summary>Validation output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>`;
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }

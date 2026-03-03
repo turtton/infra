@@ -58,6 +58,19 @@ GitHub Actions UIから手動で実行。mainブランチのterraform構成をap
 
 apply成功後、暗号化されたstateファイルを自動的にgit commit & pushする。
 
+### Flux CD
+
+#### flux-check.yml (Validate)
+
+PRで `clusters/` 配下のファイルが変更された場合に自動実行。
+
+- `kustomize build` でマニフェストをレンダリング
+- `kubeconform` でKubernetesスキーマ検証 (`-strict`, `-ignore-missing-schemas`)
+- 結果をPRにコメントとして投稿
+
+シークレット不要。クラスタへのアクセスなしの純粋なローカルバリデーション。
+FluxはGitマージ時に自動reconcileするため、applyワークフローは不要。
+
 ## Required Secrets
 
 | Secret | 内容 | 用途 |
