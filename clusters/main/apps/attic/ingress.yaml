@@ -6,6 +6,7 @@ metadata:
   namespace: attic
   annotations:
     tailscale.com/funnel: "true"
+    tailscale.com/tags: "tag:attic"
 spec:
   ingressClassName: tailscale
   defaultBackend:
