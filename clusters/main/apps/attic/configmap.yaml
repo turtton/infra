@@ -8,7 +8,6 @@ data:
   server.toml: |
     listen = "[::]:8080"
     allowed-hosts = ["attic.taile2777.ts.net", "attic-ci.taile2777.ts.net"]
-    api-endpoint = "https://attic.taile2777.ts.net/"
 
     [database]
     url = "sqlite:///var/lib/attic/server.db?mode=rwc"
