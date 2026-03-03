@@ -48,12 +48,18 @@ spec:
             httpGet:
               path: /
               port: http
+              httpHeaders:
+                - name: Host
+                  value: attic.taile2777.ts.net
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
             httpGet:
               path: /
               port: http
+              httpHeaders:
+                - name: Host
+                  value: attic.taile2777.ts.net
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
