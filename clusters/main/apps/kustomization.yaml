@@ -5,3 +5,4 @@ resources:
   - loki
   - alloy
   - obsidian-livesync
+  - attic

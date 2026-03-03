@@ -5,3 +5,4 @@ resources:
   - longhorn
   - cloudflared
   - metrics-server
+  - tailscale-operator
