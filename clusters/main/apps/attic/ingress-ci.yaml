@@ -6,6 +6,7 @@ metadata:
   namespace: attic
   annotations:
     tailscale.com/tags: "tag:attic"
+    tailscale.com/proxy-class: "attic-ci"
 spec:
   ingressClassName: tailscale
   defaultBackend:
