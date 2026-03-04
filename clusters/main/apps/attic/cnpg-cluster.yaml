@@ -1,0 +1,21 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: attic-db
+  namespace: attic
+spec:
+  instances: 1
+  storage:
+    size: 5Gi
+    storageClass: longhorn
+  postgresql:
+    parameters:
+      shared_buffers: "128MB"
+      max_connections: "50"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

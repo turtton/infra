@@ -6,3 +6,4 @@ resources:
   - cloudflared
   - metrics-server
   - tailscale-operator
+  - cnpg
