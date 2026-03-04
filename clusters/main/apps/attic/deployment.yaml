@@ -18,6 +18,17 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: cp-1
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z attic-db-rw 5432; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
       containers:
         - name: attic
           image: ghcr.io/zhaofengli/attic:ff9bf4092fc68f6fa2028ced8bdda48813b40a6e
@@ -33,6 +44,11 @@ spec:
                 secretKeyRef:
                   name: attic-secrets
                   key: ATTIC_SERVER_TOKEN_HS256_SECRET_BASE64
+            - name: ATTIC_SERVER_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: attic-db-app
+                  key: uri
           ports:
             - name: http
               containerPort: 8080
