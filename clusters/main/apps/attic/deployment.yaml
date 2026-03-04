@@ -33,18 +33,18 @@ spec:
         - name: attic
           image: ghcr.io/zhaofengli/attic:ff9bf4092fc68f6fa2028ced8bdda48813b40a6e
           command:
-            - atticd
-            - -f
-            - /etc/attic/server.toml
-            - --mode
-            - monolithic
+            - sh
+            - -c
+            - |
+              export ATTIC_SERVER_DATABASE_URL=$(echo "$DATABASE_URI" | sed 's|^postgresql://|postgres://|')
+              exec atticd -f /etc/attic/server.toml --mode monolithic
           env:
             - name: ATTIC_SERVER_TOKEN_HS256_SECRET_BASE64
               valueFrom:
                 secretKeyRef:
                   name: attic-secrets
                   key: ATTIC_SERVER_TOKEN_HS256_SECRET_BASE64
-            - name: ATTIC_SERVER_DATABASE_URL
+            - name: DATABASE_URI
               valueFrom:
                 secretKeyRef:
                   name: attic-db-app
