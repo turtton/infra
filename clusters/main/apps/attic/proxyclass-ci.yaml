@@ -7,6 +7,9 @@ spec:
   statefulSet:
     pod:
       tailscaleContainer:
+        env:
+          - name: TS_DEBUG_FIREWALL_MODE
+            value: "nftables"
         resources:
           requests:
             cpu: 100m
