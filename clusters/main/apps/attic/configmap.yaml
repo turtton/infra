@@ -7,7 +7,7 @@ metadata:
 data:
   server.toml: |
     listen = "[::]:8080"
-    allowed-hosts = ["attic.taile2777.ts.net", "attic-ci.taile2777.ts.net"]
+    allowed-hosts = ["attic.taile2777.ts.net", "attic-ci.taile2777.ts.net", "attic-ci.taile2777.ts.net:8080"]
 
     [database]
     url = "sqlite:///var/lib/attic/server.db?mode=rwc"
