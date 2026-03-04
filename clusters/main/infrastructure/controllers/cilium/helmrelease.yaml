@@ -31,6 +31,13 @@ spec:
 
     # kube-proxy代替（eBPF）
     kubeProxyReplacement: true
+    # Tailscale Service exposeのDNAT転送パケットをTC BPFで処理するため
+    # Pod namespaceでのsocket-level LBを無効化
+    # ref: https://tailscale.com/kb/1236/kubernetes-operator#cilium
+    socketLB:
+      hostNamespaceOnly: true
+    bpf:
+      lbExternalClusterIP: true
     # KubePrism経由でK8s APIに接続
     k8sServiceHost: localhost
     k8sServicePort: 7445
