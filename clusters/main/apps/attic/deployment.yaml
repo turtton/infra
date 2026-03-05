@@ -16,6 +16,14 @@ spec:
       labels:
         app: attic
     spec:
+      securityContext:
+        sysctls:
+          - name: net.ipv4.tcp_keepalive_time
+            value: "60"
+          - name: net.ipv4.tcp_keepalive_intvl
+            value: "15"
+          - name: net.ipv4.tcp_keepalive_probes
+            value: "5"
       nodeSelector:
         kubernetes.io/hostname: cp-1
       initContainers:
