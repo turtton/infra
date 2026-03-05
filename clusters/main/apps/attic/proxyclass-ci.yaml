@@ -6,6 +6,7 @@ metadata:
 spec:
   statefulSet:
     pod:
+      hostNetwork: true
       tailscaleContainer:
         env:
           - name: TS_DEBUG_FIREWALL_MODE
