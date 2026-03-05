@@ -11,3 +11,5 @@ resources:
   - service-tailscale.yaml
   - proxyclass-ci.yaml
   - cnpg-cluster.yaml
+  - tailscale-serve-config.yaml
+  - tailscale-authkey.sops.yaml

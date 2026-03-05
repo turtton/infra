@@ -92,6 +92,37 @@ spec:
               memory: 256Mi
             limits:
               memory: 4Gi
+        - name: tailscale
+          image: ghcr.io/tailscale/tailscale:v1.94.2
+          env:
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: tailscale-authkey
+                  key: authkey
+            - name: TS_HOSTNAME
+              value: "attic-direct"
+            - name: TS_STATE_DIR
+              value: "/var/lib/tailscale"
+            - name: TS_SERVE_CONFIG
+              value: "/etc/ts-serve/serve-config.json"
+            - name: TS_USERSPACE
+              value: "true"
+            - name: TS_EXTRA_ARGS
+              value: "--advertise-tags=tag:attic"
+          volumeMounts:
+            - name: attic-data
+              mountPath: /var/lib/tailscale
+              subPath: tailscale-state
+            - name: tailscale-serve-config
+              mountPath: /etc/ts-serve
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
       volumes:
         - name: attic-config
           configMap:
@@ -99,3 +130,6 @@ spec:
         - name: attic-data
           persistentVolumeClaim:
             claimName: attic-data
+        - name: tailscale-serve-config
+          configMap:
+            name: tailscale-serve-config
