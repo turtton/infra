@@ -24,6 +24,7 @@ spec:
             value: "15"
           - name: net.ipv4.tcp_keepalive_probes
             value: "5"
+      serviceAccountName: default
       nodeSelector:
         kubernetes.io/hostname: cp-1
       initContainers:
