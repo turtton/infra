@@ -24,6 +24,7 @@ spec:
             value: "15"
           - name: net.ipv4.tcp_keepalive_probes
             value: "5"
+      serviceAccountName: tailscale-sidecar
       nodeSelector:
         kubernetes.io/hostname: cp-1
       initContainers:
@@ -110,6 +111,14 @@ spec:
               value: "true"
             - name: TS_EXTRA_ARGS
               value: "--advertise-tags=tag:attic"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           volumeMounts:
             - name: attic-data
               mountPath: /var/lib/tailscale
