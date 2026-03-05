@@ -29,6 +29,11 @@ spec:
     ipam:
       mode: kubernetes
 
+    # Pod MTUを明示指定
+    # auto-detectだとノードのtailscale0 (MTU 1280) を参照してしまうため
+    # 物理NIC MTU 1500 - VXLAN overhead 50 = 1450
+    MTU: 1450
+
     # kube-proxy代替（eBPF）
     kubeProxyReplacement: true
     # Tailscale Service exposeのDNAT転送パケットをTC BPFで処理するため
