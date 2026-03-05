@@ -7,7 +7,7 @@ metadata:
 data:
   server.toml: |
     listen = "[::]:8080"
-    allowed-hosts = ["attic.taile2777.ts.net", "attic-ci.taile2777.ts.net", "attic-ci.taile2777.ts.net:8080", "attic-direct.taile2777.ts.net",  "attic-direct.taile2777.ts.net":8080, "localhost:8080"]
+    allowed-hosts = ["attic.taile2777.ts.net", "attic-ci.taile2777.ts.net", "attic-ci.taile2777.ts.net:8080", "attic-direct.taile2777.ts.net", "attic-direct.taile2777.ts.net:8080", "localhost:8080"]
 
     [database]
     # url is loaded from ATTIC_SERVER_DATABASE_URL env var
