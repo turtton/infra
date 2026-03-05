@@ -108,7 +108,7 @@ spec:
             - name: TS_SERVE_CONFIG
               value: "/etc/ts-serve/serve-config.json"
             - name: TS_USERSPACE
-              value: "true"
+              value: "false"
             - name: TS_EXTRA_ARGS
               value: "--advertise-tags=tag:attic"
             - name: POD_NAME
@@ -119,7 +119,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.uid
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
           volumeMounts:
+            - name: tun-device
+              mountPath: /dev/net/tun
             - name: attic-data
               mountPath: /var/lib/tailscale
               subPath: tailscale-state
@@ -142,3 +149,7 @@ spec:
         - name: tailscale-serve-config
           configMap:
             name: tailscale-serve-config
+        - name: tun-device
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
