@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iceshrimp-web
+  namespace: iceshrimp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: iceshrimp-web
+  template:
+    metadata:
+      labels:
+        app: iceshrimp-web
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: cp-1
+      initContainers:
+        - name: wait-for-db
+          image: docker.io/library/busybox:1.37.0
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z iceshrimp-db-rw 5432; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+        - name: inject-db-password
+          image: docker.io/library/busybox:1.37.0
+          command:
+            - sh
+            - -c
+            - |
+              sed "s/__DB_PASS__/${DB_PASS}/" /config-template/default.yml > /config/default.yml
+          env:
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: iceshrimp-db-app
+                  key: password
+          volumeMounts:
+            - name: config-template
+              mountPath: /config-template
+            - name: config
+              mountPath: /config
+      containers:
+        - name: iceshrimp
+          image: iceshrimp.dev/iceshrimp/iceshrimp:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+          volumeMounts:
+            - name: config
+              mountPath: /iceshrimp/.config
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+              httpHeaders:
+                - name: Host
+                  value: kameuo.turtton.net
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+              httpHeaders:
+                - name: Host
+                  value: kameuo.turtton.net
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: config-template
+          configMap:
+            name: iceshrimp-config
+        - name: config
+          emptyDir: {}

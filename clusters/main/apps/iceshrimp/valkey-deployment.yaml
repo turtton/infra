@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iceshrimp-valkey
+  namespace: iceshrimp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: iceshrimp-valkey
+  template:
+    metadata:
+      labels:
+        app: iceshrimp-valkey
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: cp-1
+      containers:
+        - name: valkey
+          image: docker.io/valkey/valkey:8.0.2-alpine3.21
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: valkey-data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: valkey-data
+          persistentVolumeClaim:
+            claimName: iceshrimp-valkey-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iceshrimp-valkey
+  namespace: iceshrimp
+spec:
+  selector:
+    app: iceshrimp-valkey
+  ports:
+    - port: 6379
+      targetPort: 6379

@@ -1,0 +1,35 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: iceshrimp-db
+  namespace: iceshrimp
+spec:
+  instances: 1
+  bootstrap:
+    initdb:
+      database: ffdb
+      owner: firefish
+  storage:
+    size: 120Gi
+    storageClass: longhorn
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "256MB"
+      effective_cache_size: "768MB"
+      maintenance_work_mem: "128MB"
+      checkpoint_completion_target: "0.9"
+      wal_buffers: "16MB"
+      default_statistics_target: "100"
+      random_page_cost: "4"
+      effective_io_concurrency: "2"
+      work_mem: "1966kB"
+      huge_pages: "off"
+      min_wal_size: "256MB"
+      max_wal_size: "1GB"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
