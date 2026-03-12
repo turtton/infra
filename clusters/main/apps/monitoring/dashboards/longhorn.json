@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "An example dashboard for Longhorn v1.4.0",
+  "description": "Longhorn storage monitoring dashboard",
   "editable": true,
   "gnetId": 17626,
   "graphTooltip": 0,
@@ -2810,7 +2810,7 @@
     ]
   },
   "timezone": "",
-  "title": "Longhorn Example v1.4.0",
+  "title": "Longhorn",
   "uid": "2BCgsldGz",
   "version": 22
 }
