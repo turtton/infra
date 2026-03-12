@@ -23,3 +23,11 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - flux-control-plane.json=dashboards/flux-control-plane.json
+  - name: grafana-dashboard-longhorn
+    namespace: monitoring
+    options:
+      labels:
+        grafana_dashboard: "1"
+      disableNameSuffixHash: true
+    files:
+      - longhorn.json=dashboards/longhorn.json

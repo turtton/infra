@@ -30,3 +30,6 @@ spec:
       guaranteedInstanceManagerCPU: 5
     persistence:
       defaultClassReplicaCount: 1
+    metrics:
+      serviceMonitor:
+        enabled: true
