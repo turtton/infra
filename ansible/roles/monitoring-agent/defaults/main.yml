@@ -6,6 +6,7 @@ pve_exporter_config_dir: /etc/pve-exporter
 pve_exporter_user: pve-exporter
 pve_exporter_group: pve-exporter
 pve_exporter_bin: /usr/local/bin/pve-exporter
+pve_exporter_checksum: "eb3adf202699d10196d24a270a0605b29a1a68091611313bf49804052c1cb405"
 
 # PVE API Token authentication
 # These MUST be overridden (e.g. via ansible-vault encrypted group_vars)

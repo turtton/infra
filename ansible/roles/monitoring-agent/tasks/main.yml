@@ -20,21 +20,28 @@
     home: "{{ pve_exporter_config_dir }}"
     create_home: false
 
+- name: Check if old prometheus-pve-exporter binary exists
+  ansible.builtin.stat:
+    path: /usr/local/bin/pve_exporter
+  register: old_pve_exporter
+
 - name: Stop old pve-exporter if running (migration from prometheus-pve-exporter)
   ansible.builtin.systemd:
     name: pve-exporter
     state: stopped
-  ignore_errors: true
+  when: old_pve_exporter.stat.exists
 
 - name: Remove old prometheus-pve-exporter binary
   ansible.builtin.file:
     path: /usr/local/bin/pve_exporter
     state: absent
+  when: old_pve_exporter.stat.exists
 
 - name: Download pve-exporter binary
   ansible.builtin.get_url:
     url: "https://github.com/bigtcze/pve-exporter/releases/download/v{{ pve_exporter_version }}/pve-exporter-linux-amd64"
     dest: "{{ pve_exporter_bin }}"
+    checksum: "sha256:{{ pve_exporter_checksum }}"
     mode: "0755"
     owner: root
     group: root
