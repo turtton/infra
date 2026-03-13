@@ -6,6 +6,7 @@ resources:
   - valkey-pvc.yaml
   - valkey-deployment.yaml
   - valkey-podmonitor.yaml
+  - cnpg-podmonitor.yaml
   - configmap.yaml
   - deployment.yaml
   - service.yaml
