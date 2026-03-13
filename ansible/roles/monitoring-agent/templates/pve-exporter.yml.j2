@@ -1,5 +1,5 @@
 proxmox:
-  host: "{{ ansible_default_ipv4.address }}"
+  host: "{{ ansible_facts['default_ipv4']['address'] }}"
   port: 8006
   token_id: "{{ pve_exporter_api_user }}"
   token_secret: "{{ pve_exporter_api_token_value }}"
