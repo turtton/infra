@@ -1,10 +1,11 @@
 ---
-# prometheus-pve-exporter
-pve_exporter_version: "3.5.1"
+# bigtcze/pve-exporter (Go)
+pve_exporter_version: "1.12.0"
 pve_exporter_listen_port: 9221
 pve_exporter_config_dir: /etc/pve-exporter
 pve_exporter_user: pve-exporter
 pve_exporter_group: pve-exporter
+pve_exporter_bin: /usr/local/bin/pve-exporter
 
 # PVE API Token authentication
 # These MUST be overridden (e.g. via ansible-vault encrypted group_vars)

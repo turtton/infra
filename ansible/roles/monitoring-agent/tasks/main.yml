@@ -20,20 +20,25 @@
     home: "{{ pve_exporter_config_dir }}"
     create_home: false
 
-- name: Install uv
-  ansible.builtin.shell:
-    cmd: curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
-    creates: /usr/local/bin/uv
+- name: Stop old pve-exporter if running (migration from prometheus-pve-exporter)
+  ansible.builtin.systemd:
+    name: pve-exporter
+    state: stopped
+  ignore_errors: true
 
-- name: Install prometheus-pve-exporter via uv tool
-  ansible.builtin.command:
-    cmd: >-
-      /usr/local/bin/uv tool install
-      prometheus-pve-exporter=={{ pve_exporter_version }}
-    creates: /usr/local/bin/pve_exporter
-  environment:
-    UV_TOOL_BIN_DIR: /usr/local/bin
-    UV_TOOL_DIR: /opt/uv-tools
+- name: Remove old prometheus-pve-exporter binary
+  ansible.builtin.file:
+    path: /usr/local/bin/pve_exporter
+    state: absent
+
+- name: Download pve-exporter binary
+  ansible.builtin.get_url:
+    url: "https://github.com/bigtcze/pve-exporter/releases/download/v{{ pve_exporter_version }}/pve-exporter-linux-amd64"
+    dest: "{{ pve_exporter_bin }}"
+    mode: "0755"
+    owner: root
+    group: root
+  notify: restart pve-exporter
 
 - name: Create config directory
   ansible.builtin.file:

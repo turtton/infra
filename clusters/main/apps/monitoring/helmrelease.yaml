@@ -46,19 +46,13 @@ spec:
                   storage: 5Gi
         additionalScrapeConfigs:
           - job_name: pve-main
-            metrics_path: /pve
-            params:
-              module: [default]
-              target: ["192.168.11.100"]
+            metrics_path: /metrics
             static_configs:
               - targets: ["192.168.11.100:9221"]
                 labels:
                   pve_node: main
           - job_name: pve-data
-            metrics_path: /pve
-            params:
-              module: [default]
-              target: ["192.168.11.40"]
+            metrics_path: /metrics
             static_configs:
               - targets: ["192.168.11.40:9221"]
                 labels:

@@ -1,14 +1,12 @@
 [Unit]
-Description=Prometheus PVE Exporter
+Description=Proxmox VE Exporter (bigtcze/pve-exporter)
 After=network.target
 
 [Service]
 Type=simple
 User={{ pve_exporter_user }}
 Group={{ pve_exporter_group }}
-ExecStart=/usr/local/bin/pve_exporter \
-    --config.file {{ pve_exporter_config_dir }}/pve-exporter.yml \
-    --web.listen-address 0.0.0.0:{{ pve_exporter_listen_port }}
+ExecStart={{ pve_exporter_bin }} -config {{ pve_exporter_config_dir }}/pve-exporter.yml
 Restart=on-failure
 RestartSec=5
 
