@@ -5,6 +5,7 @@ resources:
   - cnpg-cluster.yaml
   - valkey-pvc.yaml
   - valkey-deployment.yaml
+  - valkey-podmonitor.yaml
   - configmap.yaml
   - deployment.yaml
   - service.yaml

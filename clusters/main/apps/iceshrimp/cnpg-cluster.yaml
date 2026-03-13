@@ -12,6 +12,10 @@ spec:
   storage:
     size: 120Gi
     storageClass: longhorn
+  monitoring:
+    enablePodMonitor: true
+    podMonitorLabels:
+      release: kube-prometheus-stack
   postgresql:
     parameters:
       max_connections: "200"

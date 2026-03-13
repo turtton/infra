@@ -41,6 +41,20 @@ spec:
               command: ["valkey-cli", "ping"]
             initialDelaySeconds: 5
             periodSeconds: 5
+        - name: redis-exporter
+          image: docker.io/oliver006/redis_exporter:v1.67.0
+          ports:
+            - containerPort: 9121
+              name: metrics
+          env:
+            - name: REDIS_ADDR
+              value: "redis://localhost:6379"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
       volumes:
         - name: valkey-data
           persistentVolumeClaim:

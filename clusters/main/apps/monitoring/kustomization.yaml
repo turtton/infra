@@ -31,3 +31,11 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - longhorn.json=dashboards/longhorn.json
+  - name: grafana-dashboard-iceshrimp
+    namespace: monitoring
+    options:
+      labels:
+        grafana_dashboard: "1"
+      disableNameSuffixHash: true
+    files:
+      - iceshrimp.json=dashboards/iceshrimp.json
