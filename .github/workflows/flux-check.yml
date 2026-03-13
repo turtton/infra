@@ -28,6 +28,7 @@ jobs:
 
       - name: Validate manifests
         id: validate
+        shell: bash
         run: |
           set +e
           kustomize build clusters/main/ 2>&1 | kubeconform \
@@ -37,12 +38,11 @@ jobs:
             -schema-location default \
             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
             2>&1 | tee /tmp/validate.log
-          KUSTOMIZE_EXIT=${PIPESTATUS[0]}
-          KUBECONFORM_EXIT=${PIPESTATUS[1]}
-          if [ "$KUSTOMIZE_EXIT" -ne 0 ]; then
-            EXIT_CODE=$KUSTOMIZE_EXIT
+          PIPE_STATUS=("${PIPESTATUS[@]}")
+          if [ "${PIPE_STATUS[0]}" -ne 0 ]; then
+            EXIT_CODE=${PIPE_STATUS[0]}
           else
-            EXIT_CODE=$KUBECONFORM_EXIT
+            EXIT_CODE=${PIPE_STATUS[1]}
           fi
           {
             echo "output<<VALIDATE_EOF"
@@ -50,7 +50,7 @@ jobs:
             echo "VALIDATE_EOF"
           } >> "$GITHUB_OUTPUT"
           echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
-          exit $EXIT_CODE
+          exit "$EXIT_CODE"
 
       - name: Comment validation result on PR
         if: always()

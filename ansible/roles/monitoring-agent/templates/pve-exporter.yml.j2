@@ -1,5 +1,9 @@
-default:
-  user: {{ pve_exporter_api_user.split('!')[0] }}
-  token_name: {{ pve_exporter_api_user.split('!')[1] }}
-  token_value: {{ pve_exporter_api_token_value }}
-  verify_ssl: {{ pve_exporter_verify_ssl | lower }}
+proxmox:
+  host: "{{ ansible_facts['default_ipv4']['address'] }}"
+  port: 8006
+  token_id: "{{ pve_exporter_api_user }}"
+  token_secret: "{{ pve_exporter_api_token_value }}"
+  insecure_skip_verify: {{ (not pve_exporter_verify_ssl) | lower }}
+server:
+  listen_address: ":{{ pve_exporter_listen_port }}"
+  metrics_path: "/metrics"
