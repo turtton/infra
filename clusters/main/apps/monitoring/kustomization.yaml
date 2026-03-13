@@ -39,3 +39,11 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - iceshrimp.json=dashboards/iceshrimp.json
+  - name: grafana-dashboard-apps-overview
+    namespace: monitoring
+    options:
+      labels:
+        grafana_dashboard: "1"
+      disableNameSuffixHash: true
+    files:
+      - apps-overview.json=dashboards/apps-overview.json
