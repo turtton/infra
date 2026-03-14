@@ -69,7 +69,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "cnpg_collector_up{cluster=\"iceshrimp-db\"}",
+          "expr": "cnpg_collector_up{namespace=\"iceshrimp\"}",
           "legendFormat": "",
           "refId": "A"
         }
@@ -233,7 +233,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "cnpg_backends_total{cluster=\"iceshrimp-db\"}",
+          "expr": "cnpg_backends_total{namespace=\"iceshrimp\"}",
           "legendFormat": "{{datname}} ({{state}}, {{usename}})",
           "refId": "A"
         }
@@ -256,7 +256,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "sum(cnpg_backends_total{cluster=\"iceshrimp-db\"})",
+          "expr": "sum(cnpg_backends_total{namespace=\"iceshrimp\"})",
           "legendFormat": "",
           "refId": "A"
         }
@@ -279,7 +279,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "cnpg_backends_waiting_total{cluster=\"iceshrimp-db\"}",
+          "expr": "cnpg_backends_waiting_total{namespace=\"iceshrimp\"}",
           "legendFormat": "",
           "refId": "A"
         }
@@ -302,7 +302,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "max(cnpg_backends_max_tx_duration_seconds{cluster=\"iceshrimp-db\"})",
+          "expr": "max(cnpg_backends_max_tx_duration_seconds{namespace=\"iceshrimp\"})",
           "legendFormat": "",
           "refId": "A"
         }
@@ -325,7 +325,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "cnpg_collector_pg_wal{cluster=\"iceshrimp-db\", value=\"size\"}",
+          "expr": "cnpg_collector_pg_wal{namespace=\"iceshrimp\", value=\"size\"}",
           "legendFormat": "WAL size",
           "refId": "A"
         }
