@@ -78,6 +78,8 @@ spec:
                   value: attic.taile2777.ts.net
             initialDelaySeconds: 30
             periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 6
           readinessProbe:
             httpGet:
               path: /
