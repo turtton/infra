@@ -34,6 +34,8 @@ spec:
         memory: 1Gi
     persistence:
       vault:
-        existingClaim: bridge-vault
+        size: 2Gi
+        storageClassName: longhorn
       data:
-        existingClaim: bridge-data
+        size: 512Mi
+        storageClassName: longhorn
