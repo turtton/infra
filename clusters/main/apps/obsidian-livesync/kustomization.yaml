@@ -5,8 +5,7 @@ resources:
   - couchdb-credentials.sops.yaml
   - livesync-bridge-config.sops.yaml
   - couchdb-configmap.yaml
-  - livesync-bridge-scripts.yaml
   - pvc.yaml
   - deployment.yaml
-  - livesync-bridge-deployment.yaml
   - service.yaml
+  - livesync-bridge-helmrelease.yaml
