@@ -28,6 +28,7 @@ spec:
       defaultReplicaCount: 1
       defaultDataPath: /var/lib/longhorn
       guaranteedInstanceManagerCPU: 5
+      storageReservedPercentageForDefaultDisk: 20
     persistence:
       defaultClassReplicaCount: 1
     metrics:
