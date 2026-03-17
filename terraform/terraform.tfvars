@@ -43,7 +43,7 @@ workers = {
     ip           = "192.168.11.122"
     cpu          = 1
     ram          = 4096 # 4GB - Longhornストレージ専用
-    disk_size    = 300
+    disk_size    = 350
     datastore_id = "data-pve"
   }
 }
