@@ -45,6 +45,9 @@ spec:
             secretKeyRef:
               name: nextcloud-valkey
               key: valkey-password
+      defaultConfigs:
+        redis.config.php: false
+        reverse-proxy.config.php: false
       configs:
         redis.config.php: |-
           <?php
