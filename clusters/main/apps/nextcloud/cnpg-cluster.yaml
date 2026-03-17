@@ -1,0 +1,39 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: nextcloud-db
+  namespace: nextcloud
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.9-system-trixie
+  bootstrap:
+    initdb:
+      database: nextcloud
+      owner: nextcloud
+  storage:
+    size: 10Gi
+    storageClass: longhorn
+  monitoring:
+    enablePodMonitor: false
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: "256MB"
+      effective_cache_size: "768MB"
+      maintenance_work_mem: "128MB"
+      checkpoint_completion_target: "0.9"
+      wal_buffers: "8MB"
+      default_statistics_target: "100"
+      random_page_cost: "4"
+      effective_io_concurrency: "2"
+      work_mem: "4MB"
+      huge_pages: "off"
+      min_wal_size: "128MB"
+      max_wal_size: "512MB"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
