@@ -131,23 +131,6 @@ spec:
     nodeSelector:
       kubernetes.io/hostname: cp-1
 
-  workspace:
-    initialFiles:
-      agents/github-ops/MEMORY.md: |
-        # MEMORY.md
-
-        ## サブエージェントについて
-        - サブエージェントはホスト側のファイルシステム・クレデンシャルにアクセスできない
-        - 結果はユーザーへのメッセージとして届くため、自分が自動で続きを動かせない（ユーザーの返信が必要）
-        - → リポジトリ調査・編集は自分が直接 exec + read で行う。サブエージェント委託は現構成では機能しない
-
-        ## ワークフロー
-
-        ### 編集→PRの流れ
-        - 質問・議論 → ドキュメント編集 → ユーザーが内容に満足したらPR作成
-        - 「内容を反映して」「まとめて」「保存して」などの表現でも**必ずPRを作成する**
-        - **mainに直接pushしない**。常にブランチ → PR の流れを守る
-
   extraVolumes:
     - name: config-ops-workspace
       configMap:
@@ -173,6 +156,10 @@ spec:
     - name: github-ops-workspace
       mountPath: /home/openclaw/.openclaw/workspace/agents/github-ops/scripts/bootstrap-repo.sh
       subPath: bootstrap-repo.sh
+      readOnly: true
+    - name: github-ops-workspace
+      mountPath: /home/openclaw/.openclaw/workspace/agents/github-ops/MEMORY.md
+      subPath: MEMORY.md
       readOnly: true
 
   selfConfigure:
