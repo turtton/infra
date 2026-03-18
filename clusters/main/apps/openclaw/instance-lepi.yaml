@@ -105,11 +105,9 @@ spec:
           enabled: true
           groupPolicy: allowlist
           streaming: "partial"
-          dm:
-            enabled: true
-            policy: allowlist
-            allowFrom:
-              - "275915497353117697"
+          dmPolicy: allowlist
+          allowFrom:
+            - "275915497353117697"
           guilds:
             "719207321854541874":
               channels:
@@ -162,6 +160,11 @@ spec:
       mountPath: /home/openclaw/.openclaw/workspace/agents/github-ops/MEMORY.md
       subPath: MEMORY.md
       readOnly: true
+
+  security:
+    networkPolicy:
+      allowedIngressNamespaces:
+        - tailscale
 
   selfConfigure:
     enabled: true

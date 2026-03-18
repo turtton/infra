@@ -84,11 +84,9 @@ spec:
           enabled: true
           groupPolicy: allowlist
           streaming: "partial"
-          dm:
-            enabled: true
-            policy: allowlist
-            allowFrom:
-              - "275915497353117697"
+          dmPolicy: allowlist
+          allowFrom:
+            - "275915497353117697"
           guilds:
             "280320003159490561":
               channels:
@@ -123,6 +121,11 @@ spec:
       mountPath: /home/openclaw/.openclaw/workspace/agents/config-ops/AGENTS.md
       subPath: AGENTS.md
       readOnly: true
+
+  security:
+    networkPolicy:
+      allowedIngressNamespaces:
+        - tailscale
 
   selfConfigure:
     enabled: true
