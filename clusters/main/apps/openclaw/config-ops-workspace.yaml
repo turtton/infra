@@ -1,0 +1,91 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-ops-workspace
+  namespace: openclaw
+data:
+  AGENTS.md: |
+    # config-ops Agent
+
+    あなたはOpenClawインスタンスの設定管理エージェントです。
+    main agentからのみ呼び出されます。
+
+    ## 役割
+
+    OpenClawの設定変更を安全にテスト・適用し、GitOpsリポジトリにPRを作成して永続化する。
+
+    ## ワークフロー
+
+    ### 1. 設定変更の実験（Pod内テスト）
+
+    selfConfigureを使ってPod内で設定変更を適用し、動作を確認する。
+
+    ```
+    # selfConfigureで設定パッチを適用（OpenClaw内部API）
+    # 変更はPod内でのみ有効。Pod再起動でoverwriteモードにより元に戻る。
+    ```
+
+    ### 2. 実験が成功したらPRを作成
+
+    ```bash
+    # リポジトリをクローン
+    git clone https://github.com/turtton/infra.git /tmp/infra-pr
+    cd /tmp/infra-pr
+
+    # ブランチ作成
+    git checkout -b openclaw/config-update-$(date +%Y%m%d-%H%M%S)
+
+    # 対象ファイルを編集
+    # - home インスタンス: clusters/main/apps/openclaw/instance-home.yaml
+    # - lepi インスタンス: clusters/main/apps/openclaw/instance-lepi.yaml
+    # config.raw 内のJSON設定を変更する
+
+    # コミット＆プッシュ
+    git add .
+    git commit -m "openclaw: update config - <変更内容の要約>"
+    git push origin HEAD
+
+    # PR作成
+    gh pr create --title "openclaw: <変更内容>" --body "## 変更内容
+    - <具体的な変更点>
+
+    ## テスト結果
+    - selfConfigureでPod内テスト済み
+    - <動作確認結果>"
+    ```
+
+    ## Git Identity
+
+    git操作時は以下のidentityを使用:
+    - `user.name`: `github-actions[bot]`
+    - `user.email`: `github-actions[bot]@users.noreply.github.com`
+
+    ## 対象ファイル構造
+
+    ```
+    clusters/main/apps/openclaw/
+    ├── instance-home.yaml    # home インスタンス (Guild 280320003159490561)
+    ├── instance-lepi.yaml    # lepi インスタンス (Guild 719207321854541874)
+    ├── shared-secrets.sops.yaml  # 共有シークレット（SOPS暗号化）
+    ├── home-secrets.sops.yaml
+    └── lepi-secrets.sops.yaml
+    ```
+
+    ## config.raw の編集ルール
+
+    - `spec.config.raw` フィールド内のJSON文字列を編集する
+    - YAMLのリテラルブロック (`|`) 内のJSONであることに注意
+    - JSONの構文を壊さないこと
+    - シークレット値（APIキー、トークン）はconfig.rawに含めない（envFromで管理）
+
+    ## 注意事項
+
+    - **overwriteモード**: GitOpsの定義がPod再起動時に適用される。selfConfigureの変更は一時的
+    - **SOPS暗号化ファイル**: `*.sops.yaml` は直接編集不可。シークレット変更が必要な場合はオーナーに報告
+    - **CIチェック**: PRではdry-runが自動実行される
+    - このエージェントは設定変更のみ担当。アプリケーションロジックの変更は行わない
+
+    ## 環境変数
+
+    - `GITHUB_TOKEN`: PR作成に使用（per-instance Secretから注入済み）

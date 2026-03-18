@@ -1,0 +1,246 @@
+---
+apiVersion: openclaw.rocks/v1alpha1
+kind: OpenClawInstance
+metadata:
+  name: lepi
+  namespace: openclaw
+spec:
+  envFrom:
+    - secretRef:
+        name: openclaw-shared-secrets
+    - secretRef:
+        name: openclaw-lepi-secrets
+
+  env:
+    - name: GITHUB_REPO_URL
+      value: "https://github.com/turtton/doumels.git"
+    - name: GITHUB_BASE_BRANCH
+      value: "main"
+
+  storage:
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: longhorn
+
+  config:
+    mergeMode: overwrite
+    raw: |
+      {
+        "auth": {
+          "profiles": {
+            "github-copilot:github": {
+              "provider": "github-copilot",
+              "mode": "token"
+            }
+          }
+        },
+        "models": {
+          "providers": {
+            "voyage": {
+              "baseUrl": "https://api.voyageai.com/v1",
+              "models": [
+                {
+                  "id": "voyage-4",
+                  "name": "voyage-4"
+                }
+              ]
+            }
+          }
+        },
+        "agents": {
+          "defaults": {
+            "model": {
+              "primary": "github-copilot/claude-sonnet-4.6"
+            },
+            "memorySearch": {
+              "provider": "voyage",
+              "remote": {
+                "batch": {
+                  "enabled": false
+                }
+              },
+              "model": "voyage-4"
+            },
+            "compaction": {
+              "mode": "safeguard"
+            },
+            "maxConcurrent": 4,
+            "subagents": {
+              "maxConcurrent": 8
+            },
+            "sandbox": {
+              "mode": "non-main",
+              "workspaceAccess": "none",
+              "scope": "session"
+            }
+          },
+          "list": [
+            {
+              "id": "main",
+              "default": true
+            },
+            {
+              "id": "github-ops",
+              "name": "GitHub Ops",
+              "agentDir": "agents/github-ops",
+              "sandbox": {
+                "workspaceAccess": "rw",
+                "scope": "agent"
+              }
+            },
+            {
+              "id": "config-ops",
+              "agentDir": "agents/config-ops",
+              "sandbox": {
+                "workspaceAccess": "rw",
+                "scope": "agent"
+              }
+            }
+          ]
+        },
+        "tools": {
+          "profile": "full",
+          "web": {
+            "search": {
+              "enabled": true
+            },
+            "fetch": {
+              "enabled": true
+            }
+          },
+          "exec": {
+            "security": "full",
+            "ask": "off"
+          }
+        },
+        "bindings": [
+          {
+            "agentId": "github-ops",
+            "comment": "Route target Discord channel to github-ops",
+            "match": {
+              "channel": "discord",
+              "peer": {
+                "kind": "channel",
+                "id": "719807203158130688"
+              },
+              "guildId": "719207321854541874"
+            }
+          }
+        ],
+        "messages": {
+          "ackReactionScope": "group-mentions"
+        },
+        "commands": {
+          "native": "auto",
+          "nativeSkills": "auto",
+          "restart": true,
+          "ownerDisplay": "raw"
+        },
+        "approvals": {
+          "exec": {
+            "enabled": false
+          }
+        },
+        "channels": {
+          "discord": {
+            "enabled": true,
+            "groupPolicy": "allowlist",
+            "streaming": "off",
+            "guilds": {
+              "719207321854541874": {
+                "channels": {
+                  "719807203158130688": {
+                    "allow": true
+                  }
+                }
+              }
+            },
+            "execApprovals": {
+              "enabled": false
+            }
+          }
+        },
+        "gateway": {
+          "controlUi": {
+            "allowedOrigins": [
+              "https://openclaw-lepi.taile2777.ts.net"
+            ]
+          },
+          "auth": {
+            "mode": "token",
+            "allowTailscale": true
+          }
+        },
+        "skills": {
+          "install": {
+            "nodeManager": "bun"
+          }
+        },
+        "plugins": {
+          "entries": {
+            "discord": {
+              "enabled": true
+            }
+          }
+        }
+      }
+
+  availability:
+    nodeSelector:
+      kubernetes.io/hostname: cp-1
+
+  workspace:
+    initialFiles:
+      agents/github-ops/MEMORY.md: |
+        # MEMORY.md
+
+        ## サブエージェントについて
+        - サブエージェントはホスト側のファイルシステム・クレデンシャルにアクセスできない
+        - 結果はユーザーへのメッセージとして届くため、自分が自動で続きを動かせない（ユーザーの返信が必要）
+        - → リポジトリ調査・編集は自分が直接 exec + read で行う。サブエージェント委託は現構成では機能しない
+
+        ## ワークフロー
+
+        ### 編集→PRの流れ
+        - 質問・議論 → ドキュメント編集 → ユーザーが内容に満足したらPR作成
+        - 「内容を反映して」「まとめて」「保存して」などの表現でも**必ずPRを作成する**
+        - **mainに直接pushしない**。常にブランチ → PR の流れを守る
+
+  extraVolumes:
+    - name: config-ops-workspace
+      configMap:
+        name: config-ops-workspace
+    - name: github-ops-workspace
+      configMap:
+        name: github-ops-workspace
+        defaultMode: 0755
+
+  extraVolumeMounts:
+    - name: config-ops-workspace
+      mountPath: /home/openclaw/.openclaw/workspace/agents/config-ops/AGENTS.md
+      subPath: AGENTS.md
+      readOnly: true
+    - name: github-ops-workspace
+      mountPath: /home/openclaw/.openclaw/workspace/agents/github-ops/AGENTS.md
+      subPath: AGENTS.md
+      readOnly: true
+    - name: github-ops-workspace
+      mountPath: /home/openclaw/.openclaw/workspace/agents/github-ops/TOOLS.md
+      subPath: TOOLS.md
+      readOnly: true
+    - name: github-ops-workspace
+      mountPath: /home/openclaw/.openclaw/workspace/agents/github-ops/scripts/bootstrap-repo.sh
+      subPath: bootstrap-repo.sh
+      readOnly: true
+
+  selfConfigure:
+    enabled: true
+    allowedActions:
+      - config
+      - skills
+      - workspaceFiles
+
+  gateway:
+    proxy:
+      enabled: true

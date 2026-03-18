@@ -1,0 +1,10 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: openclaw-operator
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 1h0m0s
+  url: oci://ghcr.io/openclaw-rocks/charts

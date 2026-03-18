@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - shared-secrets.sops.yaml
+  - home-secrets.sops.yaml
+  - lepi-secrets.sops.yaml
+  - config-ops-workspace.yaml
+  - github-ops-workspace.yaml
+  - instance-home.yaml
+  - instance-lepi.yaml
+  - ingress-home.yaml
+  - ingress-lepi.yaml

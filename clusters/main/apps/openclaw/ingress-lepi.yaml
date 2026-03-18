@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openclaw-lepi
+  namespace: openclaw
+  annotations:
+    tailscale.com/funnel: "false"
+    tailscale.com/tags: "tag:openclaw"
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: lepi
+      port:
+        number: 18789
+  tls:
+    - hosts:
+        - openclaw-lepi
