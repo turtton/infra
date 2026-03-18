@@ -127,10 +127,6 @@ spec:
           discord:
             enabled: true
 
-  availability:
-    nodeSelector:
-      kubernetes.io/hostname: cp-1
-
   extraVolumes:
     - name: config-ops-workspace
       configMap:
