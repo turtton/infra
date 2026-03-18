@@ -25,166 +25,107 @@ spec:
 
   config:
     mergeMode: overwrite
-    raw: |
-      {
-        "auth": {
-          "profiles": {
-            "github-copilot:github": {
-              "provider": "github-copilot",
-              "mode": "token"
-            }
-          }
-        },
-        "models": {
-          "providers": {
-            "voyage": {
-              "baseUrl": "https://api.voyageai.com/v1",
-              "models": [
-                {
-                  "id": "voyage-4",
-                  "name": "voyage-4"
-                }
-              ]
-            }
-          }
-        },
-        "agents": {
-          "defaults": {
-            "model": {
-              "primary": "github-copilot/claude-sonnet-4.6"
-            },
-            "memorySearch": {
-              "provider": "voyage",
-              "remote": {
-                "batch": {
-                  "enabled": false
-                }
-              },
-              "model": "voyage-4"
-            },
-            "compaction": {
-              "mode": "safeguard"
-            },
-            "maxConcurrent": 4,
-            "subagents": {
-              "maxConcurrent": 8
-            },
-            "sandbox": {
-              "mode": "non-main",
-              "workspaceAccess": "none",
-              "scope": "session"
-            }
-          },
-          "list": [
-            {
-              "id": "main",
-              "default": true
-            },
-            {
-              "id": "github-ops",
-              "name": "GitHub Ops",
-              "agentDir": "agents/github-ops",
-              "sandbox": {
-                "workspaceAccess": "rw",
-                "scope": "agent"
-              }
-            },
-            {
-              "id": "config-ops",
-              "agentDir": "agents/config-ops",
-              "sandbox": {
-                "workspaceAccess": "rw",
-                "scope": "agent"
-              }
-            }
-          ]
-        },
-        "tools": {
-          "profile": "full",
-          "web": {
-            "search": {
-              "enabled": true
-            },
-            "fetch": {
-              "enabled": true
-            }
-          },
-          "exec": {
-            "security": "full",
-            "ask": "off"
-          }
-        },
-        "bindings": [
-          {
-            "agentId": "github-ops",
-            "comment": "Route target Discord channel to github-ops",
-            "match": {
-              "channel": "discord",
-              "peer": {
-                "kind": "channel",
-                "id": "719807203158130688"
-              },
-              "guildId": "719207321854541874"
-            }
-          }
-        ],
-        "messages": {
-          "ackReactionScope": "group-mentions"
-        },
-        "commands": {
-          "native": "auto",
-          "nativeSkills": "auto",
-          "restart": true,
-          "ownerDisplay": "raw"
-        },
-        "approvals": {
-          "exec": {
-            "enabled": false
-          }
-        },
-        "channels": {
-          "discord": {
-            "enabled": true,
-            "groupPolicy": "allowlist",
-            "streaming": "off",
-            "guilds": {
-              "719207321854541874": {
-                "channels": {
-                  "719807203158130688": {
-                    "allow": true
-                  }
-                }
-              }
-            },
-            "execApprovals": {
-              "enabled": false
-            }
-          }
-        },
-        "gateway": {
-          "controlUi": {
-            "allowedOrigins": [
-              "https://openclaw-lepi.taile2777.ts.net"
-            ]
-          },
-          "auth": {
-            "mode": "token",
-            "allowTailscale": true
-          }
-        },
-        "skills": {
-          "install": {
-            "nodeManager": "bun"
-          }
-        },
-        "plugins": {
-          "entries": {
-            "discord": {
-              "enabled": true
-            }
-          }
-        }
-      }
+    raw:
+      auth:
+        profiles:
+          github-copilot:github:
+            provider: github-copilot
+            mode: token
+      models:
+        providers:
+          voyage:
+            baseUrl: "https://api.voyageai.com/v1"
+            models:
+              - id: voyage-4
+                name: voyage-4
+      agents:
+        defaults:
+          model:
+            primary: github-copilot/claude-sonnet-4.6
+          memorySearch:
+            provider: voyage
+            remote:
+              batch:
+                enabled: false
+            model: voyage-4
+          compaction:
+            mode: safeguard
+          maxConcurrent: 4
+          subagents:
+            maxConcurrent: 8
+          sandbox:
+            mode: non-main
+            workspaceAccess: none
+            scope: session
+        list:
+          - id: main
+            default: true
+          - id: github-ops
+            name: GitHub Ops
+            agentDir: agents/github-ops
+            sandbox:
+              workspaceAccess: rw
+              scope: agent
+          - id: config-ops
+            agentDir: agents/config-ops
+            sandbox:
+              workspaceAccess: rw
+              scope: agent
+      tools:
+        profile: full
+        web:
+          search:
+            enabled: true
+          fetch:
+            enabled: true
+        exec:
+          security: full
+          ask: "off"
+      bindings:
+        - agentId: github-ops
+          comment: Route target Discord channel to github-ops
+          match:
+            channel: discord
+            peer:
+              kind: channel
+              id: "719807203158130688"
+            guildId: "719207321854541874"
+      messages:
+        ackReactionScope: group-mentions
+      commands:
+        native: auto
+        nativeSkills: auto
+        restart: true
+        ownerDisplay: raw
+      approvals:
+        exec:
+          enabled: false
+      channels:
+        discord:
+          enabled: true
+          groupPolicy: allowlist
+          streaming: "off"
+          guilds:
+            "719207321854541874":
+              channels:
+                "719807203158130688":
+                  allow: true
+          execApprovals:
+            enabled: false
+      gateway:
+        controlUi:
+          allowedOrigins:
+            - "https://openclaw-lepi.taile2777.ts.net"
+        auth:
+          mode: token
+          allowTailscale: true
+      skills:
+        install:
+          nodeManager: bun
+      plugins:
+        entries:
+          discord:
+            enabled: true
 
   availability:
     nodeSelector:
@@ -240,7 +181,3 @@ spec:
       - config
       - skills
       - workspaceFiles
-
-  gateway:
-    proxy:
-      enabled: true
