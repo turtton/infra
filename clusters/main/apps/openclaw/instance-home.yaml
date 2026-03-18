@@ -83,7 +83,7 @@ spec:
         discord:
           enabled: true
           groupPolicy: allowlist
-          streaming: "off"
+          streaming: "partial"
           dm:
             enabled: true
             policy: allowlist

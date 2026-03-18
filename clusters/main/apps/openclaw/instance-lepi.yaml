@@ -104,7 +104,12 @@ spec:
         discord:
           enabled: true
           groupPolicy: allowlist
-          streaming: "off"
+          streaming: "partial"
+          dm:
+            enabled: true
+            policy: allowlist
+            allowFrom:
+              - "275915497353117697"
           guilds:
             "719207321854541874":
               channels:
