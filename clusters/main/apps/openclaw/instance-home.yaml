@@ -51,11 +51,13 @@ spec:
             mode: non-main
             workspaceAccess: none
             scope: session
+        # non-main agentはagentDirとworkspaceを絶対パスで指定すること
         list:
           - id: main
             default: true
           - id: config-ops
-            agentDir: agents/config-ops
+            agentDir: /home/openclaw/.openclaw/agents/config-ops/agent
+            workspace: /home/openclaw/.openclaw/workspace/agents/config-ops
             sandbox:
               workspaceAccess: rw
               scope: agent
