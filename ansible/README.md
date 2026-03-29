@@ -23,31 +23,31 @@ Proxmox VEノードの構成管理。
 ### Full Apply
 
 ```bash
-ansible-playbook playbooks/site.yml --ask-vault-pass
+ansible-playbook playbooks/site.yml
 ```
 
 ### Dry-Run (変更内容を確認)
 
 ```bash
-ansible-playbook playbooks/site.yml --check --diff --ask-vault-pass
+ansible-playbook playbooks/site.yml --check --diff
 ```
 
 ### ネットワーク設定のみ更新
 
 ```bash
-ansible-playbook playbooks/network-update.yml --ask-vault-pass
+ansible-playbook playbooks/network-update.yml
 ```
 
 ### 特定ノードのみ
 
 ```bash
-ansible-playbook playbooks/site.yml --limit main --ask-vault-pass
+ansible-playbook playbooks/site.yml --limit main
 ```
 
 ### 特定ロールのみ
 
 ```bash
-ansible-playbook playbooks/site.yml --tags proxmox-base --ask-vault-pass
+ansible-playbook playbooks/site.yml --tags proxmox-base
 ```
 
 ## Inventory
@@ -59,19 +59,19 @@ inventory/
 │   ├── main/network.yml         # main固有のネットワーク設定
 │   └── data/network.yml         # data固有のネットワーク設定
 └── group_vars/
-    └── proxmox/vault.yml        # 暗号化された機密変数
+    └── proxmox/vault.sops.yml    # SOPS暗号化された機密変数
 ```
 
-### Vault管理
+### Secret管理
 
-機密変数 (`pve_exporter_api_token_value`, `tailscale_auth_key`) は `ansible-vault` で暗号化して管理する。
+機密変数 (`pve_exporter_api_token_value`, `tailscale_auth_key`) は SOPS + Age で暗号化して管理する。
 
 ```bash
 # 編集
-ansible-vault edit inventory/group_vars/proxmox/vault.yml
+sops inventory/group_vars/proxmox/vault.sops.yml
 
 # 内容確認
-ansible-vault view inventory/group_vars/proxmox/vault.yml
+sops --decrypt inventory/group_vars/proxmox/vault.sops.yml
 ```
 
 ## Role Details

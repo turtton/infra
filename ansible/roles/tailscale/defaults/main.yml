@@ -1,5 +1,5 @@
 ---
-# Auth key (must be overridden via ansible-vault)
+# Auth key (must be overridden via sops-encrypted group_vars)
 tailscale_auth_key: ""
 
 # Tailscale options

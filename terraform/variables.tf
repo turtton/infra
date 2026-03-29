@@ -86,7 +86,7 @@ variable "proxmox_nodes" {
 variable "gateway" {
   description = "Default gateway IP"
   type        = string
-  default     = "192.168.11.1"
+  default     = "192.168.10.1"
 }
 
 variable "control_planes" {

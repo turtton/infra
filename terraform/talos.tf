@@ -21,11 +21,11 @@ locals {
     yamlencode({
       machine = {
         network = {
-          nameservers = [var.gateway, "1.1.1.1", "8.8.8.8"]
+          nameservers = ["1.1.1.1", "8.8.8.8"]
         }
         kubelet = {
           nodeIP = {
-            validSubnets = ["192.168.11.0/24"]
+            validSubnets = ["192.168.10.0/24"]
           }
         }
       }
@@ -61,7 +61,7 @@ data "talos_machine_configuration" "controlplane" {
       cluster = {
         allowSchedulingOnControlPlanes = true
         etcd = {
-          advertisedSubnets = ["192.168.11.0/24"]
+          advertisedSubnets = ["192.168.10.0/24"]
         }
         network = {
           cni = {

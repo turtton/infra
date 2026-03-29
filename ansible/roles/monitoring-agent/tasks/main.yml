@@ -3,7 +3,7 @@
   ansible.builtin.assert:
     that:
       - pve_exporter_api_token_value | length > 0
-    fail_msg: "pve_exporter_api_token_value must be set (use ansible-vault)"
+    fail_msg: "pve_exporter_api_token_value must be set (use sops)"
 
 - name: Create pve-exporter system group
   ansible.builtin.group:

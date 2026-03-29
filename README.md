@@ -28,15 +28,15 @@ Git (このリポジトリ)
 
 | ノード名 | IP | 役割 | ホストノード | CPU | RAM |
 |---|---|---|---|---|---|
-| cp-1 | 192.168.11.110 | Control Plane (schedulable) | main | 4 | 24GB |
-| worker-1 | 192.168.11.120 | Worker (Longhornストレージ) | data | 1 | 4GB |
+| cp-1 | 192.168.10.110 | Control Plane (schedulable) | main | 4 | 24GB |
+| worker-1 | 192.168.10.120 | Worker (Longhornストレージ) | data | 1 | 4GB |
 
 ## Proxmox Nodes
 
 | ホスト名 | ローカルIP | 役割 |
 |---|---|---|
-| main | 192.168.11.100 | Proxmox VEノード |
-| data | 192.168.11.40 | Proxmox VEノード |
+| main | 192.168.10.100 | Proxmox VEノード |
+| data | 192.168.10.40 | Proxmox VEノード |
 
 ## Getting Started
 
@@ -49,7 +49,7 @@ Git (このリポジトリ)
 
 ```bash
 cd ansible/
-ansible-playbook playbooks/site.yml --check --diff --ask-vault-pass
+ansible-playbook playbooks/site.yml --check --diff
 ```
 
 ### OpenTofu

@@ -1,0 +1,13 @@
+---
+- name: Configure ICX switches
+  hosts: switches
+  gather_facts: false
+  roles:
+    - icx-base
+    - icx-vlan
+    - icx-dhcp
+  post_tasks:
+    - name: Save running config to startup
+      community.network.icx_command:
+        commands:
+          - "write memory"

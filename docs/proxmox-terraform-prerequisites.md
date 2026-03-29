@@ -118,7 +118,7 @@ Proxmoxノード（main）で実行:
 
 ```bash
 # サブネットルートを広告
-tailscale set --advertise-routes=192.168.11.0/24
+tailscale set --advertise-routes=192.168.10.0/24
 
 # IP forwardingが有効であることを確認
 sysctl net.ipv4.ip_forward
@@ -131,14 +131,14 @@ sysctl -p /etc/sysctl.d/99-tailscale.conf
 
 1. [Tailscale Admin Console](https://login.tailscale.com/admin/machines) を開く
 2. mainノードの「...」→「Edit route settings」
-3. `192.168.11.0/24` のルートを承認
+3. `192.168.10.0/24` のルートを承認
 
 ### 確認
 
 OpenTofu実行マシンから到達確認:
 
 ```bash
-ping 192.168.11.110
+ping 192.168.10.110
 ```
 
 ---
@@ -247,14 +247,14 @@ tofu apply
 
 ### Tailscale併用時のクラスタ内通信
 
-Talos VMにTailscale拡張を導入すると、各ノードにLAN IP（192.168.11.x）とTailscale IP（100.x.x.x）の2つのアドレスが付与される。etcdやkubeletがTailscale IPを使用するとクラスタの整合性に問題が生じるため、以下の設定でLAN IPに制限している。
+Talos VMにTailscale拡張を導入すると、各ノードにLAN IP（192.168.10.x）とTailscale IP（100.x.x.x）の2つのアドレスが付与される。etcdやkubeletがTailscale IPを使用するとクラスタの整合性に問題が生じるため、以下の設定でLAN IPに制限している。
 
 - `cluster.etcd.advertisedSubnets`: etcdメンバーの広告IPをLANに制限（CPのみ）
 - `machine.kubelet.nodeIP.validSubnets`: kubeletのノードIPをLANに制限（全ノード）
 
 ### リモートノード追加時の制約
 
-現在の構成では全ノードが同一LAN（192.168.11.0/24）上にある前提で設計されている。Tailscale経由でしか到達できないリモートノード（別拠点・クラウドVM等）を追加する場合、以下の変更が必要になる。
+現在の構成では全ノードが同一LAN（192.168.10.0/24）上にある前提で設計されている。Tailscale経由でしか到達できないリモートノード（別拠点・クラウドVM等）を追加する場合、以下の変更が必要になる。
 
 1. `advertisedSubnets`/`validSubnets`にTailscaleサブネット（100.64.0.0/10）を追加
 2. ヘルスチェックのIPをTailscale IPベースに変更

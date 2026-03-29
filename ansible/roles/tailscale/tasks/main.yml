@@ -3,7 +3,7 @@
   ansible.builtin.assert:
     that:
       - tailscale_auth_key | length > 0
-    fail_msg: "tailscale_auth_key must be set (use ansible-vault)"
+    fail_msg: "tailscale_auth_key must be set (use sops)"
 
 - name: Install Tailscale via official install script
   ansible.builtin.shell:

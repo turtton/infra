@@ -1,0 +1,12 @@
+---
+icx_vlans:
+  - id: 2
+    name: UPLINK
+    untagged_ports: "ethe 1/1/47 to 1/1/48"
+    ip_address: "192.168.0.2 255.255.255.0"
+  - id: 10
+    name: LAN
+    untagged_ports: "ethe 1/1/1 to 1/1/46"
+    ip_address: "192.168.10.1 255.255.255.0"
+
+icx_default_route: "192.168.0.1"

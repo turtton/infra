@@ -1,0 +1,9 @@
+---
+ansible_connection: ansible.netcommon.network_cli
+ansible_network_os: community.network.icx
+ansible_network_cli_ssh_type: paramiko
+ansible_user: "{{ vault_switch_username }}"
+ansible_password: "{{ vault_switch_password }}"
+ansible_become: true
+ansible_become_method: enable
+ansible_become_password: "{{ vault_switch_enable_password }}"

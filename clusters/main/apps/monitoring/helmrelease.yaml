@@ -51,13 +51,13 @@ spec:
           - job_name: pve-main
             metrics_path: /metrics
             static_configs:
-              - targets: ["192.168.11.100:9221"]
+              - targets: ["192.168.10.100:9221"]
                 labels:
                   pve_node: main
           - job_name: pve-data
             metrics_path: /metrics
             static_configs:
-              - targets: ["192.168.11.40:9221"]
+              - targets: ["192.168.10.40:9221"]
                 labels:
                   pve_node: data
 
