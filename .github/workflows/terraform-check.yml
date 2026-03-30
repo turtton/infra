@@ -17,6 +17,7 @@ jobs:
       PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
       TF_VAR_state_encryption_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
       TF_VAR_tailscale_authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

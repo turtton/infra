@@ -9,3 +9,9 @@ output "kubeconfig" {
   value       = talos_cluster_kubeconfig.this.kubeconfig_raw
   sensitive   = true
 }
+
+output "tunnel_token" {
+  description = "Cloudflare Tunnel token for cloudflared deployment"
+  value       = data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab.token
+  sensitive   = true
+}

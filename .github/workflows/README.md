@@ -83,6 +83,7 @@ FluxはGitマージ時に自動reconcileするため、applyワークフロー�
 | `PROXMOX_VE_API_TOKEN` | OpenTofu用APIトークン | OpenTofu |
 | `TOFU_STATE_PASSPHRASE` | State暗号化パスフレーズ | OpenTofu |
 | `TAILSCALE_AUTHKEY` | Talosノード用reusable authkey | OpenTofu |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare APIトークン (Tunnel/Access/DNS管理) | OpenTofu |
 
 ## Tailscale Setup
 

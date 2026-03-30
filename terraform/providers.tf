@@ -18,3 +18,7 @@ provider "proxmox" {
 }
 
 provider "talos" {}
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}
