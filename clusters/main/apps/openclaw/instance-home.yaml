@@ -34,6 +34,7 @@ spec:
                 name: voyage-4
       agents:
         defaults:
+          thinkingDefault: high
           model:
             primary: openrouter/stepfun/step-3.5-flash
           models:
