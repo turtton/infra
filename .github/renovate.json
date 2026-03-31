@@ -3,5 +3,8 @@
   "extends": [
     "config:recommended",
     "github>turtton/renovate"
-  ]
+  ],
+  "flux": {
+    "managerFilePatterns": ["/clusters/.+\\.ya?ml$/"]
+  }
 }
