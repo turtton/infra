@@ -35,7 +35,12 @@ spec:
       agents:
         defaults:
           model:
-            primary: github-copilot/claude-sonnet-4.6
+            primary: openrouter/stepfun/step-3.5-flash
+          models:
+            "openrouter/stepfun/step-3.5-flash":
+              params:
+                provider:
+                  sort: throughput
           memorySearch:
             provider: voyage
             remote:
@@ -114,6 +119,8 @@ spec:
       plugins:
         entries:
           discord:
+            enabled: true
+          openrouter:
             enabled: true
 
   extraVolumes:
