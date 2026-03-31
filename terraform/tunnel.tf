@@ -1,6 +1,6 @@
 locals {
-  tunnel_id   = "8dcd868c-295b-4cd0-96d7-37d7928e903d"
   tunnel_name = "home-infra"
+  team_name   = "turtton-net"
   domain      = "turtton.net"
 
   tunnel_ingress = {
@@ -10,7 +10,7 @@ locals {
     kameuo   = "http://iceshrimp-web.iceshrimp.svc.cluster.local:3000"
   }
 
-  access_protected_hostnames = toset(["grafana", "longhorn"])
+  access_protected_hostnames = ["grafana", "longhorn"]
 }
 
 resource "cloudflare_zero_trust_tunnel_cloudflared" "homelab" {
@@ -30,7 +30,7 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         origin_request = contains(local.access_protected_hostnames, name) ? {
           access = {
             aud_tag   = [cloudflare_zero_trust_access_application.protected.aud]
-            team_name = "turtton-net"
+            team_name = local.team_name
             required  = true
           }
         } : null
@@ -46,7 +46,7 @@ resource "cloudflare_dns_record" "tunnel" {
   zone_id = var.cloudflare_zone_id
   name    = "${each.key}.${local.domain}"
   type    = "CNAME"
-  content = "${local.tunnel_id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
   proxied = true
   ttl     = 1
 }

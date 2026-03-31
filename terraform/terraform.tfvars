@@ -1,8 +1,9 @@
 cluster_name     = "homelab"
 cluster_endpoint = "192.168.11.110"
 
-cloudflare_account_id = "db189f6278d9d9fbdfd8dbf99a5e8c95"
-cloudflare_zone_id    = "ef642a36cc3c9d8a9e3f757561fa0ce8"
+cloudflare_account_id       = "db189f6278d9d9fbdfd8dbf99a5e8c95"
+cloudflare_zone_id          = "ef642a36cc3c9d8a9e3f757561fa0ce8"
+cloudflare_access_policy_id = "cb1bf754-ee1f-44e6-96e5-d51885fe3684"
 
 proxmox_nodes = {
   main = { ssh_address = "main" }

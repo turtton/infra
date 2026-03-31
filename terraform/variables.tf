@@ -31,6 +31,11 @@ variable "cloudflare_zone_id" {
   type        = string
 }
 
+variable "cloudflare_access_policy_id" {
+  description = "Cloudflare Zero Trust reusable access policy ID"
+  type        = string
+}
+
 variable "cluster_name" {
   description = "Kubernetes cluster name"
   type        = string

@@ -11,7 +11,7 @@ resource "cloudflare_zero_trust_access_application" "protected" {
 
   policies = [
     {
-      id         = "cb1bf754-ee1f-44e6-96e5-d51885fe3684"
+      id         = var.cloudflare_access_policy_id
       precedence = 1
     }
   ]

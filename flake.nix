@@ -39,10 +39,12 @@
             SOPS_AGE_KEY_CMD = "rbw get infra-age-key";
           };
           shellHook = ''
-            export TF_VAR_state_encryption_passphrase="$(command -v rbw >/dev/null 2>&1 && rbw get infra-tohu-state-passphrase)"
-            export TF_VAR_tailscale_authkey="$(command -v rbw >/dev/null 2>&1 && rbw get terraform-tailscale-auth-key)"
-            export TF_VAR_cloudflare_api_token="$(command -v rbw >/dev/null 2>&1 && rbw get terraform-cloudflare-api-token)"
-            export PROXMOX_VE_API_TOKEN="$(command -v rbw >/dev/null 2>&1 && rbw get proxmox-tohu-token)"
+            rbw_get() { command -v rbw >/dev/null 2>&1 && rbw get "$1" 2>/dev/null; }
+            val="$(rbw_get infra-tohu-state-passphrase)"           && export TF_VAR_state_encryption_passphrase="$val"
+            val="$(rbw_get terraform-tailscale-auth-key)"          && export TF_VAR_tailscale_authkey="$val"
+            val="$(rbw_get terraform-cloudflare-api-token)"        && export TF_VAR_cloudflare_api_token="$val"
+            val="$(rbw_get proxmox-tohu-token)"                    && export PROXMOX_VE_API_TOKEN="$val"
+            unset -f rbw_get; unset val
           '';
         };
       }
