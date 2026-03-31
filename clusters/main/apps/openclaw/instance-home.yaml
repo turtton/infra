@@ -139,6 +139,13 @@ spec:
       allowedIngressNamespaces:
         - tailscale
 
+  autoUpdate:
+    enabled: true
+    checkInterval: "24h"
+    backupBeforeUpdate: false
+    rollbackOnFailure: true
+    healthCheckTimeout: "10m"
+
   selfConfigure:
     enabled: true
     allowedActions:
