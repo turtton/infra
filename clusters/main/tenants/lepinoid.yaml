@@ -26,6 +26,11 @@ spec:
   postBuild:
     substitute:
       tenant_name: lepinoid
+      quota_requests_cpu: "1"
+      quota_requests_memory: 2Gi
+      quota_limits_cpu: "2"
+      quota_limits_memory: 4Gi
+      quota_pvc: "5"
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

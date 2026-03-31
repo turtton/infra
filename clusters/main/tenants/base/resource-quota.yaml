@@ -6,8 +6,8 @@ metadata:
   namespace: ${tenant_name}
 spec:
   hard:
-    requests.cpu: "1"
-    requests.memory: 2Gi
-    limits.cpu: "2"
-    limits.memory: 4Gi
-    persistentvolumeclaims: "5"
+    requests.cpu: "${quota_requests_cpu}"
+    requests.memory: ${quota_requests_memory}
+    limits.cpu: "${quota_limits_cpu}"
+    limits.memory: ${quota_limits_memory}
+    persistentvolumeclaims: "${quota_pvc}"
