@@ -1,0 +1,13 @@
+---
+# openclaw CRをadmin ClusterRoleに集約
+# テナントのdeployer SA (admin) がOpenClawInstance CRを管理可能にする
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openclaw-admin
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["openclaw.rocks"]
+    resources: ["openclawinstances"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
