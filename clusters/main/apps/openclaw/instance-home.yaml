@@ -55,6 +55,9 @@ spec:
         list:
           - id: main
             default: true
+            subagents:
+              allowAgents:
+                - config-ops
           - id: config-ops
             agentDir: /home/openclaw/.openclaw/agents/config-ops/agent
             workspace: /home/openclaw/.openclaw/workspace/agents/config-ops

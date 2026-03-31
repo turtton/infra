@@ -61,6 +61,10 @@ spec:
         list:
           - id: main
             default: true
+            subagents:
+              allowAgents:
+                - config-ops
+                - github-ops
           - id: github-ops
             name: GitHub Ops
             agentDir: /home/openclaw/.openclaw/agents/github-ops/agent
