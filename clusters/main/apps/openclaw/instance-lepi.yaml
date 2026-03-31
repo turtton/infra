@@ -53,10 +53,6 @@ spec:
           maxConcurrent: 4
           subagents:
             maxConcurrent: 8
-          sandbox:
-            mode: non-main
-            workspaceAccess: none
-            scope: session
         # non-main agentはagentDirとworkspaceを絶対パスで指定すること
         list:
           - id: main
@@ -69,15 +65,9 @@ spec:
             name: GitHub Ops
             agentDir: /home/openclaw/.openclaw/agents/github-ops/agent
             workspace: /home/openclaw/.openclaw/workspace/agents/github-ops
-            sandbox:
-              workspaceAccess: rw
-              scope: agent
           - id: config-ops
             agentDir: /home/openclaw/.openclaw/agents/config-ops/agent
             workspace: /home/openclaw/.openclaw/workspace/agents/config-ops
-            sandbox:
-              workspaceAccess: rw
-              scope: agent
       tools:
         profile: full
         web:

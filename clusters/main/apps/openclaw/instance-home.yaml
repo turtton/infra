@@ -53,11 +53,6 @@ spec:
           maxConcurrent: 4
           subagents:
             maxConcurrent: 8
-          sandbox:
-            mode: non-main
-            workspaceAccess: none
-            scope: session
-        # non-main agentはagentDirとworkspaceを絶対パスで指定すること
         list:
           - id: main
             default: true
@@ -67,9 +62,6 @@ spec:
           - id: config-ops
             agentDir: /home/openclaw/.openclaw/agents/config-ops/agent
             workspace: /home/openclaw/.openclaw/workspace/agents/config-ops
-            sandbox:
-              workspaceAccess: rw
-              scope: agent
       tools:
         profile: full
         web:
