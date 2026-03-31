@@ -119,7 +119,6 @@ spec:
         discord:
           enabled: true
           groupPolicy: allowlist
-          streaming: "partial"
           dmPolicy: allowlist
           allowFrom:
             - "275915497353117697"
@@ -148,7 +147,8 @@ spec:
   initContainers:
     - name: init-exec-approvals
       image: busybox:1.37.0
-      command: ["cp", "/config/exec-approvals.json", "/data/exec-approvals.json"]
+      command:
+        ["cp", "/config/exec-approvals.json", "/data/exec-approvals.json"]
       volumeMounts:
         - name: exec-approvals-config
           mountPath: /config
