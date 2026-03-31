@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exec-approvals-lepi
+  namespace: openclaw
+data:
+  exec-approvals.json: |
+    {
+      "version": 1,
+      "defaults": {},
+      "agents": {
+        "config-ops": {
+          "allowlist": [
+            { "pattern": "/usr/bin/git" },
+            { "pattern": "/usr/bin/gh" }
+          ]
+        },
+        "github-ops": {
+          "allowlist": [
+            { "pattern": "/usr/bin/git" },
+            { "pattern": "/usr/bin/gh" },
+            { "pattern": "/usr/bin/bash" },
+            { "pattern": "/usr/bin/env" }
+          ]
+        }
+      }
+    }

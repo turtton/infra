@@ -62,6 +62,15 @@ spec:
           - id: config-ops
             agentDir: /home/openclaw/.openclaw/agents/config-ops/agent
             workspace: /home/openclaw/.openclaw/workspace/agents/config-ops
+            tools:
+              allow:
+                - "group:fs"
+                - exec
+                - web_search
+                - web_fetch
+              exec:
+                security: allowlist
+                ask: "off"
       tools:
         profile: full
         web:
@@ -116,10 +125,24 @@ spec:
           openrouter:
             enabled: true
 
+  initContainers:
+    - name: init-exec-approvals
+      image: busybox:1.37.0
+      command: ["cp", "/config/exec-approvals.json", "/data/exec-approvals.json"]
+      volumeMounts:
+        - name: exec-approvals-config
+          mountPath: /config
+          readOnly: true
+        - name: data
+          mountPath: /data
+
   extraVolumes:
     - name: config-ops-workspace
       configMap:
         name: config-ops-workspace
+    - name: exec-approvals-config
+      configMap:
+        name: exec-approvals-home
 
   extraVolumeMounts:
     - name: config-ops-workspace

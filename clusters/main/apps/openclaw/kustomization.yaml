@@ -7,6 +7,8 @@ resources:
   - lepi-secrets.sops.yaml
   - config-ops-workspace.yaml
   - github-ops-workspace.yaml
+  - exec-approvals-home.yaml
+  - exec-approvals-lepi.yaml
   - instance-home.yaml
   - instance-lepi.yaml
   - ingress-home.yaml
