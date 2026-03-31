@@ -32,27 +32,10 @@ spec:
             models:
               - id: voyage-4
                 name: voyage-4
-          plamo:
-            baseUrl: "https://api.platform.preferredai.jp/v1"
-            apiKey: "${PLAMO_API_KEY}"
-            api: openai-completions
-            models:
-              - id: plamo-2.2-prime
-                name: PLaMo 2.2 Prime
-                reasoning: false
-                input:
-                  - text
-                cost:
-                  input: 0
-                  output: 0
-                  cacheRead: 0
-                  cacheWrite: 0
-                contextWindow: 32768
-                maxTokens: 4096
       agents:
         defaults:
           model:
-            primary: plamo/plamo-2.2-prime
+            primary: github-copilot/claude-sonnet-4.6
           memorySearch:
             provider: voyage
             remote:
