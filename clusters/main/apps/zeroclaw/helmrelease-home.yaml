@@ -1,0 +1,108 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: zeroclaw-home
+  namespace: zeroclaw
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: zeroclaw
+      version: "0.1.18"
+      sourceRef:
+        kind: HelmRepository
+        name: zeroclaw
+        namespace: flux-system
+  values:
+    config:
+      mode: daemon
+      provider: openrouter
+      model: "stepfun/step-3.5-flash"
+      allowPublicBind: false
+      requirePairing: false
+      memory:
+        backend: sqlite
+        autoSave: true
+        embeddingProvider: "custom:https://api.voyageai.com/v1"
+        embeddingModel: "voyage-4"
+      agent:
+        thinking: high
+      autonomy:
+        level: full
+        workspaceOnly: false
+        allowedCommands: [git, gh]
+        shellEnvPassthrough: [GITHUB_TOKEN]
+      identity:
+        format: openclaw
+      channels:
+        discord:
+          enabled: true
+          guildId: "280320003159490561"
+          allowedUsers: ["275915497353117697"]
+          listenToBots: false
+      extraConfig: |
+        [auth]
+        provider = "github-copilot"
+        mode = "token"
+
+        [[memory.embedding_routes]]
+        hint = "voyage"
+        provider = "custom:https://api.voyageai.com/v1"
+        model = "voyage-4"
+        api_key_env = "VOYAGE_API_KEY"
+
+        [agents.config-ops]
+        provider = "openrouter"
+        model = "stepfun/step-3.5-flash"
+        agentic = true
+        allowed_tools = ["file_read", "file_write", "shell", "web_search", "web_fetch"]
+        skills_directory = "skills/config-ops"
+        memory_namespace = "config-ops"
+        system_prompt = "You are config-ops, a GitOps configuration management agent. Follow the instructions in your SKILL.md for workflow details."
+
+        [gateway.auth]
+        mode = "token"
+        allow_tailscale = true
+
+        [plugins.openrouter]
+        enabled = true
+
+        [messages]
+        ack_reaction_scope = "group-mentions"
+
+        [commands]
+        native = "auto"
+        native_skills = "auto"
+        restart = true
+        owner_display = "raw"
+
+        [skills.install]
+        node_manager = "bun"
+    skillFiles:
+      - name: config-ops
+        configMapName: zeroclaw-config-ops-skill
+        key: SKILL.md
+    secret:
+      create: false
+      existingSecret: "zeroclaw-home-secrets"
+      existingSecretKey: "OPENROUTER_API_KEY"
+    channelSecrets:
+      create: false
+      existingSecret: "zeroclaw-home-channel-secrets"
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: longhorn
+    extraEnvFrom:
+      - secretRef:
+          name: zeroclaw-shared-secrets
+      - secretRef:
+          name: zeroclaw-home-secrets
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

@@ -2,9 +2,8 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: openclaw-operator
+  name: zeroclaw
   namespace: flux-system
 spec:
-  type: oci
   interval: 1h0m0s
-  url: oci://ghcr.io/openclaw-rocks/charts
+  url: https://turtton.github.io/zeroclaw-helm

@@ -1,0 +1,94 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zeroclaw-config-ops-skill
+  namespace: zeroclaw
+data:
+  SKILL.md: |
+    # config-ops Agent
+
+    あなたはZeroClawインスタンスの設定管理エージェントです。
+    main agentからのみ呼び出されます。
+
+    ## 役割
+
+    ZeroClawの設定変更を安全にテストし、GitOpsリポジトリにPRを作成して永続化する。
+
+    ## ワークフロー
+
+    ### 1. 設定変更の実験（Pod内テスト）
+
+    ZeroClawのconfig.tomlを直接編集してPod内で動作確認する。
+    変更はPod再起動でHelmRelease定義に戻る。
+
+    ### 2. 実験が成功したらPRを作成
+
+    ```bash
+    # Git認証セットアップ
+    git config --global user.name "github-actions[bot]"
+    git config --global user.email "github-actions[bot]@users.noreply.github.com"
+    git config --global credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'
+
+    # リポジトリをクローン
+    git clone https://github.com/turtton/infra.git /tmp/infra-pr
+    cd /tmp/infra-pr
+
+    # ブランチ作成
+    git checkout -b zeroclaw/config-update-$(date +%Y%m%d-%H%M%S)
+
+    # 対象ファイルを編集
+    # - home インスタンス: clusters/main/apps/zeroclaw/helmrelease-home.yaml
+    # - lepi インスタンス: clusters/main/apps/zeroclaw/helmrelease-lepi.yaml
+    # HelmRelease values内のconfig設定またはextraConfig(TOML)を変更する
+
+    # コミット＆プッシュ
+    git add .
+    git commit -m "zeroclaw: update config - <変更内容の要約>"
+    git push origin HEAD
+
+    # PR作成
+    gh pr create --title "zeroclaw: <変更内容>" --body "## 変更内容
+    - <具体的な変更点>
+
+    ## テスト結果
+    - Pod内でconfig.toml編集によりテスト済み
+    - <動作確認結果>"
+    ```
+
+    ## Git Identity
+
+    git操作時は以下のidentityを使用:
+    - `user.name`: `github-actions[bot]`
+    - `user.email`: `github-actions[bot]@users.noreply.github.com`
+
+    ## 対象ファイル構造
+
+    ```
+    clusters/main/apps/zeroclaw/
+    ├── helmrelease-home.yaml     # home インスタンス HelmRelease
+    ├── helmrelease-lepi.yaml     # lepi インスタンス HelmRelease
+    ├── shared-secrets.sops.yaml  # 共有シークレット（SOPS暗号化）
+    ├── home-secrets.sops.yaml
+    ├── lepi-secrets.sops.yaml
+    ├── home-channel-secrets.sops.yaml
+    └── lepi-channel-secrets.sops.yaml
+    ```
+
+    ## 設定の編集ルール
+
+    - HelmRelease `spec.values.config.*` フィールドはYAMLで直接編集
+    - `spec.values.config.extraConfig` フィールド内はTOML文字列
+    - TOMLの構文を壊さないこと
+    - シークレット値（APIキー、トークン）はHelmRelease内に含めない（Secret + extraEnvFromで管理）
+
+    ## 注意事項
+
+    - **Flux管理**: GitOpsの定義がPod再起動時に適用される。Pod内の変更は一時的
+    - **SOPS暗号化ファイル**: `*.sops.yaml` は直接編集不可。シークレット変更が必要な場合はオーナーに報告
+    - **CIチェック**: PRではdry-runが自動実行される
+    - このエージェントは設定変更のみ担当。アプリケーションロジックの変更は行わない
+
+    ## 環境変数
+
+    - `GITHUB_TOKEN`: PR作成に使用（per-instance Secretから注入済み）

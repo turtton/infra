@@ -39,9 +39,10 @@ creation_rules:
 YukkuriLaboratory/infra/
 ├── .sops.yaml
 ├── kustomization.yaml          # 全リソースを参照
-├── openclaw/
-│   ├── secrets.sops.yaml       # OpenClaw用Secret（API鍵等）
-│   ├── instance.yaml           # OpenClawInstance CR
+├── zeroclaw/
+│   ├── secrets.sops.yaml       # ZeroClaw用Secret（API鍵等）
+│   ├── channel-secrets.sops.yaml # Discordボットトークン
+│   ├── helmrelease.yaml        # ZeroClaw HelmRelease
 │   └── ingress.yaml            # Tailscale Ingress（オプション）
 ├── plane/
 │   ├── credentials.sops.yaml   # Plane用Secret
@@ -68,10 +69,11 @@ YukkuriLaboratory/infra/
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  # OpenClaw
-  - openclaw/secrets.sops.yaml
-  - openclaw/instance.yaml
-  # - openclaw/ingress.yaml        # Tailscale Ingress（オプション・管理者と要調整）
+  # ZeroClaw
+  - zeroclaw/secrets.sops.yaml
+  - zeroclaw/channel-secrets.sops.yaml
+  - zeroclaw/helmrelease.yaml
+  # - zeroclaw/ingress.yaml        # Tailscale Ingress（オプション・管理者と要調整）
   # Plane
   - plane/credentials.sops.yaml
   - plane/helm-repository.yaml
@@ -97,13 +99,15 @@ resources:
 - **全コンテナに `resources.requests` / `resources.limits` を設定すること** — ResourceQuotaにより未設定のPodは作成が拒否される。特に `limits.cpu` は ResourceQuota の制限対象であるため必ず設定すること
 - **`nodeSelector` は省略すること** — Pod のリソース消費が ResourceQuota で制限される
 
-## 4. OpenClaw
+## 4. ZeroClaw
 
-**注意**: 本プロジェクトで使用するオペレーター名は OpenClaw である。以前 zeroclaw と呼ばれていたものと同一であるが、設定ファイルやリソース名は OpenClaw に統一すること。
+[ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) は軽量なAIエージェント基盤。Rust製のシングルバイナリ（~8.8MB）で動作し、Discord/Telegram等のチャンネル連携やメモリ（SQLite）、スキルシステムを備える。
 
-### OpenClawInstance CR
+Helm チャートは [the-saas-shop/zeroclaw-helm](https://github.com/the-saas-shop/zeroclaw-helm) を使用する。クラスタ側で HelmRepository `zeroclaw`（namespace: `flux-system`）が登録済み。
 
-yukulab テナントの deployer SA には `openclaw.rocks` API グループへの CRUD 権限が付与されている（aggregate-to-admin ClusterRole経由）。テナントリポジトリから直接 OpenClawInstance CR を作成できる。
+### Secrets
+
+API鍵とDiscordボットトークンを分離して管理する。
 
 **secrets.sops.yaml** (暗号化前):
 
@@ -111,143 +115,161 @@ yukulab テナントの deployer SA には `openclaw.rocks` API グループへ�
 apiVersion: v1
 kind: Secret
 metadata:
-  name: openclaw-yukulab-secrets
+  name: zeroclaw-yukulab-secrets
 type: Opaque
 stringData:
-  # 共有シークレット（クラスタ側のopenclaw-shared-secretsに相当）
-  # テナントnamespaceでは共有Secretにアクセスできないため、自前で用意する
   COPILOT_GITHUB_TOKEN: "<GitHub Copilotトークン>"  # github-copilotプロバイダ用（必須）
-  VOYAGE_API_KEY: "<Voyage APIキー>"                  # memorySearch用
+  VOYAGE_API_KEY: "<Voyage APIキー>"                  # embedding用
   BRAVE_API_KEY: "<Brave Search APIキー>"              # Web検索用
-  # インスタンス固有
-  DISCORD_BOT_TOKEN: "<Discordボットトークン>"
-  GITHUB_TOKEN: "<GitHubトークン>"
+  GITHUB_TOKEN: "<GitHubトークン>"                    # GitHub API操作用
 ```
 
-暗号化: `sops --encrypt --in-place openclaw/secrets.sops.yaml`
+暗号化: `sops --encrypt --in-place zeroclaw/secrets.sops.yaml`
 
-**instance.yaml** — 以下はlepiインスタンスを参考にした設定例。必要に応じてカスタマイズすること:
+**channel-secrets.sops.yaml** (暗号化前) — chart の `channelSecrets` でDiscordボットトークンを注入するために分離:
 
 ```yaml
-apiVersion: openclaw.rocks/v1alpha1
-kind: OpenClawInstance
+apiVersion: v1
+kind: Secret
 metadata:
-  name: yukulab
+  name: zeroclaw-yukulab-channel-secrets
+type: Opaque
+stringData:
+  DISCORD_BOT_TOKEN: "<Discordボットトークン>"
+```
+
+暗号化: `sops --encrypt --in-place zeroclaw/channel-secrets.sops.yaml`
+
+### HelmRelease
+
+以下はlepiインスタンスを参考にした設定例。必要に応じてカスタマイズすること。
+
+**helmrelease.yaml**:
+
+```yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: zeroclaw-yukulab
 spec:
-  envFrom:
-    - secretRef:
-        name: openclaw-yukulab-secrets
+  interval: 30m
+  chart:
+    spec:
+      chart: zeroclaw
+      version: "0.1.17"
+      sourceRef:
+        kind: HelmRepository
+        name: zeroclaw
+        namespace: flux-system
+  values:
+    config:
+      mode: daemon
+      provider: "github-copilot"
+      model: "claude-sonnet-4.6"
+      allowPublicBind: false
+      requirePairing: false
+      memory:
+        backend: sqlite
+        autoSave: true
+        embeddingProvider: "custom:https://api.voyageai.com/v1"
+      autonomy:
+        level: full
+        workspaceOnly: false
+        allowedCommands: [git, gh]
+      identity:
+        format: openclaw
+      gateway:
+        trustForwardedHeaders: true
+      channels:
+        discord:
+          enabled: true
+          guildId: "<DiscordサーバーID>"
+          allowedUsers: ["<DiscordユーザーID>"]
+          listenToBots: false
+      extraConfig: |
+        [auth]
+        provider = "github-copilot"
+        mode = "token"
 
-  env:
-    - name: GITHUB_REPO_URL
-      value: "https://github.com/YukkuriLaboratory/<リポジトリ>.git"
-    - name: GITHUB_BASE_BRANCH
-      value: "main"
+        [memory]
+        embedding_model = "voyage-4"
 
-  storage:
+        [[memory.embedding_routes]]
+        hint = "voyage"
+        provider = "custom:https://api.voyageai.com/v1"
+        model = "voyage-4"
+        api_key_env = "VOYAGE_API_KEY"
+
+        [agent]
+        thinking = "high"
+
+        [autonomy]
+        shell_env_passthrough = ["GITHUB_TOKEN"]
+
+        [gateway.auth]
+        mode = "token"
+        allow_tailscale = true
+
+        [messages]
+        ack_reaction_scope = "group-mentions"
+
+        [commands]
+        native = "auto"
+        native_skills = "auto"
+        restart = true
+        owner_display = "raw"
+
+        [skills.install]
+        node_manager = "bun"
+    secret:
+      create: false
+      existingSecret: "zeroclaw-yukulab-secrets"
+      existingSecretKey: "COPILOT_GITHUB_TOKEN"
+    channelSecrets:
+      create: false
+      existingSecret: "zeroclaw-yukulab-channel-secrets"
     persistence:
       enabled: true
       size: 5Gi
       storageClass: longhorn
-
-  config:
-    mergeMode: overwrite
-    raw:
-      auth:
-        profiles:
-          github-copilot:github:
-            provider: github-copilot
-            mode: token
-      models:
-        providers:
-          voyage:
-            baseUrl: "https://api.voyageai.com/v1"
-            models:
-              - id: voyage-4
-                name: voyage-4
-      agents:
-        defaults:
-          model:
-            primary: github-copilot/claude-sonnet-4.6
-          memorySearch:
-            provider: voyage
-            remote:
-              batch:
-                enabled: false
-            model: voyage-4
-          compaction:
-            mode: safeguard
-          maxConcurrent: 4
-          subagents:
-            maxConcurrent: 8
-        list:
-          - id: main
-            default: true
-      tools:
-        profile: full
-        web:
-          search:
-            enabled: true
-          fetch:
-            enabled: true
-        exec:
-          security: full
-          ask: "off"
-      approvals:
-        exec:
-          enabled: false
-      channels:
-        discord:
-          enabled: true
-          groupPolicy: allowlist
-          dmPolicy: allowlist
-          allowFrom:
-            - "<DiscordユーザーID>"
-          guilds:
-            "<DiscordサーバーID>":
-              channels:
-                "<DiscordチャンネルID>":
-                  allow: true
-          execApprovals:
-            enabled: false
-      gateway:
-        controlUi:
-          allowedOrigins:
-            - "https://openclaw-yukulab.taile2777.ts.net"
-        auth:
-          mode: token
-          allowTailscale: true
-      plugins:
-        entries:
-          discord:
-            enabled: true
-
-  security:
-    networkPolicy:
-      allowedIngressNamespaces:
-        - tailscale
+    extraEnvFrom:
+      - secretRef:
+          name: zeroclaw-yukulab-secrets
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
 ```
 
-**ingress.yaml** (Tailscale経由でControl UIにアクセスする場合):
+> **注意**: `config.channels.discord.enabled: true` を設定しないと `channelSecrets` によるDiscordボットトークンの注入が動作しない。Discord設定は `channels.discord` の値とextraConfigの `[channels_config.discord]` を重複させないこと（TOML重複テーブルエラーになる）。
+
+> **注意**: ZeroClaw のシェルツールは `env_clear()` で環境変数をリセットしてから実行される。`git` や `gh` コマンドで `GITHUB_TOKEN` を参照する場合は `[autonomy] shell_env_passthrough` で明示的にパススルーする必要がある。
+
+> **注意**: ZeroClaw はチャンネル→エージェントのルーティング機能を持たない。Discordメッセージはすべてメイン（デフォルト）エージェントが受信し、必要に応じてサブエージェントに委譲する形になる。
+
+### Ingress (Tailscale経由でWeb Dashboardにアクセスする場合)
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: openclaw-yukulab
+  name: zeroclaw-yukulab
   annotations:
     tailscale.com/funnel: "false"
-    tailscale.com/tags: "tag:openclaw"
+    tailscale.com/tags: "tag:zeroclaw"
 spec:
   ingressClassName: tailscale
   defaultBackend:
     service:
-      name: yukulab
+      name: zeroclaw-yukulab
       port:
-        number: 18789
+        number: 3000
   tls:
     - hosts:
-        - openclaw-yukulab
+        - zeroclaw-yukulab
 ```
 
 注意: Tailscale Ingress の作成にはクラスタスコープの権限が必要な場合がある。テナント deployer SA では作成できない可能性があるため、管理者側での対応が必要になることがある。
@@ -600,7 +622,7 @@ HelmRelease で設定したリソース値に基づく見積もり:
 
 > **注意**: 上記には PostgreSQL・Redis のリソースは含まれていない。外部サービスとして別途デプロイする場合はそのリソースも ResourceQuota の見積もりに含めること。migrator は Helm install/upgrade 時にのみ実行される一時的な Job だが、ResourceQuota は Job の Pod にも適用されるため見積もりに含めている。
 
-> **注意**: OpenClaw（またはそれに代わるAIエージェント）のリソースは別途加算する必要がある。
+> **注意**: ZeroClaw のリソースは別途加算する必要がある。
 
 ## 6. Cloudflare Tunnel
 
@@ -728,7 +750,7 @@ spec:
 | limits.memory | 8Gi |
 | PVC数 | 10 |
 
-- **クラスタスコープのリソースは作成不可** — ClusterRole, CustomResourceDefinition, PersistentVolume 等（OpenClawInstance CRは例外として許可済み）
+- **クラスタスコープのリソースは作成不可** — ClusterRole, CustomResourceDefinition, PersistentVolume 等
 - **全Podに `resources.requests` / `resources.limits` を設定すること** — 未設定のPodはResourceQuotaにより作成が拒否される。すべてのコンテナに `limits.cpu` を明示的に設定すること
 - **`metadata.namespace` は省略推奨** — Flux の `targetNamespace: yukulab` で自動設定される
 
@@ -782,8 +804,8 @@ flux get helmreleases -n yukulab
 # migrator Job の確認（初回デプロイ・アップグレード時）
 kubectl get jobs -n yukulab
 
-# OpenClawInstance の確認
-kubectl get openclawinstances -n yukulab
+# ZeroClaw HelmRelease の確認
+flux get helmreleases -n yukulab zeroclaw-yukulab
 ```
 
 ## 11. 注意事項
@@ -792,5 +814,5 @@ kubectl get openclawinstances -n yukulab
 - `yukulab-workloads` は初期状態で `suspend: true`。テナントリポジトリとSOPS鍵が準備できてから解除する
 - テナントリポジトリがprivateの場合、GitRepositoryのfetchが認証エラーで失敗する
 - Plane の Helm チャートバージョンは固定し、アップグレード前に `helm diff` 等で差分を確認すること
-- OpenClawInstance の `config.raw` は環境に合わせてカスタマイズが必要（Discord設定、GitHub設定等）
+- ZeroClaw HelmRelease の `config` / `extraConfig` は環境に合わせてカスタマイズが必要（Discord設定、GitHub設定等）
 - yukulab namespace は他テナントの namespace とは NetworkPolicy で隔離されるが、namespace 内の Pod 同士は相互通信が可能（intra-tenant マイクロセグメンテーションなし）
