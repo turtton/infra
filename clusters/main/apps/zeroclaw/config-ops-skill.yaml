@@ -47,13 +47,17 @@ data:
     git commit -m "zeroclaw: update config - <変更内容の要約>"
     git push origin HEAD
 
-    # PR作成
-    gh pr create --title "zeroclaw: <変更内容>" --body "## 変更内容
-    - <具体的な変更点>
-
-    ## テスト結果
-    - Pod内でconfig.toml編集によりテスト済み
-    - <動作確認結果>"
+    # PR作成（GitHub REST API経由 — ghコマンドは利用不可）
+    curl -s -X POST \
+      -H "Authorization: token $GITHUB_TOKEN" \
+      -H "Accept: application/vnd.github.v3+json" \
+      https://api.github.com/repos/turtton/infra/pulls \
+      -d "{
+        \"title\": \"zeroclaw: <変更内容>\",
+        \"head\": \"<ブランチ名>\",
+        \"base\": \"main\",
+        \"body\": \"## 変更内容\n- <具体的な変更点>\n\n## テスト結果\n- Pod内でconfig.toml編集によりテスト済み\n- <動作確認結果>\"
+      }"
     ```
 
     ## Git Identity

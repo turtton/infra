@@ -16,7 +16,7 @@ spec:
         namespace: flux-system
   values:
     image:
-      tag: "v0.6.8"
+      tag: "v0.6.8-debian"
     config:
       mode: daemon
       provider: openrouter
@@ -34,7 +34,7 @@ spec:
       autonomy:
         level: full
         workspaceOnly: false
-        allowedCommands: [git, gh]
+        allowedCommands: [git, curl]
         shellEnvPassthrough: [GITHUB_TOKEN]
       identity:
         format: openclaw
@@ -59,7 +59,7 @@ spec:
         provider = "openrouter"
         model = "stepfun/step-3.5-flash"
         agentic = true
-        allowed_tools = ["file_read", "file_write", "shell", "web_search", "web_fetch"]
+        allowed_tools = ["file_read", "file_write", "shell", "web_search", "web_fetch", "git_operations"]
         skills_directory = "skills/config-ops"
         memory_namespace = "config-ops"
         system_prompt = "You are config-ops, a GitOps configuration management agent. Follow the instructions in your SKILL.md for workflow details."

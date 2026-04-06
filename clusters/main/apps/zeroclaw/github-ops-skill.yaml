@@ -123,3 +123,18 @@ data:
     - 質問・議論 → ドキュメント編集 → ユーザーが内容に満足したらPR作成
     - 「内容を反映して」「まとめて」「保存して」などの表現でも**必ずPRを作成する**
     - **mainに直接pushしない**。常にブランチ → PR の流れを守る
+
+    ### PR作成方法（curl + GitHub REST API）
+    `gh` CLIは利用不可。PR作成は以下のcurlを使用:
+    ```bash
+    curl -s -X POST \
+      -H "Authorization: token $GITHUB_TOKEN" \
+      -H "Accept: application/vnd.github.v3+json" \
+      https://api.github.com/repos/OWNER/REPO/pulls \
+      -d "{
+        \"title\": \"<タイトル>\",
+        \"head\": \"<ブランチ名>\",
+        \"base\": \"main\",
+        \"body\": \"<本文>\"
+      }"
+    ```
