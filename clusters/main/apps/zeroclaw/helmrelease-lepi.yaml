@@ -32,6 +32,9 @@ spec:
         thinking:
           defaultLevel: high
         maxToolIterations: 100
+        loopDetectionNoProgressThreshold: 10
+        loopDetectionPingPongCycles: 5
+        loopDetectionFailureStreak: 10
       autonomy:
         level: full
         workspaceOnly: false
