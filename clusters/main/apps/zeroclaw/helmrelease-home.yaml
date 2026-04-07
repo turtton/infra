@@ -35,6 +35,7 @@ spec:
       autonomy:
         level: full
         workspaceOnly: false
+        maxActionsPerHour: 1000
         allowedCommands: [git, curl]
         shellEnvPassthrough: [GITHUB_TOKEN]
       identity:
