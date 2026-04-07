@@ -31,6 +31,7 @@ spec:
       agent:
         thinking:
           defaultLevel: high
+        maxToolIterations: 100
       autonomy:
         level: full
         workspaceOnly: false
