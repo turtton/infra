@@ -20,7 +20,7 @@ spec:
     config:
       mode: daemon
       provider: openrouter
-      model: "stepfun/step-3.5-flash"
+      model: "moonshotai/kimi-k2.5"
       allowPublicBind: false
       requirePairing: false
       memory:
@@ -62,7 +62,7 @@ spec:
 
         [agents.config-ops]
         provider = "openrouter"
-        model = "stepfun/step-3.5-flash"
+        model = "moonshotai/kimi-k2.5"
         agentic = true
         max_iterations = 100
         agentic_timeout_secs = 600
