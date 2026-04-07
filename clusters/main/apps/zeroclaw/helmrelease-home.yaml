@@ -60,6 +60,7 @@ spec:
         provider = "openrouter"
         model = "stepfun/step-3.5-flash"
         agentic = true
+        max_iterations = 100
         allowed_tools = ["file_read", "file_write", "shell", "web_search", "web_fetch", "git_operations"]
         skills_directory = "skills/config-ops"
         memory_namespace = "config-ops"

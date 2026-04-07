@@ -60,6 +60,7 @@ spec:
         provider = "github-copilot"
         model = "claude-sonnet-4.6"
         agentic = true
+        max_iterations = 100
         allowed_tools = ["file_read", "file_write", "shell", "web_search", "web_fetch", "git_operations"]
         skills_directory = "skills/config-ops"
         memory_namespace = "config-ops"
@@ -69,6 +70,7 @@ spec:
         provider = "github-copilot"
         model = "claude-sonnet-4.6"
         agentic = true
+        max_iterations = 100
         allowed_tools = ["file_read", "file_write", "shell", "web_search", "web_fetch", "git_operations"]
         skills_directory = "skills/github-ops"
         memory_namespace = "github-ops"
