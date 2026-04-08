@@ -99,15 +99,15 @@ resources:
 - **全コンテナに `resources.requests` / `resources.limits` を設定すること** — ResourceQuotaにより未設定のPodは作成が拒否される。特に `limits.cpu` は ResourceQuota の制限対象であるため必ず設定すること
 - **`nodeSelector` は省略すること** — Pod のリソース消費が ResourceQuota で制限される
 
-## 4. ZeroClaw
+## 4. PicoClaw
 
-[ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) は軽量なAIエージェント基盤。Rust製のシングルバイナリ（~8.8MB）で動作し、Discord/Telegram等のチャンネル連携やメモリ（SQLite）、スキルシステムを備える。
+[PicoClaw](https://github.com/sipeed/picoclaw) はGo製の軽量AIエージェント基盤。Discord/Telegram等のチャンネル連携、メモリ（JSONL）、スキルシステム、エージェントバインディング（チャンネル→エージェントルーティング）を備える。
 
-Helm チャートは [the-saas-shop/zeroclaw-helm](https://github.com/the-saas-shop/zeroclaw-helm) を使用する。クラスタ側で HelmRepository `zeroclaw`（namespace: `flux-system`）が登録済み。
+Helm チャートは [turtton/picoclaw-helm](https://github.com/turtton/picoclaw-helm) を使用する。クラスタ側で HelmRepository `picoclaw`（namespace: `flux-system`）が登録済み。
 
 ### Secrets
 
-API鍵とDiscordボットトークンを分離して管理する。
+API鍵・トークンはSecret + 環境変数で管理する。モデルのAPIキーは `.security.yml` で管理する。
 
 **secrets.sops.yaml** (暗号化前):
 
@@ -115,30 +115,41 @@ API鍵とDiscordボットトークンを分離して管理する。
 apiVersion: v1
 kind: Secret
 metadata:
-  name: zeroclaw-yukulab-secrets
+  name: picoclaw-yukulab-secrets
 type: Opaque
 stringData:
-  COPILOT_GITHUB_TOKEN: "<GitHub Copilotトークン>"  # github-copilotプロバイダ用（必須）
-  VOYAGE_API_KEY: "<Voyage APIキー>"                  # embedding用
-  BRAVE_API_KEY: "<Brave Search APIキー>"              # Web検索用
   GITHUB_TOKEN: "<GitHubトークン>"                    # GitHub API操作用
+  DISCORD_BOT_TOKEN: "<Discordボットトークン>"        # Discord接続用
 ```
 
-暗号化: `sops --encrypt --in-place zeroclaw/secrets.sops.yaml`
+暗号化: `sops --encrypt --in-place picoclaw/secrets.sops.yaml`
 
-**channel-secrets.sops.yaml** (暗号化前) — chart の `channelSecrets` でDiscordボットトークンを注入するために分離:
+**security.sops.yaml** (暗号化前) — `.security.yml` としてマウントされ、モデルAPIキーを管理:
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: zeroclaw-yukulab-channel-secrets
+  name: picoclaw-yukulab-security
 type: Opaque
 stringData:
-  DISCORD_BOT_TOKEN: "<Discordボットトークン>"
+  security.yml: |
+    model_list:
+      claude-sonnet-4.6:
+        api_keys:
+          - "<GitHub Copilotトークン>"
+    channels:
+      discord:
+        token: "<Discordボットトークン>"
+    web:
+      brave:
+        api_keys:
+          - "<Brave Search APIキー>"
 ```
 
-暗号化: `sops --encrypt --in-place zeroclaw/channel-secrets.sops.yaml`
+暗号化: `sops --encrypt --in-place picoclaw/security.sops.yaml`
+
+> **注意**: `.security.yml` は config.json にマージされ、config.json の値を上書きする。環境変数 `PICOCLAW_*` はさらに高い優先度を持つ。
 
 ### HelmRelease
 
@@ -150,91 +161,73 @@ stringData:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: zeroclaw-yukulab
+  name: picoclaw-yukulab
 spec:
   interval: 30m
   chart:
     spec:
-      chart: zeroclaw
-      version: "0.1.17"
+      chart: picoclaw
+      version: "0.1.0"
       sourceRef:
         kind: HelmRepository
-        name: zeroclaw
+        name: picoclaw
         namespace: flux-system
   values:
     config:
-      mode: daemon
-      provider: "github-copilot"
-      model: "claude-sonnet-4.6"
-      allowPublicBind: false
-      requirePairing: false
-      memory:
-        backend: sqlite
-        autoSave: true
-        embeddingProvider: "custom:https://api.voyageai.com/v1"
-      autonomy:
-        level: full
-        workspaceOnly: false
-        allowedCommands: [git, gh]
-      identity:
-        format: openclaw
-      gateway:
-        trustForwardedHeaders: true
+      agents:
+        defaults:
+          model: "github-copilot/claude-sonnet-4.6"
+          restrict_to_workspace: false
+          max_tokens: 8192
+          temperature: 0.7
+          max_tool_iterations: 100
+        list:
+          - id: main
+            default: true
+            name: Main Assistant
+      model_list:
+        - model_name: "claude-sonnet-4.6"
+          model: "github-copilot/claude-sonnet-4.6"
+      bindings: []
       channels:
         discord:
           enabled: true
-          guildId: "<DiscordサーバーID>"
-          allowedUsers: ["<DiscordユーザーID>"]
-          listenToBots: false
-      extraConfig: |
-        [auth]
-        provider = "github-copilot"
-        mode = "token"
-
-        [memory]
-        embedding_model = "voyage-4"
-
-        [[memory.embedding_routes]]
-        hint = "voyage"
-        provider = "custom:https://api.voyageai.com/v1"
-        model = "voyage-4"
-        api_key_env = "VOYAGE_API_KEY"
-
-        [agent]
-        thinking = "high"
-
-        [autonomy]
-        shell_env_passthrough = ["GITHUB_TOKEN"]
-
-        [gateway.auth]
-        mode = "token"
-        allow_tailscale = true
-
-        [messages]
-        ack_reaction_scope = "group-mentions"
-
-        [commands]
-        native = "auto"
-        native_skills = "auto"
-        restart = true
-        owner_display = "raw"
-
-        [skills.install]
-        node_manager = "bun"
-    secret:
-      create: false
-      existingSecret: "zeroclaw-yukulab-secrets"
-      existingSecretKey: "COPILOT_GITHUB_TOKEN"
-    channelSecrets:
-      create: false
-      existingSecret: "zeroclaw-yukulab-channel-secrets"
+          allow_from: ["<DiscordユーザーID>"]
+          group_trigger:
+            mention_only: false
+      session:
+        dm_scope: "per-channel-peer"
+        backlog_limit: 20
+      gateway:
+        log_level: "info"
+      tools:
+        web:
+          brave:
+            enabled: true
+            max_results: 5
+        exec:
+          allow_remote: false
+      heartbeat:
+        enabled: false
+        interval: 30
+    securitySecret:
+      existingSecret: "picoclaw-yukulab-security"
+      key: "security.yml"
+    extraEnv:
+      - name: PICOCLAW_CHANNELS_DISCORD_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: picoclaw-yukulab-secrets
+            key: DISCORD_BOT_TOKEN
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: picoclaw-yukulab-secrets
+            key: GITHUB_TOKEN
     persistence:
       enabled: true
       size: 5Gi
       storageClass: longhorn
-    extraEnvFrom:
-      - secretRef:
-          name: zeroclaw-yukulab-secrets
     resources:
       requests:
         cpu: 50m
@@ -244,32 +237,30 @@ spec:
         memory: 256Mi
 ```
 
-> **注意**: `config.channels.discord.enabled: true` を設定しないと `channelSecrets` によるDiscordボットトークンの注入が動作しない。Discord設定は `channels.discord` の値とextraConfigの `[channels_config.discord]` を重複させないこと（TOML重複テーブルエラーになる）。
+> **注意**: Discordボットトークンは `PICOCLAW_CHANNELS_DISCORD_TOKEN` 環境変数で注入する。これは config.json / .security.yml の値を上書きする（env vars が最高優先度）。
 
-> **注意**: ZeroClaw のシェルツールは `env_clear()` で環境変数をリセットしてから実行される。`git` や `gh` コマンドで `GITHUB_TOKEN` を参照する場合は `[autonomy] shell_env_passthrough` で明示的にパススルーする必要がある。
+> **注意**: PicoClaw はエージェントバインディング機能を持つ。`bindings` フィールドでチャンネル・ギルド・ユーザーに基づいてメッセージを特定のエージェントにルーティングできる。
 
-> **注意**: ZeroClaw はチャンネル→エージェントのルーティング機能を持たない。Discordメッセージはすべてメイン（デフォルト）エージェントが受信し、必要に応じてサブエージェントに委譲する形になる。
-
-### Ingress (Tailscale経由でWeb Dashboardにアクセスする場合)
+### Ingress (Tailscale経由でWeb UIにアクセスする場合)
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: zeroclaw-yukulab
+  name: picoclaw-yukulab
   annotations:
     tailscale.com/funnel: "false"
-    tailscale.com/tags: "tag:zeroclaw"
+    tailscale.com/tags: "tag:picoclaw"
 spec:
   ingressClassName: tailscale
   defaultBackend:
     service:
-      name: zeroclaw-yukulab
+      name: picoclaw-yukulab
       port:
-        number: 3000
+        number: 18790
   tls:
     - hosts:
-        - zeroclaw-yukulab
+        - picoclaw-yukulab
 ```
 
 注意: Tailscale Ingress の作成にはクラスタスコープの権限が必要な場合がある。テナント deployer SA では作成できない可能性があるため、管理者側での対応が必要になることがある。

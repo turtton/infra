@@ -1,0 +1,107 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: picoclaw-lepi
+  namespace: picoclaw
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: picoclaw
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: picoclaw
+        namespace: flux-system
+  values:
+    config:
+      agents:
+        defaults:
+          model: "github-copilot/claude-sonnet-4.6"
+          restrict_to_workspace: false
+          max_tokens: 8192
+          temperature: 0.7
+          max_tool_iterations: 100
+        list:
+          - id: main
+            default: true
+            name: Main Assistant
+          - id: config-ops
+            name: Config Ops
+          - id: github-ops
+            name: GitHub Ops
+      model_list:
+        - model_name: "claude-sonnet-4.6"
+          model: "github-copilot/claude-sonnet-4.6"
+      bindings:
+        - agent_id: "github-ops"
+          match:
+            channel: "discord"
+            guild_id: "719207321854541874"
+      channels:
+        discord:
+          enabled: true
+          allow_from: ["275915497353117697"]
+          group_trigger:
+            mention_only: false
+      session:
+        dm_scope: "per-channel-peer"
+        backlog_limit: 20
+      gateway:
+        log_level: "info"
+      tools:
+        web:
+          brave:
+            enabled: true
+            max_results: 5
+        exec:
+          allow_remote: false
+        allow_read_paths: []
+        allow_write_paths: []
+      heartbeat:
+        enabled: false
+        interval: 30
+      extraConfig:
+        agents:
+          config-ops:
+            model: "github-copilot/claude-sonnet-4.6"
+            skills_directory: "skills/config-ops"
+          github-ops:
+            model: "github-copilot/claude-sonnet-4.6"
+            skills_directory: "skills/github-ops"
+    securitySecret:
+      existingSecret: "picoclaw-lepi-security"
+      key: "security.yml"
+    skillFiles:
+      config-ops:
+        configMapName: picoclaw-config-ops-skill
+        items:
+          - key: SKILL.md
+            path: SKILL.md
+      github-ops:
+        configMapName: picoclaw-github-ops-skill
+        items:
+          - key: SKILL.md
+            path: SKILL.md
+    extraEnv:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: picoclaw-lepi-secrets
+            key: GITHUB_TOKEN
+      - name: GITHUB_REPO_URL
+        value: "https://github.com/turtton/doumels.git"
+      - name: GITHUB_BASE_BRANCH
+        value: "main"
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: longhorn
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

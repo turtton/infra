@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: picoclaw-home-security
+    namespace: picoclaw
+stringData:
+    security.yml: ENC[AES256_GCM,data:PPiQT8hOD6/WP1Trp/LZWlq21sKrw+vVlRtP3m+KPqNbRkoGd4NJ7oTzFKY7i44MAzMdSLQ1S17GG39fFnSsvtWizxmlXpSlyyMr0DZEfjAw5CA9X5PsCuuqEKT8bJwGLv5kxI8ktzfv+i1swjbz9T/TJn4SeUvhFPkTkCYjCg3p6NFj15YKcSi5MglDA2LtGcDbaHdCTzWJ869LQrpiOlxnOJwnbYUnZD8CRng9xSOXtsZ4QEWRG7+fst+9mf8m5iWPBra09xMR9T0pvkKkWAZjofKRlfRjdzyWQx6ikVm/BRZFC7Nu6mEmGo34PahzZUkXna6R1ElFii1ClYwc1lN33BuIh15l+u+J0PERoIUS42SoJmR0yHq0dEXAoMk2Zz6yTg/9,iv:NDvxZWg4KIvEL45yAmUp0FP7eqnLMwnUlcDxwKK0M8M=,tag:8d+DBbsEChMzA3GibbdAEA==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBuYzkyTkQ1LzRRek45N0hF
+            U0RJS0tMZUJ6cXdMcVBPVnJ1dUFoUHlKZmtRCm1ydm16NnhRS1dBQUVtYVgvd1My
+            Y3FMSi9BOWFBL2g5MWc1Uzl6SnlTOEkKLS0tIGJDWUFWSi9UcksrcjFBSDU4SmNG
+            MERsckdVdSt4emJiNFVRVnNWVmFQZjAKqoH/5W3oY+FAoP3SQF4RY2QvazNr7XHC
+            qWHy+btdDIG1GWte2bPTGkZc35LRjKEzA4eq9R5DNFs0pO2XtvrfBg==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-04-08T13:52:57Z"
+    mac: ENC[AES256_GCM,data:iuMQJHOjo9IgyUe+YNOSc39gYiQC4k35VsTvmJq8QQlI1D1EA4xgEGFfLsBTKMCkQHj+SwlJC+Ktnplr9YnL/okUOoEGy4iIVeUIkAEVoe0THawRnQIr2Xl3sf+jqFX3IQK5Kchbgk7VM5DFwQrTkJIDAYEvm+0YSCCpYlqV53o=,iv:r4bsilERQc8ZV8sAfLwBczrANT6oUMD2Fa9aYJvGx3I=,tag:GOV8488qNalOc6OVzLxB5A==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0

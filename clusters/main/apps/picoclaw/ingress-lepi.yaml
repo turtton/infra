@@ -2,18 +2,18 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: zeroclaw-lepi
-  namespace: zeroclaw
+  name: picoclaw-lepi
+  namespace: picoclaw
   annotations:
     tailscale.com/funnel: "false"
-    tailscale.com/tags: "tag:zeroclaw"
+    tailscale.com/tags: "tag:picoclaw"
 spec:
   ingressClassName: tailscale
   defaultBackend:
     service:
-      name: zeroclaw-lepi
+      name: picoclaw-lepi
       port:
-        number: 3000
+        number: 18790
   tls:
     - hosts:
-        - zeroclaw-lepi
+        - picoclaw-lepi

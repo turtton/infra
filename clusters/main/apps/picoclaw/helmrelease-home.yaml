@@ -1,0 +1,89 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: picoclaw-home
+  namespace: picoclaw
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: picoclaw
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: picoclaw
+        namespace: flux-system
+  values:
+    config:
+      agents:
+        defaults:
+          model: "openrouter/moonshotai/kimi-k2.5"
+          restrict_to_workspace: false
+          max_tokens: 8192
+          temperature: 0.7
+          max_tool_iterations: 100
+        list:
+          - id: main
+            default: true
+            name: Main Assistant
+          - id: config-ops
+            name: Config Ops
+      model_list:
+        - model_name: "kimi-k2.5"
+          model: "openrouter/moonshotai/kimi-k2.5"
+      bindings: []
+      channels:
+        discord:
+          enabled: true
+          allow_from: ["275915497353117697"]
+          group_trigger:
+            mention_only: false
+      session:
+        dm_scope: "per-channel-peer"
+        backlog_limit: 20
+      gateway:
+        log_level: "info"
+      tools:
+        web:
+          brave:
+            enabled: true
+            max_results: 5
+        exec:
+          allow_remote: false
+        allow_read_paths: []
+        allow_write_paths: []
+      heartbeat:
+        enabled: false
+        interval: 30
+      extraConfig:
+        agents:
+          config-ops:
+            model: "openrouter/moonshotai/kimi-k2.5"
+            skills_directory: "skills/config-ops"
+    securitySecret:
+      existingSecret: "picoclaw-home-security"
+      key: "security.yml"
+    skillFiles:
+      config-ops:
+        configMapName: picoclaw-config-ops-skill
+        items:
+          - key: SKILL.md
+            path: SKILL.md
+    extraEnv:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: picoclaw-home-secrets
+            key: GITHUB_TOKEN
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: longhorn
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
