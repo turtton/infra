@@ -31,6 +31,12 @@ spec:
             name: Config Ops
           - id: github-ops
             name: GitHub Ops
+        config-ops:
+          model: "github-copilot/claude-sonnet-4.6"
+          skills_directory: "skills/config-ops"
+        github-ops:
+          model: "github-copilot/claude-sonnet-4.6"
+          skills_directory: "skills/github-ops"
       model_list:
         - model_name: "claude-sonnet-4.6"
           model: "github-copilot/claude-sonnet-4.6"
@@ -62,14 +68,6 @@ spec:
       heartbeat:
         enabled: false
         interval: 30
-      extraConfig:
-        agents:
-          config-ops:
-            model: "github-copilot/claude-sonnet-4.6"
-            skills_directory: "skills/config-ops"
-          github-ops:
-            model: "github-copilot/claude-sonnet-4.6"
-            skills_directory: "skills/github-ops"
     securitySecret:
       existingSecret: "picoclaw-lepi-security"
       key: "security.yml"

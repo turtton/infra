@@ -29,6 +29,9 @@ spec:
             name: Main Assistant
           - id: config-ops
             name: Config Ops
+        config-ops:
+          model: "openrouter/moonshotai/kimi-k2.5"
+          skills_directory: "skills/config-ops"
       model_list:
         - model_name: "kimi-k2.5"
           model: "openrouter/moonshotai/kimi-k2.5"
@@ -56,11 +59,6 @@ spec:
       heartbeat:
         enabled: false
         interval: 30
-      extraConfig:
-        agents:
-          config-ops:
-            model: "openrouter/moonshotai/kimi-k2.5"
-            skills_directory: "skills/config-ops"
     securitySecret:
       existingSecret: "picoclaw-home-security"
       key: "security.yml"
