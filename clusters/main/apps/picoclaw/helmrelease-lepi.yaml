@@ -18,7 +18,7 @@ spec:
     config:
       agents:
         defaults:
-          model: "github-copilot/claude-sonnet-4.6"
+          model: "claude-sonnet-4.6"
           restrict_to_workspace: false
           max_tokens: 8192
           temperature: 0.7
@@ -32,10 +32,10 @@ spec:
           - id: github-ops
             name: GitHub Ops
         config-ops:
-          model: "github-copilot/claude-sonnet-4.6"
+          model: "claude-sonnet-4.6"
           skills_directory: "skills/config-ops"
         github-ops:
-          model: "github-copilot/claude-sonnet-4.6"
+          model: "claude-sonnet-4.6"
           skills_directory: "skills/github-ops"
       model_list:
         - model_name: "claude-sonnet-4.6"
