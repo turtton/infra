@@ -10,5 +10,6 @@ resources:
   - ingress-home.yaml
   - lepi-secrets.sops.yaml
   - lepi-security.sops.yaml
+  - lepi-copilot-secrets.sops.yaml
   - helmrelease-lepi.yaml
   - ingress-lepi.yaml

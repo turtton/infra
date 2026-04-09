@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: picoclaw
-      version: "0.1.4"
+      version: "0.1.5"
       sourceRef:
         kind: HelmRepository
         name: picoclaw
@@ -96,6 +96,18 @@ spec:
       enabled: true
       size: 5Gi
       storageClass: longhorn
+    copilotCli:
+      enabled: true
+      tokenSecret:
+        name: picoclaw-lepi-copilot-secrets
+        key: COPILOT_GITHUB_TOKEN
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi
     resources:
       requests:
         cpu: 50m
