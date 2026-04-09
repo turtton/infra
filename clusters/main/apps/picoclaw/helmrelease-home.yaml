@@ -18,7 +18,7 @@ spec:
     config:
       agents:
         defaults:
-          model: "kimi-k2.5"
+          model_name: "kimi-k2.5"
           restrict_to_workspace: false
           max_tokens: 8192
           temperature: 0.7
@@ -29,9 +29,6 @@ spec:
             name: Main Assistant
           - id: config-ops
             name: Config Ops
-        config-ops:
-          model: "kimi-k2.5"
-          skills_directory: "skills/config-ops"
       model_list:
         - model_name: "kimi-k2.5"
           model: "openrouter/moonshotai/kimi-k2.5"
@@ -53,7 +50,7 @@ spec:
             enabled: true
             max_results: 5
         exec:
-          allow_remote: false
+          allow_remote: true
         allow_read_paths: []
         allow_write_paths: []
       heartbeat:
