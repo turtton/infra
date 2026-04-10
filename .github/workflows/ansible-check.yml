@@ -56,7 +56,7 @@ jobs:
 
       - name: Comment dry-run result on PR
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           DRY_RUN_OUTPUT: ${{ steps.dry_run.outputs.output }}
           DRY_RUN_EXIT_CODE: ${{ steps.dry_run.outputs.exit_code }}

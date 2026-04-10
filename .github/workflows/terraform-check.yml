@@ -62,7 +62,7 @@ jobs:
 
       - name: Comment plan result on PR
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           PLAN_OUTPUT: ${{ steps.plan.outputs.output }}
           PLAN_EXIT_CODE: ${{ steps.plan.outputs.exit_code }}
