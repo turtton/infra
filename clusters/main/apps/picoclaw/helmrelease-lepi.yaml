@@ -34,7 +34,7 @@ spec:
       model_list:
         - model_name: "claude-sonnet-4.6"
           model: "github-copilot/claude-sonnet-4.6"
-          api_base: "http://localhost:4321"
+          api_base: "localhost:4321"
       bindings:
         - agent_id: "github-ops"
           match:
@@ -93,6 +93,9 @@ spec:
       storageClass: longhorn
     copilotCli:
       enabled: true
+      image:
+        repository: ghcr.io/turtton/picoclaw-copilot
+        tag: latest
       tokenSecret:
         name: picoclaw-lepi-copilot-secrets
         key: COPILOT_GITHUB_TOKEN
