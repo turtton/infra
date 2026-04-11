@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: picoclaw
-      version: "0.1.7"
+      version: "0.1.8"
       sourceRef:
         kind: HelmRepository
         name: picoclaw
@@ -17,6 +17,17 @@ spec:
   values:
     launcher:
       enabled: true
+      port: 18800
+      tokenSecret:
+        existingSecret: "picoclaw-home-secrets"
+        key: "PICOCLAW_LAUNCHER_TOKEN"
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi
     config:
       agents:
         defaults:
