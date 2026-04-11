@@ -4,7 +4,6 @@ metadata:
     name: picoclaw-lepi-security
     namespace: picoclaw
 stringData:
-    PICOCLAW_LAUNCHER_TOKEN: ENC[AES256_GCM,data:nEc03Q2WnjFCl5Fn5lcFSmgFDkV0tV/8R6R7x9iRb9yyvX184I+ws8SFNl1fSmOt+kObcaP9ZHSXw0k7xZRxBA==,iv:5eAMRmJmyaCzKlu/t2FD//iNh6b3DDQHiuVsUsAsN6s=,tag:4gmrbYU18L/j25rH4QCtJQ==,type:str]
     security.yml: ENC[AES256_GCM,data:67xxQMgGfy1pdpLA/Szbxj7qh90MvW6P9y3g+12hlHOC1tcKPsQUbLK4xyeQtgn2vXjTcX7eZSQEI3ZKdj4Bzh5j1Uzzgrd7aq0CA8zgoi29tKFa9fvKqraVMmdHWnvHYgEG1BVtC6w36H9llkRjtb1w1MwW8bZBbNL+RmVYGap+c2o6gDzHugSRU5NU0j9tFLRD0OvOfDFwF4dZUttps/07W/SUibmLUMYpMzFrt5Sb/dRtjYBE3k/3mfzsCm/O+pzt0USYEYp47ViMbVY/wKHkaCwSpfdAsooJY+yBWQKCsruPoCC6lHuuS/ei+89rP2YEwwYskIcXzzyNKTOz7NcJ+XiWfT00YBMYbGg=,iv:XOE/9ijIQQRy8j6clFwJBQpVzfwOmbN3Vvp9maHXLew=,tag:/SdcIlz6SP2vaXrcHZJLSQ==,type:str]
 sops:
     age:
@@ -17,7 +16,7 @@ sops:
             a3NicUQrVjA1Zzh5S3lwRzdJOStnbmMKpDIjz2Ab8TgqU2iv4zqd39qUB6Wv1WS9
             dFTp9i55wJJy5STc6ur3n4EAQUMcJVycZaB+7sIKc9Z90NQkYPHXXg==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-04-11T08:42:58Z"
-    mac: ENC[AES256_GCM,data:FfaGNsS46GEtEs96V5qnm1ndPMGhtox9/ypa9pstnI/+bFdu22FGl6HrPW7ExThlyukrYmBoRmsPAXSb6wRH55j/LuxMvpIS49js639ZHvOhRwTUoi6I0ETW/paC19ha1U7SMlIH6mzmE6OUSKNFM8ce6m87T+GzHYJryl/5ImU=,iv:cSj0wjX1bnUrDuQfja9YCssTQyxnp29NBfvvQBM7Rwk=,tag:LKDScrek97vYTQY0kl2ltg==,type:str]
+    lastmodified: "2026-04-11T08:53:57Z"
+    mac: ENC[AES256_GCM,data:fKTYFl7x1YZQ7XRH1jpXno+aDg2p73bFARQp68/MQRCpB6pA6LDRmsx48zSIJXdtNRC8LppUdYxppDoNQdjSx1Qz+oh4J12hGx/Hl8tKjE9P1fKsyq4vyoZns3Pwd0YoqXldAIYv5iUpvM1ZQ5r/UY1mISa0BluVLmdIJjedHi8=,iv:sNg848ayK82sxU/WiReYqXM6meECu5s59Y8kLR+W1mg=,tag:e+Wi1R8bzm/zEJTW1xzIuA==,type:str]
     encrypted_regex: ^(data|stringData)$
     version: 3.11.0
