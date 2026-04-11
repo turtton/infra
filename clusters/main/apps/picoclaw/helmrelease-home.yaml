@@ -15,6 +15,10 @@ spec:
         name: picoclaw
         namespace: flux-system
   values:
+    image:
+      repository: ghcr.io/turtton/picoclaw-copilot
+      tag: latest
+      pullPolicy: Always
     launcher:
       enabled: true
       port: 18800
