@@ -21,6 +21,8 @@ spec:
       pullPolicy: Always
     launcher:
       enabled: true
+      image:
+        repository: docker.io/sipeed/picoclaw
       port: 18800
       tokenSecret:
         existingSecret: "picoclaw-home-secrets"
