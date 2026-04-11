@@ -71,12 +71,42 @@ spec:
       gateway:
         log_level: "info"
       tools:
+        append_file:
+          enabled: true
+        edit_file:
+          enabled: true
+        read_file:
+          enabled: true
+        write_file:
+          enabled: true
+        list_dir:
+          enabled: true
+        exec:
+          enabled: true
+          allow_remote: true
         web:
+          enabled: true
           brave:
             enabled: true
             max_results: 5
-        exec:
-          allow_remote: true
+        web_fetch:
+          enabled: true
+        send_file:
+          enabled: true
+        spawn:
+          enabled: true
+        subagent:
+          enabled: true
+        message:
+          enabled: true
+        cron:
+          enabled: true
+        skills:
+          enabled: true
+        find_skills:
+          enabled: true
+        install_skill:
+          enabled: true
         allow_read_paths: []
         allow_write_paths: []
       heartbeat:
