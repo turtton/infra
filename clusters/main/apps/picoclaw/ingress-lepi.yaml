@@ -13,7 +13,7 @@ spec:
     service:
       name: picoclaw-lepi
       port:
-        number: 18790
+        number: 18800
   tls:
     - hosts:
         - picoclaw-lepi

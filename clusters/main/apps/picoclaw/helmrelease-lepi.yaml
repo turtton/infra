@@ -9,12 +9,14 @@ spec:
   chart:
     spec:
       chart: picoclaw
-      version: "0.1.6"
+      version: "0.1.7"
       sourceRef:
         kind: HelmRepository
         name: picoclaw
         namespace: flux-system
   values:
+    launcher:
+      enabled: true
     image:
       repository: ghcr.io/turtton/picoclaw-copilot
       tag: latest
