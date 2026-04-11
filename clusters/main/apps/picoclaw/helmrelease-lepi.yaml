@@ -18,6 +18,7 @@ spec:
     image:
       repository: ghcr.io/turtton/picoclaw-copilot
       tag: latest
+      pullPolicy: Always
     config:
       agents:
         defaults:
@@ -99,6 +100,7 @@ spec:
       image:
         repository: ghcr.io/turtton/picoclaw-copilot
         tag: latest
+        pullPolicy: Always
       command: ["copilot-cli"]
       tokenSecret:
         name: picoclaw-lepi-copilot-secrets
