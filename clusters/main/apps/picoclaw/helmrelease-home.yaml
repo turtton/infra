@@ -57,7 +57,7 @@ spec:
           enabled: true
           allow_from: ["275915497353117697"]
           group_trigger:
-            mention_only: false
+            mention_only: true
       session:
         dm_scope: "per-channel-peer"
         backlog_limit: 20
