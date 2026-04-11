@@ -101,7 +101,7 @@ spec:
         repository: ghcr.io/turtton/picoclaw-copilot
         tag: latest
         pullPolicy: Always
-      command: ["copilot-cli"]
+      command: ["copilot"]
       tokenSecret:
         name: picoclaw-lepi-copilot-secrets
         key: COPILOT_GITHUB_TOKEN
