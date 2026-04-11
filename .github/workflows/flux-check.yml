@@ -54,7 +54,7 @@ jobs:
 
       - name: Comment validation result on PR
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           VALIDATE_OUTPUT: ${{ steps.validate.outputs.output }}
           VALIDATE_EXIT_CODE: ${{ steps.validate.outputs.exit_code }}
