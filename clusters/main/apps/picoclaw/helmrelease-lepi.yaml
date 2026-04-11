@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: picoclaw
-      version: "0.1.10"
+      version: "0.1.11"
       sourceRef:
         kind: HelmRepository
         name: picoclaw
@@ -17,6 +17,8 @@ spec:
   values:
     launcher:
       enabled: true
+      image:
+        repository: docker.io/sipeed/picoclaw
       port: 18800
       tokenSecret:
         existingSecret: "picoclaw-lepi-secrets"
