@@ -27,8 +27,6 @@ spec:
     prometheus:
       prometheusSpec:
         retention: 7d
-        nodeSelector:
-          kubernetes.io/hostname: cp-1
         resources:
           requests:
             cpu: 200m
@@ -43,7 +41,7 @@ spec:
                 - ReadWriteOnce
               resources:
                 requests:
-                  storage: 5Gi
+                  storage: 20Gi
         additionalScrapeConfigs:
           - job_name: pve-main
             metrics_path: /metrics
@@ -63,8 +61,6 @@ spec:
         existingSecret: grafana-admin
         userKey: admin-user
         passwordKey: admin-password
-      nodeSelector:
-        kubernetes.io/hostname: cp-1
       resources:
         requests:
           cpu: 100m
@@ -98,8 +94,6 @@ spec:
 
     alertmanager:
       alertmanagerSpec:
-        nodeSelector:
-          kubernetes.io/hostname: cp-1
         storage:
           volumeClaimTemplate:
             spec:
@@ -121,6 +115,4 @@ spec:
     kubeScheduler:
       enabled: false
 
-    prometheusOperator:
-      nodeSelector:
-        kubernetes.io/hostname: cp-1
+    prometheusOperator: {}
