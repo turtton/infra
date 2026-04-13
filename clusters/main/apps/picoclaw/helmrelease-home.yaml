@@ -55,7 +55,10 @@ spec:
       channels:
         discord:
           enabled: true
-          allow_from: ["275915497353117697"]
+          allow_from:
+            - "275915497353117697"
+            - "299106923741970432"
+            - "280320003159490561"
           group_trigger:
             mention_only: true
       session:
