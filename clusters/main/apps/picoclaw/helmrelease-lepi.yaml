@@ -138,6 +138,10 @@ spec:
         value: "https://github.com/turtton/doumels.git"
       - name: GITHUB_BASE_BRANCH
         value: "main"
+      - name: PICOCLAW_TOOLS_OPENCODE_TASK_ENABLED
+        value: "true"
+      - name: PICOCLAW_TOOLS_OPENCODE_TASK_SERVER_URL
+        value: "http://localhost:4567"
     persistence:
       enabled: true
       size: 5Gi
@@ -166,3 +170,91 @@ spec:
       limits:
         cpu: 500m
         memory: 256Mi
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: placeholder
+              spec:
+                template:
+                  spec:
+                    initContainers:
+                      - name: fetch-opencode-config
+                        image: alpine/git:latest
+                        command:
+                          - sh
+                          - -c
+                          - |
+                            set -eu
+                            git clone --depth 1 https://github.com/turtton/dotnix.git /tmp/dotnix
+                            SRC=/tmp/dotnix/home-manager/cli/dev/opencode
+                            DEST=/opencode-config
+                            cp "$SRC/opencode.jsonc" "$DEST/"
+                            cp "$SRC/oh-my-openagent.json" "$DEST/"
+                            cp "$SRC/AGENTS.md" "$DEST/"
+                            mkdir -p "$DEST/skill/final-review" "$DEST/skill/git-commit"
+                            cp "$SRC/skill/final-review/SKILL.md" "$DEST/skill/final-review/"
+                            cp "$SRC/skill/final-review/GUIDE.md" "$DEST/skill/final-review/"
+                            cp "$SRC/skill/git-commit/SKILL.md" "$DEST/skill/git-commit/"
+                            cp "$SRC/skill/git-commit/GUIDE.md" "$DEST/skill/git-commit/"
+                            rm -rf /tmp/dotnix
+                        volumeMounts:
+                          - name: opencode-config
+                            mountPath: /opencode-config
+                        resources:
+                          requests:
+                            cpu: 10m
+                            memory: 64Mi
+                          limits:
+                            cpu: 200m
+                            memory: 256Mi
+                    containers:
+                      - name: opencode
+                        image: ghcr.io/turtton/opencode:latest
+                        imagePullPolicy: Always
+                        args:
+                          - serve
+                          - --port
+                          - "4567"
+                          - --hostname
+                          - 0.0.0.0
+                        ports:
+                          - name: opencode
+                            containerPort: 4567
+                            protocol: TCP
+                        env:
+                          - name: HOME
+                            value: /root
+                          - name: COPILOT_GITHUB_TOKEN
+                            valueFrom:
+                              secretKeyRef:
+                                name: picoclaw-lepi-copilot-secrets
+                                key: COPILOT_GITHUB_TOKEN
+                        volumeMounts:
+                          - name: opencode-config
+                            mountPath: /root/.config/opencode
+                        readinessProbe:
+                          tcpSocket:
+                            port: 4567
+                          initialDelaySeconds: 30
+                          periodSeconds: 10
+                        livenessProbe:
+                          tcpSocket:
+                            port: 4567
+                          initialDelaySeconds: 60
+                          periodSeconds: 30
+                        resources:
+                          requests:
+                            cpu: 10m
+                            memory: 128Mi
+                          limits:
+                            cpu: 500m
+                            memory: 512Mi
+                    volumes:
+                      - name: opencode-config
+                        emptyDir: {}
