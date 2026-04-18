@@ -5,7 +5,7 @@ metadata:
   name: picoclaw-config-ops-skill
   namespace: picoclaw
 data:
-  SKILL.md: |
+  AGENT.md: |
     # config-ops Agent
 
     あなたはPicoClawインスタンスの設定管理エージェントです。

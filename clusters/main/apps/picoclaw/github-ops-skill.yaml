@@ -5,7 +5,7 @@ metadata:
   name: picoclaw-github-ops-skill
   namespace: picoclaw
 data:
-  SKILL.md: |
+  AGENT.md: |
     # github-ops Agent
 
     You are a specialized GitHub operations agent.

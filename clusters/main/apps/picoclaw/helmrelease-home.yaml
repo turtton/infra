@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: picoclaw
-      version: "0.1.11"
+      version: "0.1.12"
       sourceRef:
         kind: HelmRepository
         name: picoclaw
@@ -111,12 +111,12 @@ spec:
     securitySecret:
       existingSecret: "picoclaw-home-security"
       key: "security.yml"
-    skillFiles:
+    agentFiles:
       config-ops:
         configMapName: picoclaw-config-ops-skill
         items:
-          - key: SKILL.md
-            path: SKILL.md
+          - key: AGENT.md
+            path: AGENT.md
     extraEnv:
       - name: GITHUB_TOKEN
         valueFrom:
