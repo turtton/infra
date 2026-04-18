@@ -18,6 +18,9 @@ jobs:
       TF_VAR_state_encryption_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
       TF_VAR_tailscale_authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
       TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_tailscale_oauth_client_id: ${{ secrets.TAILSCALE_ACL_OAUTH_CLIENT_ID }}
+      TF_VAR_tailscale_oauth_client_secret: ${{ secrets.TAILSCALE_ACL_OAUTH_SECRET }}
+      TF_VAR_tailscale_tailnet: ${{ secrets.TAILSCALE_TAILNET }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
