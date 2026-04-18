@@ -103,7 +103,7 @@ resources:
 
 [PicoClaw](https://github.com/sipeed/picoclaw) はGo製の軽量AIエージェント基盤。Discord/Telegram等のチャンネル連携、メモリ（JSONL）、スキルシステム、エージェントバインディング（チャンネル→エージェントルーティング）を備える。
 
-Helm チャートは [turtton/picoclaw-helm](https://github.com/turtton/picoclaw-helm) を使用する。クラスタ側で HelmRepository `picoclaw`（namespace: `flux-system`）が登録済み。
+カスタムイメージ [turtton/picoclaw-copilot](https://github.com/turtton/picoclaw-copilot) を使用する。Helm チャートは [turtton/picoclaw-helm](https://github.com/turtton/picoclaw-helm)（現在 v0.1.12）。クラスタ側で HelmRepository `picoclaw`（namespace: `flux-system`）が登録済み。
 
 ### Secrets
 
@@ -151,6 +151,34 @@ stringData:
 
 > **注意**: `.security.yml` は config.json にマージされ、config.json の値を上書きする。環境変数 `PICOCLAW_*` はさらに高い優先度を持つ。
 
+### agentFiles（エージェント別ワークスペース）
+
+chart v0.1.12 で追加された機能。エージェントごとに `AGENT.md` 等のファイルをワークスペースディレクトリにマウントし、チャートが自動で `config.json` の `workspace` パスを設定する。
+
+ConfigMap でエージェント用のプロンプトを定義:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: picoclaw-yukulab-config-ops
+data:
+  AGENT.md: |
+    # Config Ops Agent
+    （エージェントのシステムプロンプト）
+```
+
+HelmRelease の `values.agentFiles` で参照:
+
+```yaml
+agentFiles:
+  config-ops:
+    configMapName: picoclaw-yukulab-config-ops
+    items:
+      - key: AGENT.md
+        path: AGENT.md
+```
+
 ### HelmRelease
 
 以下はlepiインスタンスを参考にした設定例。必要に応じてカスタマイズすること。
@@ -167,16 +195,20 @@ spec:
   chart:
     spec:
       chart: picoclaw
-      version: "0.1.0"
+      version: "0.1.12"
       sourceRef:
         kind: HelmRepository
         name: picoclaw
         namespace: flux-system
   values:
+    image:
+      repository: ghcr.io/turtton/picoclaw-copilot
+      tag: latest
+      pullPolicy: Always
     config:
       agents:
         defaults:
-          model: "github-copilot/claude-sonnet-4.6"
+          model_name: "claude-sonnet-4.6"
           restrict_to_workspace: false
           max_tokens: 8192
           temperature: 0.7
@@ -201,12 +233,44 @@ spec:
       gateway:
         log_level: "info"
       tools:
+        append_file:
+          enabled: true
+        edit_file:
+          enabled: true
+        read_file:
+          enabled: true
+        write_file:
+          enabled: true
+        list_dir:
+          enabled: true
+        exec:
+          enabled: true
+          allow_remote: true
         web:
+          enabled: true
           brave:
             enabled: true
             max_results: 5
-        exec:
-          allow_remote: false
+        web_fetch:
+          enabled: true
+        send_file:
+          enabled: true
+        spawn:
+          enabled: true
+        subagent:
+          enabled: true
+        message:
+          enabled: true
+        cron:
+          enabled: true
+        skills:
+          enabled: true
+        find_skills:
+          enabled: true
+        install_skill:
+          enabled: true
+        allow_read_paths: []
+        allow_write_paths: []
       heartbeat:
         enabled: false
         interval: 30
@@ -240,6 +304,146 @@ spec:
 > **注意**: Discordボットトークンは `PICOCLAW_CHANNELS_DISCORD_TOKEN` 環境変数で注入する。これは config.json / .security.yml の値を上書きする（env vars が最高優先度）。
 
 > **注意**: PicoClaw はエージェントバインディング機能を持つ。`bindings` フィールドでチャンネル・ギルド・ユーザーに基づいてメッセージを特定のエージェントにルーティングできる。
+
+### opencode サイドカー（オプション）
+
+[opencode](https://github.com/turtton/opencode) をサイドカーとして追加すると、PicoClaw から opencode の機能を利用できる。Helm チャートの機能ではなく、Flux `postRenderers` で Deployment にパッチを適用する。
+
+```yaml
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: placeholder
+              spec:
+                template:
+                  spec:
+                    initContainers:
+                      - name: fetch-opencode-config
+                        image: alpine/git:latest
+                        command:
+                          - sh
+                          - -c
+                          - |
+                            set -eu
+                            git clone --depth 1 https://github.com/turtton/dotnix.git /tmp/dotnix
+                            SRC=/tmp/dotnix/home-manager/cli/dev/opencode
+                            DEST=/opencode-config
+                            cp "$SRC/opencode.jsonc" "$DEST/"
+                            cp "$SRC/oh-my-openagent.json" "$DEST/"
+                            cp "$SRC/AGENTS.md" "$DEST/"
+                            mkdir -p "$DEST/skill/final-review" "$DEST/skill/git-commit"
+                            cp "$SRC/skill/final-review/SKILL.md" "$DEST/skill/final-review/"
+                            cp "$SRC/skill/final-review/GUIDE.md" "$DEST/skill/final-review/"
+                            cp "$SRC/skill/git-commit/SKILL.md" "$DEST/skill/git-commit/"
+                            cp "$SRC/skill/git-commit/GUIDE.md" "$DEST/skill/git-commit/"
+                            rm -rf /tmp/dotnix
+                        volumeMounts:
+                          - name: opencode-config
+                            mountPath: /opencode-config
+                        resources:
+                          requests:
+                            cpu: 10m
+                            memory: 64Mi
+                          limits:
+                            cpu: 200m
+                            memory: 256Mi
+                    containers:
+                      - name: opencode
+                        image: ghcr.io/turtton/opencode:latest
+                        imagePullPolicy: Always
+                        args:
+                          - serve
+                          - --port
+                          - "4567"
+                          - --hostname
+                          - 0.0.0.0
+                        ports:
+                          - name: opencode
+                            containerPort: 4567
+                            protocol: TCP
+                        env:
+                          - name: HOME
+                            value: /root
+                          - name: COPILOT_GITHUB_TOKEN
+                            valueFrom:
+                              secretKeyRef:
+                                name: picoclaw-yukulab-secrets
+                                key: GITHUB_TOKEN
+                        volumeMounts:
+                          - name: opencode-config
+                            mountPath: /root/.config/opencode
+                        readinessProbe:
+                          tcpSocket:
+                            port: 4567
+                          initialDelaySeconds: 30
+                          periodSeconds: 10
+                        livenessProbe:
+                          tcpSocket:
+                            port: 4567
+                          initialDelaySeconds: 60
+                          periodSeconds: 30
+                        resources:
+                          requests:
+                            cpu: 10m
+                            memory: 128Mi
+                          limits:
+                            cpu: 500m
+                            memory: 1Gi
+                    volumes:
+                      - name: opencode-config
+                        emptyDir: {}
+```
+
+opencode を有効にする場合は、picoclaw の `extraEnv` に以下を追加:
+
+```yaml
+extraEnv:
+  - name: PICOCLAW_TOOLS_OPENCODE_TASK_ENABLED
+    value: "true"
+  - name: PICOCLAW_TOOLS_OPENCODE_TASK_SERVER_URL
+    value: "http://localhost:4567"
+```
+
+> **注意**: opencode は `COPILOT_GITHUB_TOKEN` 環境変数で GitHub Copilot API に認証する。Secret に GitHub トークンが必要。メモリは idle 時でも約 250MB 消費するため、ResourceQuota の見積もりに含めること。
+
+### copilotCli（オプション）
+
+GitHub Copilot API をローカルプロキシする sidecar。`model_list` で `api_base: "localhost:4321"` を指定して利用する。別途 copilot 用の Secret（`COPILOT_GITHUB_TOKEN`）が必要。
+
+```yaml
+    copilotCli:
+      enabled: true
+      image:
+        repository: ghcr.io/turtton/picoclaw-copilot
+        tag: latest
+        pullPolicy: Always
+      command: ["copilot"]
+      tokenSecret:
+        name: picoclaw-yukulab-copilot-secrets
+        key: COPILOT_GITHUB_TOKEN
+      resources:
+        requests:
+          cpu: 10m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+```
+
+copilotCli を使用する場合の `model_list` 設定:
+
+```yaml
+      model_list:
+        - model_name: "claude-sonnet-4.6"
+          model: "github-copilot/claude-sonnet-4.6"
+          api_base: "localhost:4321"
+```
 
 ### Ingress (Tailscale経由でWeb UIにアクセスする場合)
 
