@@ -15,6 +15,23 @@ variable "tailscale_authkey" {
   sensitive   = true
 }
 
+variable "tailscale_oauth_client_id" {
+  description = "Tailscale OAuth client ID for ACL management"
+  type        = string
+  sensitive   = true
+}
+
+variable "tailscale_oauth_client_secret" {
+  description = "Tailscale OAuth client secret for ACL management"
+  type        = string
+  sensitive   = true
+}
+
+variable "tailscale_tailnet" {
+  description = "Tailscale tailnet name (e.g. example.com or user@gmail.com)"
+  type        = string
+}
+
 variable "cloudflare_api_token" {
   description = "Cloudflare API token for Tunnel/Access/DNS management"
   type        = string

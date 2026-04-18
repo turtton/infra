@@ -14,6 +14,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
     }
+    tailscale = {
+      source  = "tailscale/tailscale"
+      version = "~> 0.18"
+    }
   }
 
   encryption {
