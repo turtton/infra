@@ -26,6 +26,11 @@ spec:
   values:
     prometheus:
       prometheusSpec:
+        enableOTLPReceiver: true
+        otlp:
+          promoteResourceAttributes:
+            - service.instance.id
+            - service.namespace
         retention: 7d
         resources:
           requests:

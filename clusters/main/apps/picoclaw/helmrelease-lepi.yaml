@@ -202,6 +202,8 @@ spec:
                             cp "$SRC/skill/final-review/GUIDE.md" "$DEST/skill/final-review/"
                             cp "$SRC/skill/git-commit/SKILL.md" "$DEST/skill/git-commit/"
                             cp "$SRC/skill/git-commit/GUIDE.md" "$DEST/skill/git-commit/"
+                            grep -q '@devtheops/opencode-plugin-otel' "$DEST/opencode.jsonc" || \
+                              sed -i 's/"opencode-wakatime"/"opencode-wakatime","@devtheops\/opencode-plugin-otel"/' "$DEST/opencode.jsonc"
                             rm -rf /tmp/dotnix
                         volumeMounts:
                           - name: opencode-config
@@ -235,6 +237,14 @@ spec:
                               secretKeyRef:
                                 name: picoclaw-lepi-copilot-secrets
                                 key: COPILOT_GITHUB_TOKEN
+                          - name: OPENCODE_ENABLE_TELEMETRY
+                            value: "1"
+                          - name: OPENCODE_OTLP_ENDPOINT
+                            value: "http://kube-prometheus-stack-prometheus.monitoring.svc:9090/api/v1/otlp"
+                          - name: OPENCODE_OTLP_PROTOCOL
+                            value: "http/protobuf"
+                          - name: OPENCODE_RESOURCE_ATTRIBUTES
+                            value: "service.name=opencode,service.namespace=picoclaw,service.instance.id=lepi"
                         volumeMounts:
                           - name: opencode-config
                             mountPath: /root/.config/opencode
