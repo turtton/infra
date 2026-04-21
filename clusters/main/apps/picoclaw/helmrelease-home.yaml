@@ -172,6 +172,8 @@ spec:
                             cp "$SRC/skill/git-commit/GUIDE.md" "$DEST/skill/git-commit/"
                             grep -q '@devtheops/opencode-plugin-otel' "$DEST/opencode.jsonc" || \
                               sed -i 's/"opencode-wakatime"/"opencode-wakatime","@devtheops\/opencode-plugin-otel"/' "$DEST/opencode.jsonc"
+                            grep -q '@devtheops/opencode-plugin-otel' "$DEST/opencode.jsonc" || \
+                              { echo "ERROR: failed to inject opencode-plugin-otel"; exit 1; }
                             rm -rf /tmp/dotnix
                         volumeMounts:
                           - name: opencode-config

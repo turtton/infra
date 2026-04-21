@@ -59,7 +59,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "sum(increase(opencode_cost_usage_total[$__range]))",
+          "expr": "sum(increase(opencode_cost_usage_USD_total[$__range]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -99,7 +99,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "sum(increase(opencode_token_usage_total[$__range]))",
+          "expr": "sum(increase(opencode_token_usage_tokens_total[$__range]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -220,7 +220,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(opencode_cost_usage_total[$__rate_interval]))",
+          "expr": "sum(rate(opencode_cost_usage_USD_total[$__rate_interval]))",
           "legendFormat": "cost",
           "refId": "A"
         }
@@ -275,7 +275,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (type) (rate(opencode_token_usage_total[$__rate_interval]))",
+          "expr": "sum by (type) (rate(opencode_token_usage_tokens_total[$__rate_interval]))",
           "legendFormat": "{{type}}",
           "refId": "A"
         }
@@ -316,7 +316,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (service_instance_id) (rate(opencode_cost_usage_total[$__rate_interval]))",
+          "expr": "sum by (service_instance_id) (rate(opencode_cost_usage_USD_total[$__rate_interval]))",
           "legendFormat": "{{service_instance_id}}",
           "refId": "A"
         }
@@ -350,7 +350,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (service_instance_id) (rate(opencode_token_usage_total[$__rate_interval]))",
+          "expr": "sum by (service_instance_id) (rate(opencode_token_usage_tokens_total[$__rate_interval]))",
           "legendFormat": "{{service_instance_id}}",
           "refId": "A"
         }
@@ -404,17 +404,17 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(opencode_session_cost_total_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(opencode_session_cost_total_USD_bucket[$__rate_interval])))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(opencode_session_cost_total_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(opencode_session_cost_total_USD_bucket[$__rate_interval])))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(opencode_session_cost_total_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(opencode_session_cost_total_USD_bucket[$__rate_interval])))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -502,17 +502,17 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum by (le, tool_name) (rate(opencode_tool_duration_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (le, tool_name) (rate(opencode_tool_duration_milliseconds_bucket[$__rate_interval])))",
           "legendFormat": "{{tool_name}} p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le, tool_name) (rate(opencode_tool_duration_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, tool_name) (rate(opencode_tool_duration_milliseconds_bucket[$__rate_interval])))",
           "legendFormat": "{{tool_name}} p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (le, tool_name) (rate(opencode_tool_duration_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, tool_name) (rate(opencode_tool_duration_milliseconds_bucket[$__rate_interval])))",
           "legendFormat": "{{tool_name}} p99",
           "refId": "C"
         }
@@ -546,7 +546,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (tool_name) (rate(opencode_tool_duration_count[$__rate_interval]))",
+          "expr": "sum by (tool_name) (rate(opencode_tool_duration_milliseconds_count[$__rate_interval]))",
           "legendFormat": "{{tool_name}}",
           "refId": "A"
         }
