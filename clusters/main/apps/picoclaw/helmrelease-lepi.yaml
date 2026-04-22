@@ -134,6 +134,11 @@ spec:
           secretKeyRef:
             name: picoclaw-lepi-secrets
             key: GITHUB_TOKEN
+      - name: GH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: picoclaw-lepi-secrets
+            key: GITHUB_TOKEN
       - name: GITHUB_REPO_URL
         value: "https://github.com/turtton/doumels.git"
       - name: GITHUB_BASE_BRANCH

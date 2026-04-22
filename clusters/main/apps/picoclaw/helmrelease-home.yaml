@@ -123,6 +123,11 @@ spec:
           secretKeyRef:
             name: picoclaw-home-secrets
             key: GITHUB_TOKEN
+      - name: GH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: picoclaw-home-secrets
+            key: GITHUB_TOKEN
       - name: PICOCLAW_TOOLS_OPENCODE_TASK_ENABLED
         value: "true"
       - name: PICOCLAW_TOOLS_OPENCODE_TASK_SERVER_URL
