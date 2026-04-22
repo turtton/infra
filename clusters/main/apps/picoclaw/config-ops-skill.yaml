@@ -28,11 +28,13 @@ data:
     # Git認証セットアップ
     git config --global user.name "github-actions[bot]"
     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-    git config --global credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'
 
-    # リポジトリをワークスペース内にクローン（workspace外へのアクセスは制限される可能性があるため）
+    # リポジトリをワークスペース内にクローン
     git clone https://github.com/turtton/infra.git ./infra-pr
     cd ./infra-pr
+
+    # gh CLIで認証設定（GH_TOKEN環境変数で自動認証）
+    gh auth setup-git
 
     # ブランチ作成
     git checkout -b picoclaw/config-update-$(date +%Y%m%d-%H%M%S)
@@ -47,17 +49,16 @@ data:
     git commit -m "picoclaw: update config - <変更内容の要約>"
     git push origin HEAD
 
-    # PR作成（GitHub REST API経由 — ghコマンドは利用不可）
-    curl -s -X POST \
-      -H "Authorization: token $GITHUB_TOKEN" \
-      -H "Accept: application/vnd.github.v3+json" \
-      https://api.github.com/repos/turtton/infra/pulls \
-      -d "{
-        \"title\": \"picoclaw: <変更内容>\",
-        \"head\": \"<ブランチ名>\",
-        \"base\": \"main\",
-        \"body\": \"## 変更内容\n- <具体的な変更点>\n\n## テスト結果\n- Pod内でconfig.json編集によりテスト済み\n- <動作確認結果>\"
-      }"
+    # PR作成（gh CLIを使用）
+    gh pr create \
+      --title "picoclaw: <変更内容>" \
+      --body "## 変更内容
+    - <具体的な変更点>
+
+    ## テスト結果
+    - Pod内でconfig.json編集によりテスト済み
+    - <動作確認結果>" \
+      --base main
     ```
 
     ## Git Identity
@@ -95,3 +96,4 @@ data:
     ## 環境変数
 
     - `GITHUB_TOKEN`: PR作成に使用（per-instance Secretから注入済み）
+    - `GH_TOKEN`: `gh` CLI認証に使用（`GITHUB_TOKEN` と同じ値）
