@@ -4,7 +4,7 @@ terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
-      version = "~> 0.102"
+      version = "~> 0.103"
     }
     talos = {
       source  = "siderolabs/talos"
@@ -16,7 +16,7 @@ terraform {
     }
     tailscale = {
       source  = "tailscale/tailscale"
-      version = "~> 0.18"
+      version = "~> 0.28"
     }
   }
 
