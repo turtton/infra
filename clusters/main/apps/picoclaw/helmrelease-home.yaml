@@ -37,11 +37,11 @@ spec:
     config:
       agents:
         defaults:
-          model_name: "kimi-k2.5"
+          model_name: "kimi-k2.6"
           restrict_to_workspace: false
-          max_tokens: 8192
-          temperature: 0.7
-          max_tool_iterations: 100
+          max_tokens: 2560000
+          temperature: 1.0
+          max_tool_iterations: 150
           tool_feedback:
             enabled: true
         list:
@@ -51,8 +51,8 @@ spec:
           - id: config-ops
             name: Config Ops
       model_list:
-        - model_name: "kimi-k2.5"
-          model: "openrouter/moonshotai/kimi-k2.5"
+        - model_name: "kimi-k2.6"
+          model: "openrouter/moonshotai/kimi-k2.6"
       bindings: []
       channels:
         discord:
