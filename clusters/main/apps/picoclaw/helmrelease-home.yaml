@@ -39,7 +39,7 @@ spec:
         defaults:
           model_name: "kimi-k2.6"
           restrict_to_workspace: false
-          max_tokens: 2560000
+          max_tokens: 200000
           temperature: 1.0
           max_tool_iterations: 150
           tool_feedback:
