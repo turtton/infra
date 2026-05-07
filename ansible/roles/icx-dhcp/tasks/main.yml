@@ -19,7 +19,6 @@
            | map('join', ' ')
            | map('regex_replace', '^', 'excluded-address ')
            | list)
-        + ['deploy']
       }}
     parents:
       - "ip dhcp-server pool {{ item.name }}"
@@ -27,6 +26,23 @@
   loop_control:
     label: "DHCP pool {{ item.name }}"
   when: "'pool ' + (item.name | lower) not in (dhcp_check.stdout[0] | default('') | lower)"
+
+- name: Check DHCP pool deploy status
+  community.network.icx_command:
+    commands:
+      - "show ip dhcp-server summary"
+  register: dhcp_summary
+
+- name: Deploy DHCP server pools
+  community.network.icx_config:
+    lines:
+      - "deploy"
+    parents:
+      - "ip dhcp-server pool {{ item.name }}"
+  loop: "{{ icx_dhcp_pools }}"
+  loop_control:
+    label: "Deploy pool {{ item.name }}"
+  when: "'undeployed address-pools:  0' not in dhcp_summary.stdout[0]"
 
 - name: Disable DHCP client (required before enabling DHCP server)
   community.network.icx_config:
