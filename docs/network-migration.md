@@ -9,13 +9,15 @@ Proxmox VEノードを旧ネットワーク (192.168.11.X) からICX7250管理�
 | ICX7250 | 稼働中。VLAN 10 (192.168.10.1/24) でLAN提供中 |
 | Proxmox main | 192.168.11.X (旧ネットワーク) |
 | Proxmox data | 192.168.11.X (旧ネットワーク) |
-| Talos VM | 192.168.10.110-122 で設定済み (稼働中) |
+| Talos VM | 192.168.11.110-122 で稼働中 (旧ネットワーク) |
 | 作業用PC (PC2) | ICX7250に接続してAnsible実行に使用 |
 | ローカルコンソール | 各Proxmoxノードにモニタ+キーボード接続可能 (ネットワーク切替失敗時の復旧用) |
 | 電源操作 | 各ノードの電源ボタンにアクセス可能 |
 | SOPS復号鍵 | PC2に `SOPS_AGE_KEY_FILE` 環境変数 (または `age.key`) が設定済み |
+| talosctl / kubectl | PC2 (または main ノード) に `~/.talos/config` と `~/.kube/config` が存在 |
+| OpenTofu | PC2に `tofu` と `TF_VAR_state_encryption_passphrase` 環境変数が設定済み |
 
-## ネットワーク設計
+## ネットワーク設計 (移行後の目標状態)
 
 ```
 ISP Router (192.168.0.1)
@@ -29,7 +31,9 @@ ICX7250 (192.168.10.1)
     │       │       ├── cp-1 VM (192.168.10.110)
     │       │       └── ...
     │       ├── Proxmox data (192.168.10.40) - vmbr0
-    │       │       └── worker-1 VM (192.168.10.120)
+    │       │       ├── worker-1 VM (192.168.10.120)
+    │       │       ├── worker-2 VM (192.168.10.121)
+    │       │       └── worker-3 VM (192.168.10.122)
     │       └── PC2 (DHCP: 192.168.10.150-250)
     │
 DHCP: 192.168.10.150-250 (除外: .1-.149, .251-.254)
@@ -245,26 +249,107 @@ ansible-playbook playbooks/site.yml
 > **注意**: `network-update.yml --check --diff` でネットワーク差分が出た場合は、
 > 先に `network-update.yml` (serial: 1) を実行して収束させてから `site.yml` を流すこと。
 
-### Phase 5: Talos VM の確認
+### Phase 5: Talos VM の IP 変更
 
-Proxmox のvmbr0がICX7250 VLAN 10に接続されたことで、VMは自動的に正しいネットワークに接続される。
+物理移行後、VMのブリッジは VLAN 10 (192.168.10.0/24) に接続されるが、VM自体はまだ旧IP (192.168.11.X) のまま。
+ゲートウェイ (192.168.11.1) に到達できないためVMは通信不能になっている。ここで `talosctl` を使いIP変更を行う。
 
-```bash
-# VM への疎通確認
-ping 192.168.10.110   # cp-1
-ping 192.168.10.120   # worker-1
+1. **Proxmox ホストに一時IPを追加** (VM到達用)
 
-# Kubernetes クラスタ状態
-export KUBECONFIG=~/.kube/config
-kubectl get nodes
-kubectl get pods -A
+   VMとProxmoxホストは同じL2ブリッジ (vmbr0) 上にいるので、旧サブネットのIPを追加すれば直接通信できる。
 
-# Flux CD 確認
-flux get sources git
-flux get kustomizations
-```
+   ```bash
+   # main ノード上で実行
+   ssh root@192.168.10.100
+   ip addr add 192.168.11.99/24 dev vmbr0
+   ```
 
-**VMが応答しない場合**:
+2. **VMへの到達確認**
+
+   ```bash
+   ping 192.168.11.110   # cp-1
+   ping 192.168.11.120   # worker-1
+   ```
+
+3. **各VMの machine config をパッチしてIPを変更**
+
+   `talosctl` で `machine.network.interfaces` を追加し、新IPに切り替える。
+   VM は config 適用後に自動的にネットワーク再設定を行う。
+
+   ```bash
+   # cp-1 (192.168.11.110 → 192.168.10.110)
+   talosctl -n 192.168.11.110 patch mc --patch '[
+     {"op": "add", "path": "/machine/network/interfaces", "value": [
+       {"interface": "eth0", "addresses": ["192.168.10.110/24"], "routes": [{"network": "0.0.0.0/0", "gateway": "192.168.10.1"}]}
+     ]}
+   ]'
+
+   # worker-1 (192.168.11.120 → 192.168.10.120)
+   talosctl -n 192.168.11.120 patch mc --patch '[
+     {"op": "add", "path": "/machine/network/interfaces", "value": [
+       {"interface": "eth0", "addresses": ["192.168.10.120/24"], "routes": [{"network": "0.0.0.0/0", "gateway": "192.168.10.1"}]}
+     ]}
+   ]'
+
+   # worker-2 (192.168.11.121 → 192.168.10.121)
+   talosctl -n 192.168.11.121 patch mc --patch '[
+     {"op": "add", "path": "/machine/network/interfaces", "value": [
+       {"interface": "eth0", "addresses": ["192.168.10.121/24"], "routes": [{"network": "0.0.0.0/0", "gateway": "192.168.10.1"}]}
+     ]}
+   ]'
+
+   # worker-3 (192.168.11.122 → 192.168.10.122)
+   talosctl -n 192.168.11.122 patch mc --patch '[
+     {"op": "add", "path": "/machine/network/interfaces", "value": [
+       {"interface": "eth0", "addresses": ["192.168.10.122/24"], "routes": [{"network": "0.0.0.0/0", "gateway": "192.168.10.1"}]}
+     ]}
+   ]'
+   ```
+
+   > **注意**: 各パッチ適用後、VMは即座にIPを切り替えるため旧IPでは到達不能になる。
+   > 次のVMにパッチを当てる前に、切り替え済みVMへの到達確認をすること。
+
+4. **新IPで全VMの疎通確認**
+
+   ```bash
+   ping 192.168.10.110
+   ping 192.168.10.120
+   ping 192.168.10.121
+   ping 192.168.10.122
+   ```
+
+5. **一時IPを削除**
+
+   ```bash
+   ip addr del 192.168.11.99/24 dev vmbr0
+   ```
+
+6. **`tofu apply` で Terraform 状態を収束**
+
+   `terraform/talos.tf` に追加したネットワークインターフェースパッチを含め、machine config を正式に適用する。
+
+   ```bash
+   cd terraform/
+   tofu plan    # 差分を確認
+   tofu apply   # 適用 (machine config の再適用が走る)
+   ```
+
+   > `tofu apply` は `talos_machine_configuration_apply` を介して全 VM に machine config を再適用する。
+   > 手動パッチと terraform の設定が一致していれば実質ノーオペレーション。
+
+7. **Kubernetes クラスタ状態確認**
+
+   ```bash
+   export KUBECONFIG=~/.kube/config
+   kubectl get nodes
+   kubectl get pods -A
+
+   # Flux CD 確認
+   flux get sources git
+   flux get kustomizations
+   ```
+
+**クラスタが復旧しない場合のトラブルシューティング**:
 
 1. Proxmox Web UIからVM再起動を試す
    - https://192.168.10.100:8006 (main)
@@ -272,15 +357,14 @@ flux get kustomizations
 
 2. VMのネットワーク設定を確認
    ```bash
-   # Proxmox CLI で VM の NIC 設定を確認
-   qm config <vmid> | grep net
-   # Bridge が vmbr0 であること
-   ```
-
-3. `talosctl` で状態確認
-   ```bash
    talosctl -n 192.168.10.110 get addresses
    talosctl -n 192.168.10.110 get routes
+   ```
+
+3. etcd の状態確認
+   ```bash
+   talosctl -n 192.168.10.110 service etcd
+   talosctl -n 192.168.10.110 etcd members
    ```
 
 4. **最終手段: クラスタ再作成 (⚠️ 全データ消失)**

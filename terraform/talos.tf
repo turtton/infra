@@ -73,6 +73,21 @@ data "talos_machine_configuration" "controlplane" {
         }
       }
     }),
+    # 静的ネットワークインターフェース設定（cloud-initではなくmachine configで管理）
+    yamlencode({
+      machine = {
+        network = {
+          interfaces = [{
+            interface = "eth0"
+            addresses = ["${each.value.ip}/24"]
+            routes = [{
+              network  = "0.0.0.0/0"
+              gateway  = var.gateway
+            }]
+          }]
+        }
+      }
+    }),
   ])
 }
 
@@ -95,6 +110,20 @@ data "talos_machine_configuration" "worker" {
     maxPoolPercent: 20
     EOT
     ,
+    yamlencode({
+      machine = {
+        network = {
+          interfaces = [{
+            interface = "eth0"
+            addresses = ["${each.value.ip}/24"]
+            routes = [{
+              network  = "0.0.0.0/0"
+              gateway  = var.gateway
+            }]
+          }]
+        }
+      }
+    }),
   ])
 }
 
