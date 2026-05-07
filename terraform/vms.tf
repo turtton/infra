@@ -58,7 +58,5 @@ resource "proxmox_virtual_environment_vm" "talos_node" {
     enabled = true
   }
 
-  lifecycle {
-    ignore_changes = [initialization]
-  }
+
 }

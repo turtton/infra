@@ -83,6 +83,7 @@ data "talos_machine_configuration" "controlplane" {
             routes = [{
               network  = "0.0.0.0/0"
               gateway  = var.gateway
+              metric   = 512
             }]
           }]
         }
@@ -119,6 +120,7 @@ data "talos_machine_configuration" "worker" {
             routes = [{
               network  = "0.0.0.0/0"
               gateway  = var.gateway
+              metric   = 512
             }]
           }]
         }
