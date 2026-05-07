@@ -276,34 +276,61 @@ ansible-playbook playbooks/site.yml
    `talosctl` で `machine.network.interfaces` を追加し、新IPに切り替える。
    VM は config 適用後に自動的にネットワーク再設定を行う。
 
+   > **注意**: マルチドキュメント machine config (ExtensionServiceConfig等を含む) では
+   > JSON6902パッチは使用不可。strategic merge patch (YAML形式) を使用すること。
+
    ```bash
    # cp-1 (192.168.11.110 → 192.168.10.110)
-   talosctl -n 192.168.11.110 patch mc --patch '[
-     {"op": "add", "path": "/machine/network/interfaces", "value": [
-       {"interface": "eth0", "addresses": ["192.168.10.110/24"], "routes": [{"network": "0.0.0.0/0", "gateway": "192.168.10.1"}]}
-     ]}
-   ]'
+   talosctl -n 192.168.11.110 patch mc --patch '
+   machine:
+     network:
+       interfaces:
+         - interface: eth0
+           addresses:
+             - 192.168.10.110/24
+           routes:
+             - network: 0.0.0.0/0
+               gateway: 192.168.10.1
+   '
 
    # worker-1 (192.168.11.120 → 192.168.10.120)
-   talosctl -n 192.168.11.120 patch mc --patch '[
-     {"op": "add", "path": "/machine/network/interfaces", "value": [
-       {"interface": "eth0", "addresses": ["192.168.10.120/24"], "routes": [{"network": "0.0.0.0/0", "gateway": "192.168.10.1"}]}
-     ]}
-   ]'
+   talosctl -n 192.168.11.120 patch mc --patch '
+   machine:
+     network:
+       interfaces:
+         - interface: eth0
+           addresses:
+             - 192.168.10.120/24
+           routes:
+             - network: 0.0.0.0/0
+               gateway: 192.168.10.1
+   '
 
    # worker-2 (192.168.11.121 → 192.168.10.121)
-   talosctl -n 192.168.11.121 patch mc --patch '[
-     {"op": "add", "path": "/machine/network/interfaces", "value": [
-       {"interface": "eth0", "addresses": ["192.168.10.121/24"], "routes": [{"network": "0.0.0.0/0", "gateway": "192.168.10.1"}]}
-     ]}
-   ]'
+   talosctl -n 192.168.11.121 patch mc --patch '
+   machine:
+     network:
+       interfaces:
+         - interface: eth0
+           addresses:
+             - 192.168.10.121/24
+           routes:
+             - network: 0.0.0.0/0
+               gateway: 192.168.10.1
+   '
 
    # worker-3 (192.168.11.122 → 192.168.10.122)
-   talosctl -n 192.168.11.122 patch mc --patch '[
-     {"op": "add", "path": "/machine/network/interfaces", "value": [
-       {"interface": "eth0", "addresses": ["192.168.10.122/24"], "routes": [{"network": "0.0.0.0/0", "gateway": "192.168.10.1"}]}
-     ]}
-   ]'
+   talosctl -n 192.168.11.122 patch mc --patch '
+   machine:
+     network:
+       interfaces:
+         - interface: eth0
+           addresses:
+             - 192.168.10.122/24
+           routes:
+             - network: 0.0.0.0/0
+               gateway: 192.168.10.1
+   '
    ```
 
    > **注意**: 各パッチ適用後、VMは即座にIPを切り替えるため旧IPでは到達不能になる。
