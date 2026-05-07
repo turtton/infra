@@ -73,6 +73,10 @@ resource "tailscale_acl" "this" {
         src    = "tag:ci"
         accept = ["192.168.11.100:5000"]
       },
+      {
+        src    = "tag:ci"
+        accept = ["192.168.10.110:50000", "192.168.10.120:50000", "192.168.10.121:50000", "192.168.10.122:50000"]
+      },
     ]
 
     nodeAttrs = [
@@ -81,6 +85,13 @@ resource "tailscale_acl" "this" {
         attr   = ["funnel"]
       },
     ]
+
+    autoApprovers = {
+      routes = {
+        "192.168.10.0/24" = ["tag:proxmox-cluster"]
+        "192.168.11.0/24" = ["tag:proxmox-cluster"]
+      }
+    }
 
     grants = [
       {
@@ -110,7 +121,7 @@ resource "tailscale_acl" "this" {
       },
       {
         src = ["tag:ci"]
-        dst = ["tag:proxmox-cluster", "tag:infra-talos-cluster", "192.168.11.0/24"]
+        dst = ["tag:proxmox-cluster", "tag:infra-talos-cluster", "192.168.11.0/24", "192.168.10.0/24"]
         ip  = ["*"]
       },
       {
