@@ -42,8 +42,7 @@
 - name: Apply Tailscale DNS settings
   ansible.builtin.command:
     cmd: "tailscale set --accept-dns={{ tailscale_accept_dns | ternary('true', 'false') }}"
-  register: tailscale_dns_result
-  changed_when: tailscale_dns_result.rc == 0
+  changed_when: false
   when: >-
     tailscale_status.rc == 0 and
     (tailscale_status.stdout | from_json).BackendState == "Running"
