@@ -80,6 +80,7 @@ data "talos_machine_configuration" "controlplane" {
           interfaces = [{
             interface = "eth0"
             addresses = ["${each.value.ip}/24"]
+            # metric 512: platform/cloud-init route (1024) より優先させる
             routes = [{
               network  = "0.0.0.0/0"
               gateway  = var.gateway
@@ -117,6 +118,7 @@ data "talos_machine_configuration" "worker" {
           interfaces = [{
             interface = "eth0"
             addresses = ["${each.value.ip}/24"]
+            # metric 512: platform/cloud-init route (1024) より優先させる
             routes = [{
               network  = "0.0.0.0/0"
               gateway  = var.gateway
