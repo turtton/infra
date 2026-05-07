@@ -20,11 +20,14 @@ Nixフォーマッタ: `nix fmt` (`nixfmt-tree`)
 ```bash
 cd ansible/
 # Dry-run (差分確認)
-ansible-playbook playbooks/site.yml --check --diff --ask-vault-pass
+ansible-playbook playbooks/site.yml --check --diff
 # 本番適用
-ansible-playbook playbooks/site.yml --ask-vault-pass
+ansible-playbook playbooks/site.yml
 # ネットワーク設定のみ
-ansible-playbook playbooks/network-update.yml --ask-vault-pass
+ansible-playbook playbooks/network-update.yml
+# スイッチ設定 (手動実行のみ)
+ansible-playbook playbooks/switch.yml --check --diff
+ansible-playbook playbooks/switch.yml
 # Lint
 ansible-lint
 ```
@@ -81,7 +84,7 @@ kubectl create secret generic sops-age \
 ## Architecture
 
 ```
-ansible/     → Proxmox VEノード(main: 192.168.11.100, data: 192.168.11.40)の構成管理
+ansible/     → Proxmox VEノード(main: 192.168.10.100, data: 192.168.10.40)の構成管理
 terraform/   → Talos Linux VM作成 + Kubernetesクラスタブートストラップ (OpenTofu)
 clusters/    → Flux CD マニフェスト (GitOps)
 docs/        → Proxmoxの事前設定手順など運用ドキュメント
@@ -91,8 +94,13 @@ docs/        → Proxmoxの事前設定手順など運用ドキュメント
 
 - `ansible.cfg`: inventory=`inventory/hosts.yml`、接続ユーザーは`root`、privilege escalation無効
 - ホスト固有変数: `inventory/host_vars/{main,data}/network.yml`
-- 暗号化変数: `inventory/group_vars/proxmox/vault.yml` (Ansible Vault, AES256)
+- 暗号化変数: `inventory/group_vars/proxmox/vault.sops.yml` (SOPS + Age)
 - ロール: `proxmox-base`(パッケージ・NTP・SSH), `proxmox-network`(ブリッジ設定), `tailscale`, `monitoring-agent`(prometheus-pve-exporter)
+- スイッチ管理: `switches`グループ (`community.network.icx` + `network_cli` + `paramiko`)
+  - ロール: `icx-base`(ホスト名・NTP・DNS), `icx-vlan`(VLAN定義・ポートアサイン・L3ルーティング), `icx-dhcp`(DHCPサーバー)
+  - 暗号化変数: `inventory/group_vars/switches/vault.sops.yml` (SOPS + Age)
+  - Playbook: `playbooks/switch.yml` (手動実行のみ — CIではスイッチへの接続不可)
+  - SSH接続: ICX7250はレガシーSSHアルゴリズム(diffie-hellman-group14-sha1, hmac-sha1, ssh-rsa)のみ対応。paramikoを使用
 
 ### OpenTofu構成
 
@@ -104,9 +112,10 @@ docs/        → Proxmoxの事前設定手順など運用ドキュメント
 
 ### SOPS + Age構成
 
-- SOPS + Ageを使用してKubernetes Secretを暗号化しGit管理する
-- `.sops.yaml`: 暗号化ルール定義。`*.sops.yaml` / `*.sops.yml` ファイルの `data` / `stringData` フィールドのみ暗号化
-- Flux Kustomizationの `decryption` ブロックでSOPS復号を有効化し、`sops-age` Secretから秘密鍵を参照
+- SOPS + Ageを使用してKubernetes SecretおよびAnsible変数を暗号化しGit管理する
+- `.sops.yaml`: 暗号化ルール定義。Ansible用（`ansible/` 配下）はファイル全体を暗号化、Kubernetes用は `data` / `stringData` フィールドのみ暗号化
+- Ansible: `community.sops` コレクションの vars plugin で `*.sops.yml` ファイルを自動復号。`SOPS_AGE_KEY_FILE` 環境変数でAge秘密鍵パスを指定
+- Flux: Kustomizationの `decryption` ブロックでSOPS復号を有効化し、`sops-age` Secretから秘密鍵を参照
 - Age秘密鍵はリポジトリ外に保管すること（`.gitignore` で除外済み）
 
 ### Flux CD構成
@@ -133,7 +142,7 @@ Apply権限は `turtton` ユーザーのみ。CIからのTailscale接続でProxm
 ## Important Notes
 
 - `terraform.tfstate` は暗号化済みで意図的にgit管理されている。絶対にgitignoreに追加したり削除しないこと
-- Ansible VaultパスワードはCI上 `/tmp/.vault-pass` に一時書き出しされ、always stepで削除される
+- Ansible秘密変数はSOPS + Ageで暗号化。CIでは `SOPS_AGE_KEY` シークレットでAge秘密鍵を渡す
 - Proxmoxプロバイダは自己署名証明書のため `insecure = true` で接続する
 - ドキュメントは日本語で記述する
 - `flux bootstrap` を再実行した場合、`gotk-sync.yaml` の `decryption` ブロックが上書きで消えるため再追加が必要

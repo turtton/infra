@@ -3,7 +3,7 @@
   ansible.builtin.assert:
     that:
       - tailscale_auth_key | length > 0
-    fail_msg: "tailscale_auth_key must be set (use ansible-vault)"
+    fail_msg: "tailscale_auth_key must be set (use sops)"
 
 - name: Install Tailscale via official install script
   ansible.builtin.shell:
@@ -30,6 +30,7 @@
       tailscale up
       --auth-key={{ tailscale_auth_key }}
       {% if tailscale_accept_routes %}--accept-routes{% endif %}
+      {% if not tailscale_accept_dns %}--accept-dns=false{% endif %}
       {% for tag in tailscale_advertise_tags %}--advertise-tags={{ tag }}{% if not loop.last %} {% endif %}{% endfor %}
       {{ tailscale_extra_args }}
   no_log: true
@@ -37,3 +38,11 @@
     tailscale_status.rc != 0 or
     (tailscale_status.stdout | from_json).BackendState != "Running"
   changed_when: true
+
+- name: Apply Tailscale DNS settings
+  ansible.builtin.command:
+    cmd: "tailscale set --accept-dns={{ tailscale_accept_dns | ternary('true', 'false') }}"
+  changed_when: false
+  when: >-
+    tailscale_status.rc == 0 and
+    (tailscale_status.stdout | from_json).BackendState == "Running"

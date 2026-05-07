@@ -44,13 +44,13 @@ terraform/
 
 - **カーネルモジュール**: `iscsi_tcp`, `dm_thin_pool` (Longhorn用)
 - **DNS**: ゲートウェイ + 1.1.1.1 + 8.8.8.8 (静的IPのため明示指定)
-- **kubelet nodeIP**: `192.168.11.0/24` に制限 (Tailscale IP使用防止)
+- **kubelet nodeIP**: `192.168.10.0/24` に制限 (Tailscale IP使用防止)
 - **Tailscale**: `ExtensionServiceConfig` でauthkeyを注入
 
 ### Control Plane
 
 - `allowSchedulingOnControlPlanes: true` (ワークロード実行可能)
-- `etcd.advertisedSubnets`: `192.168.11.0/24` に制限 (Tailscale IP広告防止)
+- `etcd.advertisedSubnets`: `192.168.10.0/24` に制限 (Tailscale IP広告防止)
 
 ### Worker
 
@@ -104,12 +104,12 @@ GitHub Actions Runner
   ├──→ Proxmox SSH (port 22)       ← イメージアップロード
   └──→ Talos API (port 50000)      ← machine config適用
        │
-       │ (Tailscaleサブネットルーティング 192.168.11.0/24)
+       │ (Tailscaleサブネットルーティング 192.168.10.0/24)
        │
   Proxmox Node (subnet router)
        │
-       ├── cp-1   (192.168.11.110) ← K8s API port 6443
-       └── worker-1 (192.168.11.120)
+       ├── cp-1   (192.168.10.110) ← K8s API port 6443
+       └── worker-1 (192.168.10.120)
 ```
 
 Talos VMは初回起動時にTailscaleが未設定のため、LAN IP経由でしかアクセスできない。Proxmoxノードをサブネットルーターとして設定し、Tailscale経由でLANに到達可能にする。

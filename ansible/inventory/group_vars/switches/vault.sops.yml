@@ -1,0 +1,18 @@
+vault_switch_username: ENC[AES256_GCM,data:xMVcggMHBQ==,iv:eMYEMdfJtG7e23URAyanuomZjcgAhQs7niGBi81bEfM=,tag:2EBob6e3YLFHSoX7rRqdlg==,type:str]
+vault_switch_password: ENC[AES256_GCM,data:v3ugKUz+AYHKioDW6A5qSQMgFRlFAqoLBhYRr5XaJJ7yGmmGHs/GxH9uNcs0qh1vZhQ=,iv:5eqR1GUBiVKJ+8kdYfTNvc5XGqbZlotv/mN0IdRpJeU=,tag:+qaEMztj/uHZkg9x51z9gg==,type:str]
+vault_switch_enable_password: ENC[AES256_GCM,data:aw6tLjSyBZ0R19kRSx6muoTrzsQ=,iv:gcZS12+/w2n7v401SbaIcgsDRxQ9aTFgywb7JtY7nmI=,tag:HF2tL24UvZ5pbA9JlGB1og==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBKSi83VWlkUURVVVpqZzNh
+            a3NNSHFJendpOEQzbzZtTUt6eFlvZnFSSWdJCmJFYzhnUWlVSjhFamZlNTdweXcx
+            NFdMMUxVQWV3Vlc5S0xYMHlndS95dmMKLS0tIHd2NmoxSFZZazZVVUFpVnZleFBj
+            MTN5dWJDWGkwSW1BTVRlZXNGNDRyRncK/2B0CsDbCynp2wq01vDr+sGpLdVZmNvE
+            SbmJXE23rodmvTCc3URm5sYa03vYWvedx/j6c+qieAj3ww/gXOfrRQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-03-29T14:14:45Z"
+    mac: ENC[AES256_GCM,data:UTR/ew9Y+E1/4c/Jxe4ttKQ0YZFRx+ekFjWjSZVfbRjwTz/X6BcKpDbN3mcgw4tSU58CCcfdjNYA/3Ooo90svomhrAOV+gunSJWrTaCFHiT/Jg+niRrd/v+M3gS0aMJhWqpQztrzB8UrsWGISlmHl2W4Hk9oVE5RUkaQLpg0xRQ=,iv:VgQwkO0x3gVNhC0z0S+c1xz6H1oBtvHdu33sqeYYXO8=,tag:XMfZDFZDAGQahTrBDK+kFw==,type:str]
+    unencrypted_suffix: _unencrypted
+    version: 3.11.0

@@ -1,0 +1,16 @@
+---
+icx_dhcp_pools:
+  - name: LAN
+    network: "192.168.10.0/24"
+    excluded_ranges:
+      - start: "192.168.10.1"
+        end: "192.168.10.149"
+      - start: "192.168.10.251"
+        end: "192.168.10.254"
+    default_router: "192.168.10.1"
+    dns_servers:
+      - "1.1.1.1"
+      - "1.0.0.1"
+    lease_days: 1
+    lease_hours: 0
+    lease_minutes: 0

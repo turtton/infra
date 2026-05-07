@@ -1,0 +1,26 @@
+---
+- name: Set hostname
+  community.network.icx_config:
+    lines:
+      - "hostname {{ icx_hostname }}"
+
+- name: Configure timezone
+  community.network.icx_config:
+    lines:
+      - "clock timezone {{ icx_timezone }}"
+
+- name: Configure NTP servers
+  community.network.icx_config:
+    parents:
+      - ntp
+    lines: "{{ icx_ntp_servers | map('regex_replace', '^(.*)$', 'server \\1') | list }}"
+
+- name: Configure DNS servers
+  community.network.icx_config:
+    lines:
+      - "ip dns server-address {{ icx_dns_servers | join(' ') }}"
+
+- name: Configure logging buffered
+  community.network.icx_config:
+    lines:
+      - "logging buffered {{ icx_logging_buffered }}"

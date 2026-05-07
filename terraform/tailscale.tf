@@ -1,3 +1,20 @@
+locals {
+  proxmox_tailscale_devices = ["main", "data"]
+}
+
+data "tailscale_device" "proxmox" {
+  for_each = toset(local.proxmox_tailscale_devices)
+  hostname = each.value
+  wait_for = "60s"
+}
+
+resource "tailscale_device_tags" "proxmox" {
+  for_each   = data.tailscale_device.proxmox
+  device_id  = each.value.node_id
+  tags       = ["tag:proxmox-cluster"]
+  depends_on = [tailscale_acl.this]
+}
+
 resource "tailscale_acl" "this" {
   acl = jsonencode({
     tagOwners = {
@@ -73,6 +90,14 @@ resource "tailscale_acl" "this" {
         src    = "tag:ci"
         accept = ["192.168.11.100:5000"]
       },
+      {
+        src    = "tag:ci"
+        accept = ["192.168.10.110:50000", "192.168.10.120:50000", "192.168.10.121:50000", "192.168.10.122:50000"]
+      },
+      {
+        src    = "tag:ci"
+        accept = ["192.168.10.100:22", "192.168.10.40:22"]
+      },
     ]
 
     nodeAttrs = [
@@ -81,6 +106,13 @@ resource "tailscale_acl" "this" {
         attr   = ["funnel"]
       },
     ]
+
+    autoApprovers = {
+      routes = {
+        "192.168.10.0/24" = ["tag:proxmox-cluster"]
+        "192.168.11.0/24" = ["tag:proxmox-cluster"]
+      }
+    }
 
     grants = [
       {
@@ -110,7 +142,7 @@ resource "tailscale_acl" "this" {
       },
       {
         src = ["tag:ci"]
-        dst = ["tag:proxmox-cluster", "tag:infra-talos-cluster", "192.168.11.0/24"]
+        dst = ["tag:proxmox-cluster", "tag:infra-talos-cluster", "192.168.11.0/24", "192.168.10.0/24"]
         ip  = ["*"]
       },
       {

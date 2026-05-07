@@ -5,6 +5,10 @@ on:
     paths:
       - "ansible/**"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
@@ -19,12 +23,22 @@ jobs:
       - name: Install Ansible
         run: pip install ansible
 
+      - name: Install SOPS
+        run: |
+          curl -LO https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64
+          install -m 755 sops-v3.9.4.linux.amd64 /usr/local/bin/sops
+
+      - name: Install Ansible collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
+
       - name: Connect to Tailscale
         uses: tailscale/github-action@v3
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci
+          args: "--accept-routes"
 
       - name: Setup SSH key
         run: |
@@ -32,18 +46,15 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: Write vault password
-        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/.vault-pass
-        working-directory: ansible
-
       - name: Run dry-run
         id: dry_run
         working-directory: ansible
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
           set +e
           OUTPUT=$(ansible-playbook playbooks/site.yml \
-            --check --diff \
-            --vault-password-file /tmp/.vault-pass 2>&1)
+            --check --diff 2>&1)
           EXIT_CODE=$?
           echo "$OUTPUT"
           {
@@ -91,4 +102,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f /tmp/.vault-pass ~/.ssh/id_ed25519
+        run: rm -f ~/.ssh/id_ed25519

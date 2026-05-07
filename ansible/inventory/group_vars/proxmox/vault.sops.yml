@@ -1,0 +1,17 @@
+pve_exporter_api_token_value: ENC[AES256_GCM,data:t8u6djTRleDCHhjlww1p08U14NDBCb/iybgaExUpVcMkXQr9,iv:2OU4BZB/KjSFzD87rPbBM1NDRUV7SO/sgS+YXxmsreM=,tag:Gbd1wySXeNIcn9w1ChCIKw==,type:str]
+tailscale_auth_key: ENC[AES256_GCM,data:GIbmMql/vkiM3dPYXVlFjAoY8MSaayC7pad4HhastTXw2ugeS4iZTnsx93kBVSyCf4wNn9EJEvfznaiIhis=,iv:djbdeNQ5APraDvKhIvL2VCYRV/tZJNTlVPvEaQZH0nc=,tag:Wa8Ee4IQIeaqhhsiCKshDw==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBDYUdYNjlrcC9DVHIyTnFV
+            Yll3Z3IyRk42UHRma0xSZHV3M3ZlUEk4Nm1JCmxzM20zcjRiS0FCMFM4UnludlRJ
+            ZXp3RkVWYi83MlBBRWJqeUZ1ZE9vWFEKLS0tIDE2V0kxd08wQTJvUDdOVUpIVTRl
+            RDBpdTBKYU5LL3pnRjFwbW5HRkZZMTAKTzjevi3LwHy3T0rdffZ8cP8ezjmTa9f0
+            mC2OtJL2n9QRYpx7RVQ6GIy00BknTo0Q00RUt1MaCJrzykAGNXO/KA==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-03-29T14:24:03Z"
+    mac: ENC[AES256_GCM,data:L3jd2mm27uAlKFW/9R4ND2VIq012M2NdI0XXNK9WbQu1QlvFZ3LB+PHMqjNfv+hrle5gh1UwvkaSuLpFdwBT/i5WoIGtWnWi5ctl0PT0QrGs04Ih772u86Vi+gKirLcTz9Ge7bww5gt+x6Uh/UKSjW4ZPRvyfHJYiDLXZ8lX9Kg=,iv:/lePanK2LU7DUNu73eMNV9LqlhyI8l7n8usCRmGUv9Q=,tag:PIK6rAcZj2vy4pAG3w73qg==,type:str]
+    unencrypted_suffix: _unencrypted
+    version: 3.11.0

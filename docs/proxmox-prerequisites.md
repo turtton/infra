@@ -22,8 +22,8 @@ echo $(cat ~/.ssh/infra-ci) >> /etc/pve/priv/authorized_keys
 外部から鍵認証でSSH接続できることを確認:
 
 ```bash
-ssh -i <秘密鍵> root@192.168.11.100
-ssh -i <秘密鍵> root@192.168.11.40
+ssh -i <秘密鍵> root@192.168.10.100
+ssh -i <秘密鍵> root@192.168.10.40
 ```
 
 ---
@@ -108,14 +108,13 @@ pveum user token add monitoring@pve exporter --privsep 0
 cd ansible/
 mkdir -p inventory/group_vars/proxmox
 
-# vaultファイルを作成 (暗号化パスワードを求められる)
-ansible-vault create inventory/group_vars/proxmox/vault.yml
-```
-
-以下の内容を記述:
-
-```yaml
+# vault.sops.yml ファイルを作成
+cat > inventory/group_vars/proxmox/vault.sops.yml <<EOF
 pve_exporter_api_token_value: "<控えたトークン値>"
+EOF
+
+# SOPSで暗号化
+sops --encrypt --in-place inventory/group_vars/proxmox/vault.sops.yml
 ```
 
 ---
@@ -126,10 +125,10 @@ pve_exporter_api_token_value: "<控えたトークン値>"
 
 ```bash
 # mainノードから
-ping -c 3 192.168.11.40
+ping -c 3 192.168.10.40
 
 # dataノードから
-ping -c 3 192.168.11.100
+ping -c 3 192.168.10.100
 ```
 
 ---
@@ -143,7 +142,7 @@ ping -c 3 192.168.11.100
 | `monitoring@pve`ユーザー作成済み | [ ] | - |
 | APIトークン (`exporter`) 作成済み | [ ] | - |
 | `PVEAuditor`権限付与済み | [ ] | - |
-| トークン値をansible-vaultに格納済み | [ ] | - |
+| トークン値をSOPSで暗号化済み | [ ] | - |
 | ノード間疎通確認 | [ ] | [ ] |
 
 > **Note:** APIトークン関連の設定はProxmoxクラスタ内で共有されるため、1台で実施すれば全ノードに反映される。
