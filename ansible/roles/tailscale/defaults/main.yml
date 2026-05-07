@@ -4,5 +4,6 @@ tailscale_auth_key: ""
 
 # Tailscale options
 tailscale_accept_routes: true
+tailscale_accept_dns: true
 tailscale_advertise_tags: []
 tailscale_extra_args: ""

@@ -30,6 +30,7 @@
       tailscale up
       --auth-key={{ tailscale_auth_key }}
       {% if tailscale_accept_routes %}--accept-routes{% endif %}
+      {% if not tailscale_accept_dns %}--accept-dns=false{% endif %}
       {% for tag in tailscale_advertise_tags %}--advertise-tags={{ tag }}{% if not loop.last %} {% endif %}{% endfor %}
       {{ tailscale_extra_args }}
   no_log: true
@@ -37,3 +38,12 @@
     tailscale_status.rc != 0 or
     (tailscale_status.stdout | from_json).BackendState != "Running"
   changed_when: true
+
+- name: Apply Tailscale DNS settings
+  ansible.builtin.command:
+    cmd: "tailscale set --accept-dns={{ tailscale_accept_dns | ternary('true', 'false') }}"
+  register: tailscale_dns_result
+  changed_when: tailscale_dns_result.rc == 0
+  when: >-
+    tailscale_status.rc == 0 and
+    (tailscale_status.stdout | from_json).BackendState == "Running"
