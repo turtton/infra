@@ -1,3 +1,20 @@
+locals {
+  proxmox_tailscale_devices = ["main", "data"]
+}
+
+data "tailscale_device" "proxmox" {
+  for_each = toset(local.proxmox_tailscale_devices)
+  hostname = each.value
+  wait_for = "60s"
+}
+
+resource "tailscale_device_tags" "proxmox" {
+  for_each   = data.tailscale_device.proxmox
+  device_id  = each.value.node_id
+  tags       = ["tag:proxmox-cluster"]
+  depends_on = [tailscale_acl.this]
+}
+
 resource "tailscale_acl" "this" {
   acl = jsonencode({
     tagOwners = {
