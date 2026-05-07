@@ -64,8 +64,7 @@ spec:
           group_trigger:
             mention_only: true
       session:
-        dm_scope: "per-channel-peer"
-        backlog_limit: 20
+        dimensions: ["chat"]
       gateway:
         log_level: "info"
       tools:
