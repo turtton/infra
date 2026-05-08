@@ -81,6 +81,8 @@ spec:
         exec:
           enabled: true
           allow_remote: true
+          custom_allow_patterns:
+            - "git\\s+push"
         web:
           enabled: true
           brave:
