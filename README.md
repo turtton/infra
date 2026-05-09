@@ -30,6 +30,11 @@ Git (このリポジトリ)
 |---|---|---|---|---|---|
 | cp-1 | 192.168.10.110 | Control Plane (schedulable) | main | 4 | 24GB |
 | worker-1 | 192.168.10.120 | Worker (Longhornストレージ) | data | 1 | 4GB |
+| worker-2 | 192.168.10.121 | Worker (Longhornストレージ) | data | 1 | 4GB |
+| worker-3 | 192.168.10.122 | Worker (Longhornストレージ) | data | 1 | 4GB |
+| toliworker-1 | 192.168.10.123 | Worker (Longhornストレージ) | toliunit | 22 | 20GB |
+| toliworker-2 | 192.168.10.124 | Worker (Longhornストレージ) | toliunit | 22 | 20GB |
+| toliworker-3 | 192.168.10.125 | Worker (Longhornストレージ) | toliunit | 22 | 20GB |
 
 ## Proxmox Nodes
 
@@ -37,6 +42,7 @@ Git (このリポジトリ)
 |---|---|---|
 | main | 192.168.10.100 | Proxmox VEノード |
 | data | 192.168.10.40 | Proxmox VEノード |
+| toliunit | 192.168.10.101 | Proxmox VEノード |
 
 ## Getting Started
 

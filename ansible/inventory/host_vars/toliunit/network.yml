@@ -1,0 +1,5 @@
+---
+proxmox_network_interface: nic0
+proxmox_network_address: 192.168.10.101
+proxmox_network_cidr: 24
+proxmox_network_gateway: 192.168.10.1

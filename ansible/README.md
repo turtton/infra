@@ -54,12 +54,13 @@ ansible-playbook playbooks/site.yml --tags proxmox-base
 
 ```
 inventory/
-├── hosts.yml                    # ノード定義 (proxmoxグループ)
+├── hosts.yml                        # ノード定義 (proxmoxグループ)
 ├── host_vars/
-│   ├── main/network.yml         # main固有のネットワーク設定
-│   └── data/network.yml         # data固有のネットワーク設定
+│   ├── main/network.yml             # main固有のネットワーク設定
+│   ├── data/network.yml             # data固有のネットワーク設定
+│   └── toliunit/network.yml         # toliunit固有のネットワーク設定
 └── group_vars/
-    └── proxmox/vault.sops.yml    # SOPS暗号化された機密変数
+    └── proxmox/vault.sops.yml        # SOPS暗号化された機密変数
 ```
 
 ### Secret管理

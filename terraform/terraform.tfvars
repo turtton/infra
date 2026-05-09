@@ -6,8 +6,9 @@ cloudflare_zone_id          = "ef642a36cc3c9d8a9e3f757561fa0ce8"
 cloudflare_access_policy_id = "cb1bf754-ee1f-44e6-96e5-d51885fe3684"
 
 proxmox_nodes = {
-  main = { ssh_address = "main" }
-  data = { ssh_address = "data" }
+  main     = { ssh_address = "main" }
+  data     = { ssh_address = "data" }
+  toliunit = { ssh_address = "toliunit" }
 }
 
 control_planes = {
@@ -49,5 +50,41 @@ workers = {
     ram          = 4096 # 4GB - Longhornストレージ専用
     disk_size    = 350
     datastore_id = "data-pve"
+  }
+  toliworker-1 = {
+    host_node    = "toliunit"
+    vm_id        = 1013
+    ip           = "192.168.10.123"
+    cpu          = 22
+    ram          = 20480 # 20GB
+    disk_size    = 10
+    datastore_id = "local"
+    extra_disks = [
+      { datastore_id = "ssd", size = 461 },
+    ]
+  }
+  toliworker-2 = {
+    host_node    = "toliunit"
+    vm_id        = 1014
+    ip           = "192.168.10.124"
+    cpu          = 22
+    ram          = 20480 # 20GB
+    disk_size    = 10
+    datastore_id = "local"
+    extra_disks = [
+      { datastore_id = "ssd2", size = 461 },
+    ]
+  }
+  toliworker-3 = {
+    host_node    = "toliunit"
+    vm_id        = 1015
+    ip           = "192.168.10.125"
+    cpu          = 22
+    ram          = 20480 # 20GB
+    disk_size    = 10
+    datastore_id = "local"
+    extra_disks = [
+      { datastore_id = "ssd3", size = 461 },
+    ]
   }
 }
