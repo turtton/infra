@@ -58,9 +58,9 @@ workers = {
     cpu          = 22
     ram          = 20480 # 20GB
     disk_size    = 10
-    datastore_id = "local"
+    datastore_id = "ssd0"
     extra_disks = [
-      { datastore_id = "ssd", size = 461 },
+      { datastore_id = "ssd", size = 420 },
     ]
   }
   toliworker-2 = {
@@ -70,9 +70,9 @@ workers = {
     cpu          = 22
     ram          = 20480 # 20GB
     disk_size    = 10
-    datastore_id = "local"
+    datastore_id = "ssd0"
     extra_disks = [
-      { datastore_id = "ssd2", size = 461 },
+      { datastore_id = "ssd2", size = 420 },
     ]
   }
   toliworker-3 = {
@@ -82,9 +82,9 @@ workers = {
     cpu          = 22
     ram          = 20480 # 20GB
     disk_size    = 10
-    datastore_id = "local"
+    datastore_id = "ssd0"
     extra_disks = [
-      { datastore_id = "ssd3", size = 461 },
+      { datastore_id = "ssd3", size = 420 },
     ]
   }
 }
