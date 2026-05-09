@@ -15,8 +15,6 @@ spec:
       labels:
         app: couchdb
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: cp-1
       initContainers:
         - name: copy-couchdb-config
           image: couchdb:3

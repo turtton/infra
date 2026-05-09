@@ -26,10 +26,10 @@ spec:
   postBuild:
     substitute:
       tenant_name: yukulab
-      quota_requests_cpu: "2"
-      quota_requests_memory: 4Gi
-      quota_limits_cpu: "4"
-      quota_limits_memory: 8Gi
+      quota_requests_cpu: "4"
+      quota_requests_memory: 8Gi
+      quota_limits_cpu: "8"
+      quota_limits_memory: 16Gi
       quota_pvc: "10"
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1

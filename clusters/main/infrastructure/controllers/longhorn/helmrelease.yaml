@@ -25,12 +25,12 @@ spec:
       retries: 3
   values:
     defaultSettings:
-      defaultReplicaCount: 1
+      defaultReplicaCount: 2
       defaultDataPath: /var/lib/longhorn
       guaranteedInstanceManagerCPU: 5
       storageReservedPercentageForDefaultDisk: 20
     persistence:
-      defaultClassReplicaCount: 1
+      defaultClassReplicaCount: 2
     metrics:
       serviceMonitor:
         enabled: true
