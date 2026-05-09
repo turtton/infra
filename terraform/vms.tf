@@ -35,6 +35,18 @@ resource "proxmox_virtual_environment_vm" "talos_node" {
     file_format  = "raw"
   }
 
+  dynamic "disk" {
+    for_each = each.value.extra_disks
+    content {
+      datastore_id = disk.value.datastore_id
+      interface    = "scsi${disk.key + 1}"
+      iothread     = true
+      discard      = "on"
+      size         = disk.value.size
+      file_format  = "raw"
+    }
+  }
+
   network_device {
     bridge = "vmbr0"
   }

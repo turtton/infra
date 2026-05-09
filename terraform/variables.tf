@@ -99,6 +99,10 @@ variable "control_planes" {
     ram          = number
     disk_size    = number
     datastore_id = string
+    extra_disks = optional(list(object({
+      datastore_id = string
+      size         = number
+    })), [])
   }))
 }
 
@@ -112,5 +116,9 @@ variable "workers" {
     ram          = number
     disk_size    = number
     datastore_id = string
+    extra_disks = optional(list(object({
+      datastore_id = string
+      size         = number
+    })), [])
   }))
 }

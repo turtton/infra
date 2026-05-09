@@ -93,7 +93,6 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci
-          args: "--accept-routes"
 
       - name: Setup SSH key
         run: |
@@ -204,7 +203,6 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci
-          args: "--accept-routes"
 
       - name: Setup SSH key
         run: |
