@@ -102,9 +102,6 @@ spec:
       limits:
         memory: 2Gi
 
-    nodeSelector:
-      kubernetes.io/hostname: cp-1
-
     livenessProbe:
       enabled: true
       initialDelaySeconds: 60

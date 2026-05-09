@@ -15,8 +15,6 @@ spec:
       labels:
         app: nextcloud-valkey
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: cp-1
       containers:
         - name: valkey
           image: docker.io/valkey/valkey:8.0.2-alpine3.21
