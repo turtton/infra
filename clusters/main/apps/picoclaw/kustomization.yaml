@@ -13,3 +13,5 @@ resources:
   - lepi-copilot-secrets.sops.yaml
   - helmrelease-lepi.yaml
   - ingress-lepi.yaml
+  - pod-restart-role.yaml
+  - pod-restart-rolebinding.yaml

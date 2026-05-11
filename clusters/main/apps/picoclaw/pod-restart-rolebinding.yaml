@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-restart-binding
+  namespace: picoclaw
+subjects:
+  - kind: ServiceAccount
+    name: default # picoclaw pod が利用している ServiceAccount
+    namespace: picoclaw
+roleRef:
+  kind: Role
+  name: pod-restart
+  apiGrop: rbac.authorization.k8s.io
