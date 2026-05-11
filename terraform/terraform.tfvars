@@ -57,7 +57,7 @@ workers = {
     ip           = "192.168.10.123"
     cpu          = 22
     ram          = 20480 # 20GB
-    disk_size    = 10
+    disk_size    = 60
     datastore_id = "ssd0"
     extra_disks = [
       { datastore_id = "ssd", size = 420 },
@@ -69,7 +69,7 @@ workers = {
     ip           = "192.168.10.124"
     cpu          = 22
     ram          = 20480 # 20GB
-    disk_size    = 10
+    disk_size    = 60
     datastore_id = "ssd0"
     extra_disks = [
       { datastore_id = "ssd2", size = 420 },
@@ -81,7 +81,7 @@ workers = {
     ip           = "192.168.10.125"
     cpu          = 22
     ram          = 20480 # 20GB
-    disk_size    = 10
+    disk_size    = 60
     datastore_id = "ssd0"
     extra_disks = [
       { datastore_id = "ssd3", size = 420 },
