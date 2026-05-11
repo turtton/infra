@@ -46,11 +46,11 @@ locals {
 data "talos_machine_configuration" "controlplane" {
   for_each = var.control_planes
 
-  cluster_name     = var.cluster_name
-  cluster_endpoint = "https://${var.cluster_endpoint}:6443"
-  machine_type     = "controlplane"
-  machine_secrets  = talos_machine_secrets.this.machine_secrets
-  talos_version    = var.talos_version
+  cluster_name       = var.cluster_name
+  cluster_endpoint   = "https://${var.cluster_endpoint}:6443"
+  machine_type       = "controlplane"
+  machine_secrets    = talos_machine_secrets.this.machine_secrets
+  talos_version      = var.talos_version
   kubernetes_version = var.kubernetes_version
 
   config_patches = concat(local.common_patches, [
@@ -82,9 +82,9 @@ data "talos_machine_configuration" "controlplane" {
             addresses = ["${each.value.ip}/24"]
             # metric 512: platform/cloud-init route (1024) より優先させる
             routes = [{
-              network  = "0.0.0.0/0"
-              gateway  = var.gateway
-              metric   = 512
+              network = "0.0.0.0/0"
+              gateway = var.gateway
+              metric  = 512
             }]
           }]
         }
@@ -97,11 +97,11 @@ data "talos_machine_configuration" "controlplane" {
 data "talos_machine_configuration" "worker" {
   for_each = var.workers
 
-  cluster_name     = var.cluster_name
-  cluster_endpoint = "https://${var.cluster_endpoint}:6443"
-  machine_type     = "worker"
-  machine_secrets  = talos_machine_secrets.this.machine_secrets
-  talos_version    = var.talos_version
+  cluster_name       = var.cluster_name
+  cluster_endpoint   = "https://${var.cluster_endpoint}:6443"
+  machine_type       = "worker"
+  machine_secrets    = talos_machine_secrets.this.machine_secrets
+  talos_version      = var.talos_version
   kubernetes_version = var.kubernetes_version
 
   config_patches = concat(local.common_patches, [
@@ -120,15 +120,33 @@ data "talos_machine_configuration" "worker" {
             addresses = ["${each.value.ip}/24"]
             # metric 512: platform/cloud-init route (1024) より優先させる
             routes = [{
-              network  = "0.0.0.0/0"
-              gateway  = var.gateway
-              metric   = 512
+              network = "0.0.0.0/0"
+              gateway = var.gateway
+              metric  = 512
             }]
           }]
         }
       }
     }),
-  ])
+    ],
+    # extra_disks がある worker (toliworker-*) のみ：sdb を /var/lib/longhorn にマウントし Longhornデータを専用SSDへ
+    length(each.value.extra_disks) > 0 ? [
+      yamlencode({
+        machine = {
+          disks = [
+            {
+              device = "/dev/sdb"
+              partitions = [
+                {
+                  mountpoint = "/var/lib/longhorn"
+                }
+              ]
+            }
+          ]
+        }
+      })
+    ] : []
+  )
 }
 
 # VMへconfig適用
