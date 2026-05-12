@@ -130,6 +130,9 @@ data "talos_machine_configuration" "worker" {
     }),
     ],
     # extra_disks がある worker (toliworker-*) のみ：sdb を /var/lib/longhorn にマウントし Longhornデータを専用SSDへ
+    # 前提: vms.tf で root=scsi0、extra_disks は scsi1 から付けるため現行構成では Talos 上で /dev/sdb が追加SSDになる
+    # 制約: 今は extra_disks の1本目だけを Longhorn に割り当てる。2本以上を扱う場合はこの patch を一般化すること
+    # 復旧手順: 再作成や SSD 再初期化後に Longhorn が DiskFilesystemChanged を出した場合は docs/longhorn-toliworker-runbook.md を参照
     length(each.value.extra_disks) > 0 ? [
       yamlencode({
         machine = {
