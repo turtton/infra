@@ -37,7 +37,7 @@ spec:
     config:
       agents:
         defaults:
-          model_name: "kimi-k2.6"
+          model_name: "main"
           restrict_to_workspace: false
           max_tokens: 200000
           temperature: 1.0
@@ -51,8 +51,10 @@ spec:
           - id: config-ops
             name: Config Ops
       model_list:
-        - model_name: "kimi-k2.6"
-          model: "openrouter/moonshotai/kimi-k2.6"
+        - model_name: "main"
+          model: "openrouter/deepseek/deepseek-v4-pro"
+        - model_name: "sub"
+          model: "openrouter/deepseek/deepseek-v4-flash"
       bindings: []
       channels:
         discord:
