@@ -60,6 +60,12 @@ spec:
               - targets: ["192.168.10.40:9221"]
                 labels:
                   pve_node: data
+          - job_name: pve-toliunit
+            metrics_path: /metrics
+            static_configs:
+              - targets: ["192.168.10.101:9221"]
+                labels:
+                  pve_node: toliunit
 
     grafana:
       admin:
