@@ -10,6 +10,9 @@ pve_exporter_checksum: "eb3adf202699d10196d24a270a0605b29a1a68091611313bf4980405
 
 # PVE API Token authentication
 # These MUST be overridden (e.g. via sops-encrypted group_vars)
-pve_exporter_api_user: "monitoring@pve!exporter"
+# Format: USER@REALM!TOKENID — must match an existing PVE API token (`pveum user token list <user>`).
+# The token must also have its own ACL when privilege separation is enabled, e.g.:
+#   pveum acl modify / --tokens 'monitoring@pve!monitoring' --roles PVEAuditor
+pve_exporter_api_user: "monitoring@pve!monitoring"
 pve_exporter_api_token_value: ""
 pve_exporter_verify_ssl: false
