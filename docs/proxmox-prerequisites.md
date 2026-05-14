@@ -174,7 +174,10 @@ ACL 再付与を飛ばすと exporter は HTTP 200 + 空 body を返す silent f
    # → 表示されたトークン値を控える
    ```
 
-2. **token ACL を再付与**（remove で消えている）
+2. **token ACL を再付与し、`pveum acl list` で存在確認**
+
+   PVE のバージョンや WebUI / CLI の経路によって token 削除時に token-side ACL が
+   残るかが変わり得るため、**必ず再付与してから一覧で存在確認**する:
 
    ```bash
    pveum acl modify / --tokens 'monitoring@pve!monitoring' --roles PVEAuditor
@@ -224,7 +227,12 @@ silent failure 設計のため、`up{}` だけでは検知できない。次の�
    - user に PVEAuditor が付いていても、token 自身に ACL が無いと読めない。
    - 確認: `pveum acl list | grep 'token .*monitoring'`
    - 修正: §3.4 のコマンドを再実行
-3. **SOPS のトークン値が古い**
+3. **user 側 ACL 欠落**
+   - privsep=1 では有効権限 = user 側 ACL ∩ token 側 ACL。
+     user 側を消すと token 側があっても読めず、同じ silent failure になる。
+   - 確認: `pveum acl list | grep 'user .*monitoring@pve'`
+   - 修正: §3.2 のコマンドを再実行
+4. **SOPS のトークン値が古い**
    - PVE 側で token を再発行したが Ansible 側の `pve_exporter_api_token_value` が
      未更新。§5 のローテーション手順 3〜5 を実施。
 
@@ -236,6 +244,9 @@ journalctl -u pve-exporter -n 50 --no-pager | grep -i 'error\|401'
 
 # exporter 単体で /metrics が空かを直接確認
 curl -s http://localhost:9221/metrics | head -5
+
+# token の実効権限を直接確認 (user∩token の結果が見える)
+pveum user token permissions monitoring@pve monitoring
 ```
 
 `pve_node_up` が出ていれば exporter は健全。空応答なら PVE API への認証が壊れている。

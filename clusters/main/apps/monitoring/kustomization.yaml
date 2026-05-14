@@ -6,7 +6,6 @@ resources:
   - grafana-admin.sops.yaml
   - alertmanager-discord-webhook.sops.yaml
   - helmrelease.yaml
-  - pve-rules.yaml
 configMapGenerator:
   - name: grafana-dashboard-pve
     namespace: monitoring
