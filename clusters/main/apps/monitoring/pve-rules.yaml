@@ -1,0 +1,55 @@
+---
+# pve-exporter は upstream PVE API が 401 を返しても HTTP 200 + 空 body を返す。
+# そのため Prometheus の `up{}` だけでは検知できない (up=1 のまま) — 実際の PVE
+# メトリクスが消えたかどうかを別途監視する必要がある。
+# 参考: docs/proxmox-prerequisites.md §トラブルシュート
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: pve-exporter
+  namespace: monitoring
+  labels:
+    # kube-prometheus-stack の prometheus.prometheusSpec.ruleSelector は
+    # release=kube-prometheus-stack を見ているため必ず付ける
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: pve-exporter.rules
+      interval: 1m
+      rules:
+        - alert: PVEExporterScrapeDown
+          # additionalScrapeConfigs で付けた pve_node ラベル経由でジョブ単位に評価
+          expr: up{job=~"pve-.+"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "pve-exporter scrape down ({{ $labels.job }})"
+            description: |
+              Prometheus が {{ $labels.job }} ({{ $labels.instance }}) の
+              pve-exporter scrape に失敗しています。systemd の pve-exporter.service
+              状態と PVE 側 API トークン (`pveum user token list monitoring@pve`)
+              を確認してください。
+        - alert: PVEExporterNoMetrics
+          # scrape は成功しているが PVE API への接続が壊れているケース。
+          # 例: トークン無効化 / 期限切れ / privsep ACL 欠落 → exporter が
+          # HTTP 200 + 空 body を返し up=1 だが pve_node_up 系列が空になる。
+          # docs/proxmox-prerequisites.md §トラブルシュート を参照。
+          expr: |-
+            (sum by (job) (up{job=~"pve-.+"} == 1))
+            unless on (job)
+            (count by (job) (pve_node_up))
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: >-
+              pve-exporter is up but returns no PVE metrics
+              ({{ $labels.job }})
+            description: |
+              {{ $labels.job }} の pve-exporter は HTTP 200 を返していますが
+              `pve_node_up` メトリクスが取得できていません。多くの場合
+              Proxmox API トークンが無効、または privilege separation 有効時に
+              トークン側 ACL が欠落しています。
+              復旧手順は docs/proxmox-prerequisites.md の「pve-exporter
+              トラブルシュート」セクションを参照してください。
