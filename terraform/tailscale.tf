@@ -32,6 +32,7 @@ resource "tailscale_acl" "this" {
       "tag:k8s"                 = ["tag:k8s-operator"]
       "tag:nextcloud"           = ["tag:k8s-operator"]
       "tag:picoclaw"            = ["tag:k8s-operator"]
+      "tag:forgejo"             = ["tag:k8s-operator"]
     }
 
     acls = []
@@ -65,6 +66,10 @@ resource "tailscale_acl" "this" {
       },
       {
         src  = "tag:nextcloud"
+        deny = ["tag:mcserver:22", "tag:mcproxy:22", "tag:client:22"]
+      },
+      {
+        src  = "tag:forgejo"
         deny = ["tag:mcserver:22", "tag:mcproxy:22", "tag:client:22"]
       },
       {
@@ -134,6 +139,11 @@ resource "tailscale_acl" "this" {
         src = ["autogroup:admin"]
         dst = ["tag:privatecloud", "tag:nextcloud"]
         ip  = ["443"]
+      },
+      {
+        src = ["autogroup:admin"]
+        dst = ["tag:forgejo"]
+        ip  = ["22", "443"]
       },
       {
         src = ["tag:nix"]
