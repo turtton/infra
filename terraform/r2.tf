@@ -34,8 +34,9 @@ resource "cloudflare_r2_bucket" "this" {
   storage_class = "Standard"
 }
 
-resource "cloudflare_api_token" "forgejo_r2" {
-  name = "forgejo-r2-backup"
+resource "cloudflare_account_token" "forgejo_r2" {
+  account_id = var.cloudflare_account_id
+  name       = "forgejo-r2-backup"
 
   policies = [
     {
@@ -51,8 +52,9 @@ resource "cloudflare_api_token" "forgejo_r2" {
   ]
 }
 
-resource "cloudflare_api_token" "longhorn_r2" {
-  name = "longhorn-r2-backup"
+resource "cloudflare_account_token" "longhorn_r2" {
+  account_id = var.cloudflare_account_id
+  name       = "longhorn-r2-backup"
 
   policies = [
     {

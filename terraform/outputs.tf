@@ -41,24 +41,24 @@ output "r2_endpoint_url" {
 
 output "forgejo_r2_access_key_id" {
   description = "R2 access key ID for Forgejo CNPG barmanObjectStore (token ID)"
-  value       = cloudflare_api_token.forgejo_r2.id
+  value       = cloudflare_account_token.forgejo_r2.id
   sensitive   = true
 }
 
 output "forgejo_r2_secret_access_key" {
   description = "R2 secret access key for Forgejo CNPG barmanObjectStore (sha256 of token value)"
-  value       = sha256(cloudflare_api_token.forgejo_r2.value)
+  value       = sha256(cloudflare_account_token.forgejo_r2.value)
   sensitive   = true
 }
 
 output "longhorn_r2_access_key_id" {
   description = "R2 access key ID for Longhorn BackupTarget (token ID)"
-  value       = cloudflare_api_token.longhorn_r2.id
+  value       = cloudflare_account_token.longhorn_r2.id
   sensitive   = true
 }
 
 output "longhorn_r2_secret_access_key" {
   description = "R2 secret access key for Longhorn BackupTarget (sha256 of token value)"
-  value       = sha256(cloudflare_api_token.longhorn_r2.value)
+  value       = sha256(cloudflare_account_token.longhorn_r2.value)
   sensitive   = true
 }
