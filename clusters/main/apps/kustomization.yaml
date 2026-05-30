@@ -6,6 +6,7 @@ resources:
   - alloy
   - obsidian-livesync
   - attic
+  - forgejo
   - iceshrimp
   - nextcloud
   - picoclaw

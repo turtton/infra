@@ -1,0 +1,97 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo
+  namespace: forgejo
+spec:
+  interval: 30m0s
+  timeout: 15m0s
+  chart:
+    spec:
+      chart: forgejo
+      version: "17.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: forgejo
+        namespace: forgejo
+      interval: 12h0m0s
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    gitea:
+      admin:
+        existingSecret: forgejo-admin
+      config:
+        server:
+          ROOT_URL: "https://forgejo.turtton.net/"
+          DOMAIN: "forgejo.turtton.net"
+          SSH_DOMAIN: "forgejo-ssh.taile2777.ts.net"
+          SSH_PORT: "22"
+          START_SSH_SERVER: "true"
+        database:
+          DB_TYPE: postgres
+          HOST: forgejo-db-rw:5432
+          NAME: forgejo
+          SSL_MODE: disable
+        cache:
+          ADAPTER: redis
+          HOST: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/0"
+        session:
+          PROVIDER: redis
+          PROVIDER_CONFIG: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/1"
+        queue:
+          TYPE: redis
+          CONN_STR: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/2"
+        service:
+          DISABLE_REGISTRATION: "true"
+          REQUIRE_SIGNIN_VIEW: "true"
+        actions:
+          ENABLED: "false"
+      additionalConfigFromEnvs:
+        - valueFrom:
+            secretKeyRef:
+              name: forgejo-db-app
+              key: username
+          name: FORGEJO__database__USER
+        - valueFrom:
+            secretKeyRef:
+              name: forgejo-db-app
+              key: password
+          name: FORGEJO__database__PASSWD
+        - valueFrom:
+            secretKeyRef:
+              name: forgejo-valkey
+              key: valkey-password
+          name: VALKEY_PASSWORD
+
+    postgresql-ha:
+      enabled: false
+
+    postgresql:
+      enabled: false
+
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 20Gi
+      labels:
+        recurring-job.longhorn.io/source: "enabled"
+
+    service:
+      ssh:
+        type: ClusterIP
+
+    ingress:
+      enabled: false
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
