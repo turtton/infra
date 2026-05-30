@@ -4,3 +4,5 @@ resources:
   - namespace.yaml
   - helmrepository.yaml
   - helmrelease.yaml
+  - r2-credentials.sops.yaml
+  - recurring-job.yaml
