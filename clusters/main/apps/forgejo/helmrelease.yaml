@@ -84,7 +84,11 @@ spec:
 
     service:
       ssh:
-        type: ClusterIP
+        type: LoadBalancer
+        loadBalancerClass: tailscale
+        annotations:
+          tailscale.com/hostname: forgejo-ssh
+          tailscale.com/tags: "tag:forgejo"
 
     ingress:
       enabled: false

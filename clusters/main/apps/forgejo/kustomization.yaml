@@ -10,5 +10,4 @@ resources:
   - ocirepository.yaml
   - helmrelease.yaml
   - ingress.yaml
-  - ssh-service.yaml
   - forgejo-secrets.sops.yaml
