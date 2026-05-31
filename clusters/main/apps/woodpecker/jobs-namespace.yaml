@@ -1,0 +1,75 @@
+---
+# CI ジョブ用の分離 namespace
+# Woodpecker agent はここにビルド Pod を作成する
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: woodpecker-jobs
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+---
+# Agent が woodpecker-jobs namespace で Pod/PVC を操作するための RBAC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: woodpecker-agent
+  namespace: woodpecker-jobs
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "persistentvolumeclaims", "services"]
+    verbs: ["create", "delete", "get", "list", "watch", "patch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "delete", "get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: woodpecker-agent
+  namespace: woodpecker-jobs
+subjects:
+  - kind: ServiceAccount
+    name: woodpecker-agent
+    namespace: woodpecker
+roleRef:
+  kind: Role
+  name: woodpecker-agent
+  apiGroup: rbac.authorization.k8s.io
+---
+# NetworkPolicy: ジョブ Pod はインターネット (egress) のみ許可
+# クラスタ内サービス (DB, server 等) へのアクセスを制限
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: woodpecker-jobs-isolation
+  namespace: woodpecker-jobs
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+    - Ingress
+  ingress:
+    # 同 namespace 内の Pod 間通信を許可 (workflow 内 service 連携用)
+    - from:
+        - podSelector: {}
+  egress:
+    # CoreDNS (kube-system) への DNS 解決を許可
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # インターネットへの egress を許可 (内部ネットワーク除外)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10

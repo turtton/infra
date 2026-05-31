@@ -1,0 +1,105 @@
+# CNPG 災害復旧手順 — Woodpecker
+#
+# ═══════════════════════════════════════════════════════════════
+# 前提条件
+# ═══════════════════════════════════════════════════════════════
+# - R2 に base backup + WAL が保存されていること (ScheduledBackup 稼働中)
+# - woodpecker-r2-credentials Secret が woodpecker namespace に存在すること
+# - CNPG operator が稼働中であること
+#
+# ═══════════════════════════════════════════════════════════════
+# 手順
+# ═══════════════════════════════════════════════════════════════
+#
+# 1. Flux による自動 reconcile を停止:
+#    flux suspend kustomization apps
+#
+# 2. 既存 Cluster を削除:
+#    kubectl -n woodpecker delete cluster woodpecker-db
+#
+# 3. PVC が残っている場合は削除:
+#    kubectl -n woodpecker delete pvc woodpecker-db-1
+#
+# 4. このファイルを apply:
+#    kubectl apply -f docs/woodpecker-runbook-assets/cnpg-recovery.yaml
+#
+# 5. 復旧完了を待つ:
+#    kubectl -n woodpecker wait --for=condition=Ready cluster/woodpecker-db --timeout=10m
+#
+# 6. アプリケーション Pod を再起動:
+#    kubectl -n woodpecker rollout restart statefulset woodpecker-server
+#
+# 7. 動作確認後、Git 側の cnpg-cluster.yaml を bootstrap.recovery に書き換えて commit:
+#    (initdb → recovery に変更し push)
+#
+# 8. Flux を再開:
+#    flux resume kustomization apps
+#
+# ═══════════════════════════════════════════════════════════════
+# 特定時点への復旧 (PITR) が必要な場合
+# ═══════════════════════════════════════════════════════════════
+# bootstrap.recovery に recoveryTarget を追加:
+#   recovery:
+#     source: woodpecker-db-backup
+#     recoveryTarget:
+#       targetTime: "2026-01-15T10:30:00Z"
+#
+# ═══════════════════════════════════════════════════════════════
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: woodpecker-db
+  namespace: woodpecker
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.9-system-trixie
+  bootstrap:
+    recovery:
+      source: woodpecker-db-backup
+      database: woodpecker
+      owner: woodpecker
+  externalClusters:
+    - name: woodpecker-db-backup
+      barmanObjectStore:
+        destinationPath: s3://forgejo-backup/woodpecker-cnpg/
+        endpointURL: https://db189f6278d9d9fbdfd8dbf99a5e8c95.r2.cloudflarestorage.com
+        s3Credentials:
+          accessKeyId:
+            name: woodpecker-r2-credentials
+            key: ACCESS_KEY_ID
+          secretAccessKey:
+            name: woodpecker-r2-credentials
+            key: SECRET_ACCESS_KEY
+        wal:
+          compression: gzip
+        data:
+          compression: gzip
+  storage:
+    size: 5Gi
+    storageClass: longhorn
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://forgejo-backup/woodpecker-cnpg/
+      endpointURL: https://db189f6278d9d9fbdfd8dbf99a5e8c95.r2.cloudflarestorage.com
+      s3Credentials:
+        accessKeyId:
+          name: woodpecker-r2-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: woodpecker-r2-credentials
+          key: SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+    retentionPolicy: "30d"
+  monitoring:
+    enablePodMonitor: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

@@ -11,3 +11,4 @@ resources:
   - helmrelease.yaml
   - ingress.yaml
   - forgejo-secrets.sops.yaml
+  - scheduled-backup.yaml

@@ -29,6 +29,7 @@ spec:
       defaultDataPath: /var/lib/longhorn
       guaranteedInstanceManagerCPU: 5
       storageReservedPercentageForDefaultDisk: 20
+    defaultBackupStore:
       backupTarget: s3://longhorn-backup@apac/
       backupTargetCredentialSecret: longhorn-r2-credentials
     persistence:
