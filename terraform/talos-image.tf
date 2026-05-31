@@ -26,7 +26,7 @@ resource "talos_image_factory_schematic" "this" {
 }
 
 # 各Proxmoxノードにイメージをダウンロード
-resource "proxmox_virtual_environment_download_file" "talos_image" {
+resource "proxmox_download_file" "talos_image" {
   for_each = toset(local.proxmox_nodes)
 
   content_type = "iso"
@@ -38,4 +38,19 @@ resource "proxmox_virtual_environment_download_file" "talos_image" {
 
   decompression_algorithm = "gz"
   overwrite               = false
+}
+
+moved {
+  from = proxmox_virtual_environment_download_file.talos_image["main"]
+  to   = proxmox_download_file.talos_image["main"]
+}
+
+moved {
+  from = proxmox_virtual_environment_download_file.talos_image["data"]
+  to   = proxmox_download_file.talos_image["data"]
+}
+
+moved {
+  from = proxmox_virtual_environment_download_file.talos_image["toliunit"]
+  to   = proxmox_download_file.talos_image["toliunit"]
 }

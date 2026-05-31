@@ -27,7 +27,7 @@ resource "proxmox_virtual_environment_vm" "talos_node" {
 
   disk {
     datastore_id = each.value.datastore_id
-    file_id      = proxmox_virtual_environment_download_file.talos_image[each.value.host_node].id
+    file_id      = proxmox_download_file.talos_image[each.value.host_node].id
     interface    = "scsi0"
     iothread     = true
     discard      = "on"
