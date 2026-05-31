@@ -40,13 +40,10 @@ spec:
           SSL_MODE: disable
         cache:
           ADAPTER: redis
-          HOST: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/0"
         session:
           PROVIDER: redis
-          PROVIDER_CONFIG: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/1"
         queue:
           TYPE: redis
-          CONN_STR: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/2"
         service:
           DISABLE_REGISTRATION: "true"
           REQUIRE_SIGNIN_VIEW: "true"
@@ -68,6 +65,12 @@ spec:
               name: forgejo-valkey
               key: valkey-password
           name: VALKEY_PASSWORD
+        - name: FORGEJO__cache__HOST
+          value: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/0"
+        - name: FORGEJO__session__PROVIDER_CONFIG
+          value: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/1"
+        - name: FORGEJO__queue__CONN_STR
+          value: "redis://:$(VALKEY_PASSWORD)@forgejo-valkey.forgejo.svc.cluster.local:6379/2"
 
     postgresql-ha:
       enabled: false
