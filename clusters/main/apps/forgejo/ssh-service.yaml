@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: forgejo-ssh
+  namespace: forgejo
+  annotations:
+    tailscale.com/hostname: forgejo-ssh
+    tailscale.com/tags: "tag:forgejo"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/name: forgejo
+  ports:
+    - name: ssh
+      port: 22
+      targetPort: 22
+      protocol: TCP

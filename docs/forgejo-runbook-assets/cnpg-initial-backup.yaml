@@ -1,0 +1,9 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Backup
+metadata:
+  name: forgejo-db-initial
+  namespace: forgejo
+spec:
+  cluster:
+    name: forgejo-db
+  method: barmanObjectStore

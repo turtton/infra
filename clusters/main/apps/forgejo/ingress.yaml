@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: forgejo
+  namespace: forgejo
+  annotations:
+    tailscale.com/funnel: "false"
+    tailscale.com/tags: "tag:forgejo"
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: forgejo-http
+      port:
+        number: 3000
+  tls:
+    - hosts:
+        - forgejo

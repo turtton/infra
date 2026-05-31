@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forgejo-valkey
+  namespace: forgejo
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: forgejo-valkey
+  template:
+    metadata:
+      labels:
+        app: forgejo-valkey
+    spec:
+      containers:
+        - name: valkey
+          image: docker.io/valkey/valkey:8.0.2-alpine3.21
+          command: ["valkey-server", "--requirepass", "$(VALKEY_PASSWORD)", "--appendonly", "yes"]
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-valkey
+                  key: valkey-password
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: valkey-data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli -a $VALKEY_PASSWORD ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli -a $VALKEY_PASSWORD ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        - name: redis-exporter
+          image: docker.io/oliver006/redis_exporter:v1.67.0
+          ports:
+            - containerPort: 9121
+              name: metrics
+          env:
+            - name: REDIS_ADDR
+              value: "redis://localhost:6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-valkey
+                  key: valkey-password
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+      volumes:
+        - name: valkey-data
+          persistentVolumeClaim:
+            claimName: forgejo-valkey-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forgejo-valkey
+  namespace: forgejo
+spec:
+  selector:
+    app: forgejo-valkey
+  ports:
+    - port: 6379
+      targetPort: 6379
