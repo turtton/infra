@@ -1,0 +1,61 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: woodpecker
+  namespace: woodpecker
+spec:
+  interval: 30m0s
+  timeout: 15m0s
+  chart:
+    spec:
+      chart: woodpecker
+      version: "3.5.1"
+      sourceRef:
+        kind: HelmRepository
+        name: woodpecker
+        namespace: woodpecker
+      interval: 12h0m0s
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    server:
+      enabled: true
+      env:
+        WOODPECKER_HOST: "https://woodpecker.turtton.net"
+        WOODPECKER_FORGEJO: "true"
+        WOODPECKER_FORGEJO_URL: "https://forgejo.turtton.net"
+        WOODPECKER_DATABASE_DRIVER: "postgres"
+        WOODPECKER_DATABASE_DATASOURCE:
+          valueFrom:
+            secretKeyRef:
+              name: woodpecker-db-app
+              key: uri
+      extraSecretNamesForEnvFrom:
+        - woodpecker-secrets
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+
+    agent:
+      enabled: true
+      env:
+        WOODPECKER_BACKEND: "kubernetes"
+        WOODPECKER_BACKEND_K8S_NAMESPACE: "woodpecker"
+        WOODPECKER_BACKEND_K8S_STORAGE_CLASS: "longhorn"
+        WOODPECKER_BACKEND_K8S_VOLUME_SIZE: "1Gi"
+      extraSecretNamesForEnvFrom:
+        - woodpecker-secrets
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          memory: 256Mi

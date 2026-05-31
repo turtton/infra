@@ -8,7 +8,8 @@ locals {
     longhorn = "http://longhorn-frontend.longhorn-system.svc.cluster.local:80"
     livesync = "http://couchdb.obsidian-livesync.svc.cluster.local:5984"
     kameuo   = "http://iceshrimp-web.iceshrimp.svc.cluster.local:3000"
-    forgejo  = "http://forgejo-http.forgejo.svc.cluster.local:3000"
+    forgejo    = "http://forgejo-http.forgejo.svc.cluster.local:3000"
+    woodpecker = "http://woodpecker-server.woodpecker.svc.cluster.local:8000"
   }
 
   access_protected_hostnames = ["grafana", "longhorn"]
