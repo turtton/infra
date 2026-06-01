@@ -29,7 +29,7 @@ spec:
         compression: gzip
       data:
         compression: gzip
-    retentionPolicy: "30d"
+    retentionPolicy: "15d"
   monitoring:
     enablePodMonitor: true
   postgresql:
@@ -47,6 +47,7 @@ spec:
       huge_pages: "off"
       min_wal_size: "64MB"
       max_wal_size: "256MB"
+      archive_timeout: "1h"
   resources:
     requests:
       cpu: 50m
