@@ -1,0 +1,118 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hermes-home
+  namespace: hermes
+  labels:
+    app: hermes-home
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hermes-home
+  template:
+    metadata:
+      labels:
+        app: hermes-home
+    spec:
+      automountServiceAccountToken: false
+      serviceAccountName: default
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: hermes
+          image: ghcr.io/nousresearch/hermes-agent:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - "ALL"
+          env:
+            - name: HERMES_HOME
+              value: /hermes
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: OPENAI_API_KEY
+            - name: OPENAI_BASE_URL
+              value: "https://crof.ai/v1"
+            - name: DISCORD_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: DISCORD_BOT_TOKEN
+            - name: DISCORD_ALLOWED_USERS
+              value: "275915497353117697,299106923741970432,280320003159490561"
+            - name: DISCORD_REQUIRE_MENTION
+              value: "true"
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: GITHUB_TOKEN
+            - name: GH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: GITHUB_TOKEN
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /hermes/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: skills
+              mountPath: /hermes/skills
+              readOnly: true
+            - name: data
+              mountPath: /hermes
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: hermes-home-config
+        - name: skills
+          projected:
+            sources:
+              - configMap:
+                  name: hermes-config-ops-skill
+                  items:
+                    - key: SKILL.md
+                      path: config-ops/SKILL.md
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 5Gi

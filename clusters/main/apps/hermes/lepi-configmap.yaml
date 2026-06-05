@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-lepi-config
+  namespace: hermes
+data:
+  config.yaml: |
+    model:
+      provider: custom
+      default: deepseek-v4-pro-lightning
+      base_url: https://crof.ai/v1
+    personality:
+      name: Main Assistant
+      restrict_to_workspace: false
+    tools:
+      append_file: true
+      edit_file: true
+      read_file: true
+      write_file: true
+      list_dir: true
+      exec: true
+      web: true
+      web_fetch: true
+      send_file: true
+      spawn: true
+      subagent: true
+      message: true
+      cron: true
+      skills: true
+      find_skills: true
+      install_skill: true
+    skills:
+      external_dirs:
+        - /hermes/skills
+    logging:
+      level: info

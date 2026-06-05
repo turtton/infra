@@ -7,4 +7,3 @@ resources:
   - metrics-server
   - tailscale-operator
   - cnpg
-  - picoclaw

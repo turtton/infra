@@ -9,5 +9,5 @@ resources:
   - forgejo
   - iceshrimp
   - nextcloud
-  - picoclaw
+  - hermes
   - woodpecker

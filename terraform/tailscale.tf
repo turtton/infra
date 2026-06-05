@@ -31,7 +31,7 @@ resource "tailscale_acl" "this" {
       "tag:k8s-operator"        = []
       "tag:k8s"                 = ["tag:k8s-operator"]
       "tag:nextcloud"           = ["tag:k8s-operator"]
-      "tag:picoclaw"            = ["tag:k8s-operator"]
+      "tag:hermes"              = ["tag:k8s-operator"]
       "tag:forgejo"             = ["tag:k8s-operator"]
     }
 

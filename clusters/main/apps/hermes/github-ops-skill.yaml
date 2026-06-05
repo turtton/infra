@@ -2,11 +2,17 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: picoclaw-github-ops-skill
-  namespace: picoclaw
+  name: hermes-github-ops-skill
+  namespace: hermes
 data:
-  AGENT.md: |
-    # github-ops Agent
+  SKILL.md: |
+    ---
+    name: github-ops
+    description: GitHub operations agent for repository Q&A, code changes, and PR preparation
+    version: 1.0.0
+    ---
+
+    # github-ops
 
     You are a specialized GitHub operations agent.
 
@@ -111,11 +117,6 @@ data:
     - Do not print tokens/secrets.
     - `GITHUB_TOKEN` is available as an environment variable (injected by K8s Secret).
     - For git HTTPS auth, configure: `git config credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'`
-
-    ## Sub-agent Limitations
-    - サブエージェントはホスト側のファイルシステム・クレデンシャルにアクセスできない
-    - 結果はユーザーへのメッセージとして届くため、自分が自動で続きを動かせない（ユーザーの返信が必要）
-    - → リポジトリ調査・編集は自分が直接行う。サブエージェント委託は現構成では機能しない
 
     ## Workflow
 
