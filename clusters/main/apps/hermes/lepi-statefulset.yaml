@@ -20,7 +20,7 @@ spec:
       serviceAccountName: default
       securityContext:
         seccompProfile:
-          type: RuntimeDefault
+          type: Unconfined
       containers:
         - name: hermes
           image: docker.io/nousresearch/hermes-agent:latest
@@ -29,12 +29,14 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
             capabilities:
-              drop:
-                - "ALL"
               add:
                 - SETUID
                 - SETGID
                 - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+                - SETPCAP
+                - SYS_ADMIN
           env:
             - name: HERMES_HOME
               value: /opt/data
