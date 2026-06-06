@@ -34,6 +34,7 @@ spec:
               add:
                 - SETUID
                 - SETGID
+                - CHOWN
           env:
             - name: HERMES_HOME
               value: /opt/data
