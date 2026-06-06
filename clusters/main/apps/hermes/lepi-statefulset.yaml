@@ -27,6 +27,10 @@ spec:
           imagePullPolicy: Always
           tty: true
           stdin: true
+          command:
+            - hermes
+            - gateway
+            - start
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
