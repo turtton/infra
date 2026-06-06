@@ -21,6 +21,27 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: init-config
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache gettext && \
+              envsubst < /template/config.yaml > /opt/data/config.yaml && \
+              chmod 644 /opt/data/config.yaml
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: OPENAI_API_KEY
+          volumeMounts:
+            - name: config-template
+              mountPath: /template
+            - name: data
+              mountPath: /opt/data
       containers:
         - name: hermes
           image: docker.io/nousresearch/hermes-agent:latest
@@ -78,10 +99,6 @@ spec:
               containerPort: 8080
               protocol: TCP
           volumeMounts:
-            - name: config
-              mountPath: /opt/data/config.yaml
-              subPath: config.yaml
-              readOnly: true
             - name: skills
               mountPath: /opt/data/skills
               readOnly: true
@@ -113,7 +130,7 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
       volumes:
-        - name: config
+        - name: config-template
           configMap:
             name: hermes-home-config
         - name: skills

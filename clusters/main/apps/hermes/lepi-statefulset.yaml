@@ -21,6 +21,27 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: init-config
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache gettext && \
+              envsubst < /template/config.yaml > /opt/data/config.yaml && \
+              chmod 644 /opt/data/config.yaml
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-lepi-secrets
+                  key: OPENAI_API_KEY
+          volumeMounts:
+            - name: config-template
+              mountPath: /template
+            - name: data
+              mountPath: /opt/data
       containers:
         - name: hermes
           image: docker.io/nousresearch/hermes-agent:latest
@@ -60,9 +81,9 @@ spec:
                   name: hermes-lepi-secrets
                   key: DISCORD_BOT_TOKEN
             - name: DISCORD_ALLOWED_USERS
-              value: "275915497353117697,719807203158130688"
+              value: "275915497353117697,299106923741970432,280320003159490561"
             - name: DISCORD_REQUIRE_MENTION
-              value: "false"
+              value: "true"
             - name: GITHUB_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -73,19 +94,11 @@ spec:
                 secretKeyRef:
                   name: hermes-lepi-secrets
                   key: GITHUB_TOKEN
-            - name: GITHUB_REPO_URL
-              value: "https://github.com/turtton/doumels.git"
-            - name: GITHUB_BASE_BRANCH
-              value: "main"
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
           volumeMounts:
-            - name: config
-              mountPath: /opt/data/config.yaml
-              subPath: config.yaml
-              readOnly: true
             - name: skills
               mountPath: /opt/data/skills
               readOnly: true
@@ -117,7 +130,7 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
       volumes:
-        - name: config
+        - name: config-template
           configMap:
             name: hermes-lepi-config
         - name: skills

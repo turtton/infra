@@ -10,6 +10,7 @@ data:
       provider: custom
       default: deepseek-v4-pro-lightning
       base_url: https://crof.ai/v1
+      api_key: ${OPENAI_API_KEY}
     personality:
       name: Main Assistant
       restrict_to_workspace: false
