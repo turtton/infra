@@ -20,7 +20,7 @@ spec:
       serviceAccountName: default
       securityContext:
         seccompProfile:
-          type: Unconfined
+          type: RuntimeDefault
       containers:
         - name: hermes
           image: docker.io/nousresearch/hermes-agent:latest
@@ -29,6 +29,8 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
             capabilities:
+              drop:
+                - "ALL"
               add:
                 - SETUID
                 - SETGID
@@ -36,7 +38,6 @@ spec:
                 - DAC_OVERRIDE
                 - FOWNER
                 - SETPCAP
-                - SYS_ADMIN
           env:
             - name: HERMES_HOME
               value: /opt/data
@@ -84,6 +85,8 @@ spec:
               readOnly: true
             - name: data
               mountPath: /opt/data
+            - name: run
+              mountPath: /run
           resources:
             requests:
               cpu: 50m
@@ -118,6 +121,9 @@ spec:
                   items:
                     - key: SKILL.md
                       path: github-ops/SKILL.md
+        - name: run
+          emptyDir:
+            medium: Memory
   volumeClaimTemplates:
     - metadata:
         name: data
