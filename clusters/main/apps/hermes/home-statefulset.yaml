@@ -30,7 +30,7 @@ spec:
           command:
             - hermes
             - gateway
-            - start
+            - run
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
