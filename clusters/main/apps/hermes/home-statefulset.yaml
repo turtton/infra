@@ -93,13 +93,19 @@ spec:
               cpu: 500m
               memory: 1Gi
           livenessProbe:
-            tcpSocket:
-              port: 8080
+            exec:
+              command:
+                - sh
+                - -c
+                - "ps aux | grep -q '[h]ermes'"
             initialDelaySeconds: 60
             periodSeconds: 30
           readinessProbe:
-            tcpSocket:
-              port: 8080
+            exec:
+              command:
+                - sh
+                - -c
+                - "ps aux | grep -q '[h]ermes'"
             initialDelaySeconds: 30
             periodSeconds: 10
       volumes:
