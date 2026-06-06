@@ -31,9 +31,12 @@ spec:
             capabilities:
               drop:
                 - "ALL"
+              add:
+                - SETUID
+                - SETGID
           env:
             - name: HERMES_HOME
-              value: /hermes
+              value: /opt/data
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -66,14 +69,14 @@ spec:
               protocol: TCP
           volumeMounts:
             - name: config
-              mountPath: /hermes/config.yaml
+              mountPath: /opt/data/config.yaml
               subPath: config.yaml
               readOnly: true
             - name: skills
-              mountPath: /hermes/skills
+              mountPath: /opt/data/skills
               readOnly: true
             - name: data
-              mountPath: /hermes
+              mountPath: /opt/data
           resources:
             requests:
               cpu: 50m
