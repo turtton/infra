@@ -25,6 +25,8 @@ spec:
         - name: hermes
           image: docker.io/nousresearch/hermes-agent:latest
           imagePullPolicy: Always
+          tty: true
+          stdin: true
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
