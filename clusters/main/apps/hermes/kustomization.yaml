@@ -1,13 +1,19 @@
+# WARNING: This kustomization must ONLY reference files within this directory.
+# Do NOT copy the parent apps/kustomization.yaml — it lists sibling app directories,
+# which will cause "kustomize build failed" errors in Flux.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - monitoring
-  - loki
-  - alloy
-  - obsidian-livesync
-  - attic
-  - forgejo
-  - iceshrimp
-  - nextcloud
-  - hermes
-  - woodpecker
+  - namespace.yaml
+  - home-configmap.yaml
+  - home-serviceaccount.yaml
+  - home-rbac.yaml
+  - home-statefulset.yaml
+  - lepi-configmap.yaml
+  - lepi-serviceaccount.yaml
+  - lepi-rbac.yaml
+  - lepi-statefulset.yaml
+  - config-ops-skill.yaml
+  - github-ops-skill.yaml
+  - home-secrets.sops.yaml
+  - lepi-secrets.sops.yaml
