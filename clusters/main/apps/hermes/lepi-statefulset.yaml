@@ -16,8 +16,7 @@ spec:
       labels:
         app: hermes-lepi
     spec:
-      automountServiceAccountToken: false
-      serviceAccountName: default
+      serviceAccountName: hermes-lepi
       securityContext:
         seccompProfile:
           type: RuntimeDefault
@@ -55,6 +54,20 @@ spec:
               mountPath: /skill-seed
             - name: data
               mountPath: /opt/data
+        - name: install-tools
+          image: alpine:latest
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /opt/data/bin && \
+              apk add --no-cache curl >/dev/null 2>&1 && \
+              curl -sLO "https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl" && \
+              chmod +x kubectl && \
+              mv kubectl /opt/data/bin/kubectl
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
       containers:
         - name: hermes
           image: docker.io/nousresearch/hermes-agent:latest
@@ -81,6 +94,8 @@ spec:
           env:
             - name: HERMES_HOME
               value: /opt/data
+            - name: PATH
+              value: /opt/data/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:

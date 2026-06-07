@@ -1,13 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: hermes
 resources:
-  - namespace.yaml
-  - config-ops-skill.yaml
-  - github-ops-skill.yaml
-  - home-configmap.yaml
-  - home-secrets.sops.yaml
-  - home-statefulset.yaml
-  - lepi-configmap.yaml
-  - lepi-secrets.sops.yaml
-  - lepi-statefulset.yaml
+  - monitoring
+  - loki
+  - alloy
+  - obsidian-livesync
+  - attic
+  - forgejo
+  - iceshrimp
+  - nextcloud
+  - hermes
+  - woodpecker
