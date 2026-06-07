@@ -41,6 +41,20 @@ spec:
               mountPath: /template
             - name: data
               mountPath: /opt/data
+        - name: init-skills
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /opt/data/skills && \
+              cp -r /skill-seed/* /opt/data/skills/ && \
+              chmod -R 755 /opt/data/skills
+          volumeMounts:
+            - name: skill-seed
+              mountPath: /skill-seed
+            - name: data
+              mountPath: /opt/data
       containers:
         - name: hermes
           image: docker.io/nousresearch/hermes-agent:latest
@@ -98,9 +112,6 @@ spec:
               containerPort: 8080
               protocol: TCP
           volumeMounts:
-            - name: skills
-              mountPath: /opt/data/skills
-              readOnly: true
             - name: data
               mountPath: /opt/data
             - name: run
@@ -132,7 +143,7 @@ spec:
         - name: config-template
           configMap:
             name: hermes-home-config
-        - name: skills
+        - name: skill-seed
           projected:
             sources:
               - configMap:
