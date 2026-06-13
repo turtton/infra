@@ -4,8 +4,6 @@ kind: Ingress
 metadata:
   name: hermes-home-webui
   namespace: hermes
-  annotations:
-    tailscale.com/experimental-ingress: "true"
 spec:
   ingressClassName: tailscale
   rules:
