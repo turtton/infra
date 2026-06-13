@@ -1,0 +1,24 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hermes-lepi-webui
+  namespace: hermes
+  annotations:
+    tailscale.com/experimental-ingress: "true"
+spec:
+  ingressClassName: tailscale
+  rules:
+    - host: hermes-lepi
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hermes-lepi
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - hermes-lepi

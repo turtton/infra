@@ -17,3 +17,7 @@ resources:
   - github-ops-skill.yaml
   - home-secrets.sops.yaml
   - lepi-secrets.sops.yaml
+  - home-service.yaml
+  - lepi-service.yaml
+  - home-ingress.yaml
+  - lepi-ingress.yaml
