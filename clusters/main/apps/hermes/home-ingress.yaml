@@ -1,0 +1,24 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hermes-home-webui
+  namespace: hermes
+  annotations:
+    tailscale.com/experimental-ingress: "true"
+spec:
+  ingressClassName: tailscale
+  rules:
+    - host: hermes-home
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hermes-home
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - hermes-home

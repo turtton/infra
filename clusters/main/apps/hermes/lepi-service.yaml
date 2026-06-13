@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hermes-lepi
+  namespace: hermes
+  labels:
+    app: hermes-lepi
+spec:
+  selector:
+    app: hermes-lepi
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
