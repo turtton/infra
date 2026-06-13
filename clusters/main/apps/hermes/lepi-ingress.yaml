@@ -4,19 +4,16 @@ kind: Ingress
 metadata:
   name: hermes-lepi-webui
   namespace: hermes
+  annotations:
+    tailscale.com/funnel: "false"
+    tailscale.com/tags: "tag:hermes"
 spec:
   ingressClassName: tailscale
-  rules:
-    - host: hermes-lepi
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: hermes-lepi
-                port:
-                  number: 8080
+  defaultBackend:
+    service:
+      name: hermes-lepi
+      port:
+        number: 9119
   tls:
     - hosts:
         - hermes-lepi

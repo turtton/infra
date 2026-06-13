@@ -121,9 +121,13 @@ spec:
                 secretKeyRef:
                   name: hermes-home-secrets
                   key: GITHUB_TOKEN
+            - name: HERMES_DASHBOARD
+              value: "1"
+            - name: HERMES_DASHBOARD_INSECURE
+              value: "1"
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 9119
               protocol: TCP
           volumeMounts:
             - name: data
