@@ -26,6 +26,7 @@ spec:
     gitea:
       admin:
         existingSecret: forgejo-admin
+        email: admin@forgejo.local
       config:
         server:
           ROOT_URL: "https://forgejo.turtton.net/"
