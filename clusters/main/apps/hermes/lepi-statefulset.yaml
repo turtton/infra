@@ -74,8 +74,7 @@ spec:
           imagePullPolicy: Always
           tty: true
           stdin: true
-          command:
-            - hermes
+          args:
             - gateway
             - run
           securityContext:
