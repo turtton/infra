@@ -34,5 +34,7 @@ data:
     skills:
       external_dirs:
         - /hermes/skills
+    approvals:
+      mode: auto
     logging:
       level: info
