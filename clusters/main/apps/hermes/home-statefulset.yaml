@@ -17,7 +17,12 @@ spec:
         app: hermes-home
     spec:
       serviceAccountName: hermes-home
+      # Secret volumeのファイルは defaultMode: 0440 (owner r only) でマウントされるが、
+      # fsGroup: 10000 (hermes ユーザーの GID) によりグループ読み取り可能になる。
+      # これにより su hermes 経由でも /mnt/secrets/GITHUB_TOKEN を読める。
+      # ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#configure-volume-permission-and-ownership-change-policy-for-pods
       securityContext:
+        fsGroup: 10000
         seccompProfile:
           type: RuntimeDefault
       initContainers:
@@ -186,9 +191,12 @@ spec:
         - name: gh-config
           emptyDir:
             medium: Memory
+        # defaultMode: 0440 → owner(root) only read.
+        # fsGroup: 10000 (Pod securityContext) により hermes ユーザーがグループ権限で読める。
         - name: token-secret
           secret:
             secretName: hermes-home-secrets
+            defaultMode: 0440
   volumeClaimTemplates:
     - metadata:
         name: data
