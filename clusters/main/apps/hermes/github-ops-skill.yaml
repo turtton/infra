@@ -25,9 +25,9 @@ data:
        ```
        git config --global user.name "github-actions[bot]"
        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-       git config --global credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'
+       gh auth setup-git
        ```
-    2. Verify env vars are set: `env | grep -E '^GITHUB_(REPO_URL|BASE_BRANCH|TOKEN)='`
+    2. Verify gh auth is working: `gh auth status`
     3. Ensure the repository exists at `repo/`:
        - If missing: create `scripts/bootstrap-repo.sh` from the template below, then run it
        - If existing: `cd repo && git fetch origin`
@@ -110,13 +110,14 @@ data:
     - Expected env vars:
       - `GITHUB_REPO_URL` (required)
       - `GITHUB_BASE_BRANCH` (optional, default: `main`)
-      - `GITHUB_TOKEN` (required for private repo HTTPS auth)
+    - Authentication: `gh` CLI is pre-authenticated via stored credentials (not env vars)
     - Bootstrap script: `scripts/bootstrap-repo.sh <topic>`
 
     ## Security
     - Do not print tokens/secrets.
-    - `GITHUB_TOKEN` is available as an environment variable (injected by K8s Secret).
-    - For git HTTPS auth, configure: `git config credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_TOKEN"; }; f'`
+    - `gh` CLI is pre-authenticated with stored credentials (injected at container startup).
+    - For git HTTPS auth, run `gh auth setup-git` (done in startup routine).
+    - The `GITHUB_TOKEN` environment variable is NOT available in subprocesses (filtered by safety features). Always use `gh` CLI for authenticated operations.
 
     ## Workflow
 
@@ -125,17 +126,11 @@ data:
     - 「内容を反映して」「まとめて」「保存して」などの表現でも**必ずPRを作成する**
     - **mainに直接pushしない**。常にブランチ → PR の流れを守る
 
-    ### PR作成方法（curl + GitHub REST API）
-    `gh` CLIは利用不可。PR作成は以下のcurlを使用:
+    ### PR作成方法（gh CLI）
+    `gh` CLIが利用可能（認証済み）。PR作成は以下を使用:
     ```bash
-    curl -s -X POST \
-      -H "Authorization: token $GITHUB_TOKEN" \
-      -H "Accept: application/vnd.github.v3+json" \
-      https://api.github.com/repos/OWNER/REPO/pulls \
-      -d "{
-        \"title\": \"<タイトル>\",
-        \"head\": \"<ブランチ名>\",
-        \"base\": \"main\",
-        \"body\": \"<本文>\"
-      }"
+    gh pr create \
+      --title "<タイトル>" \
+      --body "<本文>" \
+      --base main
     ```

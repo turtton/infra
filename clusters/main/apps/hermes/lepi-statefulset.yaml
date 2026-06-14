@@ -64,7 +64,12 @@ spec:
               apk add --no-cache curl >/dev/null 2>&1 && \
               curl -sLO "https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl" && \
               chmod +x kubectl && \
-              mv kubectl /opt/data/bin/kubectl
+              mv kubectl /opt/data/bin/kubectl && \
+              curl -sL "https://github.com/cli/cli/releases/download/v2.67.0/gh_2.67.0_linux_amd64.tar.gz" -o /tmp/gh.tar.gz && \
+              tar xzf /tmp/gh.tar.gz -C /tmp && \
+              mv /tmp/gh_2.67.0_linux_amd64/bin/gh /opt/data/bin/gh && \
+              chmod +x /opt/data/bin/gh && \
+              rm -rf /tmp/gh*
           volumeMounts:
             - name: data
               mountPath: /opt/data
@@ -74,9 +79,20 @@ spec:
           imagePullPolicy: Always
           tty: true
           stdin: true
-          args:
-            - gateway
-            - run
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              unset GH_TOKEN GITHUB_TOKEN
+              export GH_CONFIG_DIR=/run/gh-config
+              mkdir -p "$GH_CONFIG_DIR"
+              chown hermes:hermes "$GH_CONFIG_DIR"
+              if ! su hermes -c 'GH_CONFIG_DIR=/run/gh-config /opt/data/bin/gh auth status' >/dev/null 2>&1; then
+                su hermes -c 'GH_CONFIG_DIR=/run/gh-config /opt/data/bin/gh auth login --with-token < /mnt/secrets/GITHUB_TOKEN'
+                su hermes -c 'GH_CONFIG_DIR=/run/gh-config /opt/data/bin/gh auth status' >/dev/null 2>&1 || { echo "FATAL: gh auth failed"; exit 1; }
+              fi
+              exec /init /opt/hermes/docker/main-wrapper.sh gateway run
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
@@ -111,16 +127,6 @@ spec:
               value: "275915497353117697,299106923741970432,280320003159490561"
             - name: DISCORD_REQUIRE_MENTION
               value: "true"
-            - name: GITHUB_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: hermes-lepi-secrets
-                  key: GITHUB_TOKEN
-            - name: GH_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: hermes-lepi-secrets
-                  key: GITHUB_TOKEN
             - name: HERMES_DASHBOARD
               value: "1"
             - name: HERMES_DASHBOARD_INSECURE
@@ -134,6 +140,11 @@ spec:
               mountPath: /opt/data
             - name: run
               mountPath: /run
+            - name: gh-config
+              mountPath: /run/gh-config
+            - name: token-secret
+              mountPath: /mnt/secrets
+              readOnly: true
           resources:
             requests:
               cpu: 50m
@@ -177,6 +188,12 @@ spec:
         - name: run
           emptyDir:
             medium: Memory
+        - name: gh-config
+          emptyDir:
+            medium: Memory
+        - name: token-secret
+          secret:
+            secretName: hermes-lepi-secrets
   volumeClaimTemplates:
     - metadata:
         name: data

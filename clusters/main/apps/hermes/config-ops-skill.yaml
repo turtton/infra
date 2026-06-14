@@ -30,16 +30,14 @@ data:
     ### 2. 実験が成功したらPRを作成
 
     ```bash
-    # Git認証セットアップ
+    # Git認証セットアップ（gh CLIは起動時に認証済み）
+    gh auth setup-git
     git config --global user.name "github-actions[bot]"
     git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
     # リポジトリをワークスペース内にクローン
     git clone https://github.com/turtton/infra.git ./infra-pr
     cd ./infra-pr
-
-    # gh CLIで認証設定（GH_TOKEN環境変数で自動認証）
-    gh auth setup-git
 
     # ブランチ作成
     git checkout -b hermes/config-update-$(date +%Y%m%d-%H%M%S)
@@ -95,7 +93,7 @@ data:
     - **CIチェック**: PRではdry-runが自動実行される
     - このエージェントは設定変更のみ担当。アプリケーションロジックの変更は行わない
 
-    ## 環境変数
+    ## 認証
 
-    - `GITHUB_TOKEN`: PR作成に使用（Secretから注入済み）
-    - `GH_TOKEN`: `gh` CLI認証に使用（`GITHUB_TOKEN` と同じ値）
+    - `gh` CLIは起動時に`gh auth login`で認証済み（Pod起動時のみ有効）
+    - PR作成は `gh pr create` を使用（GH_TOKEN/GITHUB_TOKEN環境変数は使用不可）
