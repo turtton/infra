@@ -38,3 +38,22 @@ data:
       mode: auto
     logging:
       level: info
+    platforms:
+      webhook:
+        enabled: true
+        extra:
+          port: 8644
+          secret: "INSECURE_NO_AUTH"
+          routes:
+            k8s-alerts:
+              secret: "INSECURE_NO_AUTH"
+              prompt: |
+                以下のKubernetesアラートを解析して、改善案を日本語でアドバイスしてください。
+
+                {__raw__}
+
+                以下の観点で答えて：
+                1. このアラートの原因として考えられること
+                2. 具体的な改善手順（kubectlコマンドを含む）
+                3. 再発防止策
+              deliver: "discord"
