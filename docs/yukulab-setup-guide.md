@@ -159,7 +159,7 @@ data:
   config.yaml: |
     model:
       provider: custom
-      default: deepseek-v4-pro-lightning
+      default: deepseek-v4-pro
       base_url: https://crof.ai/v1
       api_key: ${OPENAI_API_KEY}
     personality:
