@@ -152,10 +152,10 @@ spec:
               readOnly: true
           resources:
             requests:
-              cpu: 50m
+              cpu: 400m
               memory: 512Mi
             limits:
-              cpu: 500m
+              cpu: 800m
               memory: 1Gi
           livenessProbe:
             exec:
@@ -206,3 +206,4 @@ spec:
         resources:
           requests:
             storage: 5Gi
+
