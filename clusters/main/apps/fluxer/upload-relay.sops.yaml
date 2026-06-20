@@ -5,7 +5,7 @@ metadata:
     namespace: fluxer
 type: Opaque
 stringData:
-    relay_secret_base64: ENC[AES256_GCM,data:PGV3iXuX6Sp+iUfUM1bK5LpLIfiKU5al3/FVP43DjMu05mOQXCsfWVHLP0s=,iv:pZQKFJvnc1YSZvtNc03rKRehQosCoQ6VIR8Bes2IbMY=,tag:cXw5sdOVy4k1huTdRFkcdg==,type:str]
+    relay_secret_base64: ENC[AES256_GCM,data:qbA25oU28gf/lUykeDgLv651orIxGSwHBzBRTxu6Wz4NdCR7QqA54/WI9RU=,iv:HFMI90O+66TZWwHjIMj9DK7VyzksZ3LljSqmrB/x1jw=,tag:j+CPcIhF6FmZRbWwCb6xfw==,type:str]
 sops:
     age:
         - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
@@ -17,7 +17,7 @@ sops:
             K0pVOEdYbi9qbmpCaDZiQUd3akdjOWMKheuuUzdULZYZeF5gJp/jNvl0L+qz3yRP
             uTXMAoTHhtgRzdTgTd7EhKxJn4R1epusB9SVc0rsNWCi3y+J7sQj4g==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-06-20T03:09:11Z"
-    mac: ENC[AES256_GCM,data:iymqjisfRqqGSdOT7b8VZNqZZKvE2VigU0824D8xRCZLvb6tscK1jwF2JygS6SerRZr16/ABEfKcuWw8Rsh2s6aK2bi1gJ/9rOG3V5s0FasF8KOvUQfpKIYL2J50L3FzO2yYDIGQL+2NyXhPQJnuQVpK68I5qQFuaJqbau2d04k=,iv:oayG+5EEDOZpa+IDO2fC6x+qMoz6DGAu8rXm3ozpGi8=,tag:tDFRW3jTP8f1KkDBbq0iQQ==,type:str]
+    lastmodified: "2026-06-20T04:03:00Z"
+    mac: ENC[AES256_GCM,data:h4LiR2/nHtZC4AJKFU1IU6O3JBIWr3S4rQm063wPacimkCKPKAbiuNQ/7kYxs9tg45qEds8G5ODd2zqMhyQc3KNVGHZv+lt8HNATEZ6qRXkbnsNULZ3JKVNIkaP3DIuiqhtCIKx7iWknCTWNw8ON1OUoF6X1qf2ChpocDXUyP8U=,iv:MfwUBVw2opjxCx1l5OVO12gpSePzt96aK0u5Xgv81DM=,tag:U6tz4gNYDF6XePAsF4x/Jw==,type:str]
     encrypted_regex: ^(data|stringData)$
     version: 3.11.0
