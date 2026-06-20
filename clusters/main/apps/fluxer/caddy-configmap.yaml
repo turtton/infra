@@ -6,6 +6,15 @@ metadata:
   namespace: fluxer
 data:
   Caddyfile: |
+    {
+        servers :80 {
+            trusted_proxies static 10.244.0.0/16
+        }
+        servers :8088 {
+            trusted_proxies static 10.244.0.0/16
+        }
+    }
+
     :80 {
         @notSW not path /sw.js
         encode @notSW zstd gzip
