@@ -27,6 +27,46 @@ spec:
               - op: remove
                 path: /spec/template/spec/nodeSelector
           - target:
+              kind: StatefulSet
+              name: gateway-guilds
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+              - op: remove
+                path: /spec/template/spec/nodeSelector
+          - target:
+              kind: StatefulSet
+              name: gateway-presence
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+              - op: remove
+                path: /spec/template/spec/nodeSelector
+          - target:
+              kind: StatefulSet
+              name: gateway-sessions
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+              - op: remove
+                path: /spec/template/spec/nodeSelector
+          - target:
+              kind: StatefulSet
+              name: gateway-calls
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+              - op: remove
+                path: /spec/template/spec/nodeSelector
+          - target:
+              kind: StatefulSet
+              name: gateway-push
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+              - op: remove
+                path: /spec/template/spec/nodeSelector
+          - target:
               kind: NetworkPolicy
               name: gateway
             patch: |-
@@ -102,4 +142,29 @@ spec:
         key: cookie
 
     roles:
-      enabled: false
+      enabled: true
+      websocket:
+        role: websocket
+      common:
+        nodeSelector: {}
+        tolerations: []
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+      sessions:
+        enabled: true
+        replicas: 1
+      presence:
+        enabled: true
+        replicas: 1
+      guilds:
+        enabled: true
+        replicas: 1
+      calls:
+        enabled: false
+      push:
+        enabled: true
+        replicas: 1
