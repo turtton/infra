@@ -35,6 +35,35 @@ spec:
       tag: v1
       replicas: 1
       port: 8080
+      command:
+        - /bin/sh
+        - -c
+        - |-
+          cat > /tmp/fluxer-api-wrapper.ts <<'EOF'
+          async function main() {
+            const natsUrl = 'nats://nats.fluxer.svc.cluster.local:4222';
+
+            process.env.FLUXER_NATS_URL = natsUrl;
+            process.env.FLUXER_NATS_CORE_URL = natsUrl;
+            process.env.FLUXER_NATS_JETSTREAM_URL = natsUrl;
+            process.env.NATS_URL = natsUrl;
+
+            const {Config} = await import('/usr/src/app/fluxer_api/src/Config.ts');
+            Config.nats.coreUrl = natsUrl;
+            Config.nats.jetStreamUrl = natsUrl;
+
+            console.log(`[fluxer-api-wrapper] Config.nats.coreUrl=${Config.nats.coreUrl}`);
+
+            await import('/usr/src/app/fluxer_api/src/AppEntrypoint.ts');
+          }
+
+          main().catch((error) => {
+            console.error('[fluxer-api-wrapper] failed to start', error);
+            process.exit(1);
+          });
+          EOF
+
+          exec ./node_modules/.bin/tsx /tmp/fluxer-api-wrapper.ts
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -82,12 +111,21 @@ spec:
           value: redis://valkey.fluxer.svc.cluster.local:6379/0
         - name: FLUXER_NATS_URL
           value: nats://nats.fluxer.svc.cluster.local:4222
+        - name: FLUXER_NATS_CORE_URL
+          value: nats://nats.fluxer.svc.cluster.local:4222
+        - name: FLUXER_NATS_JETSTREAM_URL
+          value: nats://nats.fluxer.svc.cluster.local:4222
         - name: NATS_URL
           value: nats://nats.fluxer.svc.cluster.local:4222
         - name: FLUXER_SEARCH_ENGINE
           value: meilisearch
         - name: FLUXER_SEARCH_URL
           value: http://meilisearch.fluxer.svc.cluster.local:7700
+        - name: FLUXER_SEARCH_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: meilisearch-key
+              key: MEILI_MASTER_KEY
         - name: FLUXER_S3_ENDPOINT
           value: http://seaweedfs.fluxer.svc.cluster.local:8333
         - name: FLUXER_S3_REGION
@@ -135,6 +173,8 @@ spec:
             secretKeyRef:
               name: fluxer-runtime-keys
               key: vapid_private_key
+        - name: FLUXER_VAPID_EMAIL
+          value: noreply@chat.turtton.net
         - name: FLUXER_MEDIA_PROXY_SECRET_KEY
           valueFrom:
             secretKeyRef:
