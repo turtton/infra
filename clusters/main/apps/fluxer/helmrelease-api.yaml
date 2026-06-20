@@ -82,6 +82,8 @@ spec:
           value: redis://valkey.fluxer.svc.cluster.local:6379/0
         - name: FLUXER_NATS_URL
           value: nats://nats.fluxer.svc.cluster.local:4222
+        - name: FLUXER_NATS_CORE_URL
+          value: nats://nats.fluxer.svc.cluster.local:4222
         - name: FLUXER_SEARCH_ENGINE
           value: meilisearch
         - name: FLUXER_SEARCH_URL
