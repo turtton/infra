@@ -25,6 +25,8 @@ spec:
               value: production
             - name: MEILI_NO_ANALYTICS
               value: "true"
+            - name: MEILI_MASTER_KEY
+              value: qF5sYUmJw0evaZU_J8xMF_oQnvqZNkpS7y2px8gvj1o
           ports:
             - name: http
               containerPort: 7700
