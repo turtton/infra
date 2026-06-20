@@ -31,7 +31,7 @@ spec:
 
     app:
       name: app-proxy
-      image: fluxer-app-proxy
+      image: fluxer-app-proxy-self-hosted
       tag: v1
       replicas: 1
       port: 8080
