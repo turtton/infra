@@ -78,6 +78,8 @@ spec:
       env:
         - name: NODE_TLS_REJECT_UNAUTHORIZED
           value: "0"
+        - name: FLUXER_STATIC_CDN_ENDPOINT
+          value: https://chat.turtton.net
         - name: FLUXER_SELF_HOSTED
           value: "true"
         - name: FLUXER_BASE_DOMAIN
