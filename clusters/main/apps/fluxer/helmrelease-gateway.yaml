@@ -26,6 +26,14 @@ spec:
                 path: /spec/template/spec/imagePullSecrets
               - op: remove
                 path: /spec/template/spec/nodeSelector
+          - target:
+              kind: NetworkPolicy
+              name: gateway
+            patch: |-
+              - op: replace
+                path: /spec/ingress
+                value:
+                  - {}
   values:
     global:
       registry: ghcr.io/fluxerapp
