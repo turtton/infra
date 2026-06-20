@@ -16,10 +16,6 @@ spec:
         app.kubernetes.io/name: fluxer-server
         app.kubernetes.io/instance: fluxer-server
     spec:
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
       containers:
         - name: fluxer-server
           image: ghcr.io/fluxerworld/fluxer-server:stable
