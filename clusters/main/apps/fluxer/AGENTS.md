@@ -14,7 +14,8 @@ Cloudflare Tunnel → Caddy:80 → app-proxy:8080 (SPA)
 ```
 
 内部通信:
-- gateway → api:8080/internal/rpc (HTTP, `x-fluxer-rpc-auth` header で認証)
+- gateway → caddy:8088/api → api:8080/internal/rpc (HTTP, `x-fluxer-rpc-auth` header で認証)
+  - Caddy が `X-Forwarded-For` を付与。API の `RequireClientIpMiddleware` を通過するため必須
 - 全サービス ↔ NATS (メッセージバス)
 - api ↔ CNPG (PostgreSQL)
 - api ↔ meilisearch:7700 (全文検索)
@@ -56,12 +57,11 @@ Cloudflare Tunnel → Caddy:80 → app-proxy:8080 (SPA)
 - `DISCOVERY_UPSTREAM_URL=http://caddy:80/.well-known/fluxer`
   (API の discovery endpoint は proxy header 必須のため caddy 経由)
 
-### Shards (messages, users, unfurl)
-- shard は Cassandra を想定 (`values.yaml` のデフォルトが `cassandra.hosts: [cassandra:9042]`)
-- 当環境に Cassandra なし → shard の StatefulSet は常に CrashLoopBackOff
-- **対処**: `helmrelease-messages.yaml` / `helmrelease-users.yaml` は postRenderer で
-  StatefulSet replicas を 0 に。router は正常動作
-- unfurl-shard は Cassandra 不要のためそのまま動作
+### Shards (messages, users, unfurl, snowflakes)
+- shard はデフォルトで Cassandra を想定しているが、Postgres もサポートされている
+- `svc.extraEnv` で Postgres 接続設定 (`FLUXER_POSTGRES_*`) を注入することで CNPG をバックエンドとして利用可能
+- **設定済み**: `helmrelease-messages.yaml` / `helmrelease-users.yaml` に extraEnv で CNPG 接続情報を追加
+- unfurl-shard / snowflakes-shard は Cassandra 不要のためそのまま動作
 
 ### Caddy (caddy-configmap.yaml, raw k8s resource)
 - HelmRelease ではなく raw Deployment + ConfigMap
