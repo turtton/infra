@@ -1,0 +1,857 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-fluxer-plugin
+  namespace: hermes
+data:
+  plugin.yaml: |
+    name: fluxer
+    label: Fluxer
+    kind: platform
+    version: 1.0.0
+    description: Fluxer instant messaging platform adapter for Hermes Agent. Supports self-hosted and cloud instances via automatic endpoint discovery from /.well-known/fluxer.
+    author: turtton
+
+    requires_env:
+      - name: FLUXER_TOKEN
+        description: "Bot API token from Fluxer OAuth2 application"
+        prompt: "Fluxer bot token"
+        url: "https://fluxer.app/developers/applications"
+        password: true
+      - name: FLUXER_CHANNEL
+        description: "Channel to join (e.g., #general)"
+        prompt: "Channel"
+        password: false
+      - name: FLUXER_INSTANCE_URL
+        description: "Self-hosted Fluxer instance base URL (e.g. https://fluxer.example.com). Endpoints are auto-discovered from /.well-known/fluxer."
+        prompt: "Instance URL (e.g. https://fluxer.example.com)"
+        password: false
+
+    optional_env:
+      - name: FLUXER_HOME_CHANNEL
+        description: "Default channel for cron delivery"
+        prompt: "Home channel ID (or empty)"
+        password: false
+      - name: FLUXER_ALLOWED_USERS
+        description: "Comma-separated user IDs allowed to talk to the bot"
+        prompt: "Allowed users (comma-separated)"
+        password: false
+      - name: FLUXER_ALLOW_ALL_USERS
+        description: "Set to 'true' to allow all users to talk to the bot"
+        prompt: "Allow all users"
+        password: false
+  adapter.py: |
+    """
+    Fluxer platform adapter for Hermes Agent.
+
+    Connects to the Fluxer API via WebSocket gateway (Discord-compatible protocol)
+    and REST API for full bot functionality.  Endpoints are auto-discovered from
+    {instance_url}/.well-known/fluxer for self-hosted instances.
+    """
+    from __future__ import annotations
+
+    import asyncio
+    import json
+    import logging
+    import os
+    import time
+    from dataclasses import dataclass, field
+    from typing import Any, Optional
+
+    import aiohttp
+
+    from gateway.platforms.base import (
+        BasePlatformAdapter,
+        MessageEvent,
+        MessageType,
+        SendResult,
+    )
+    from gateway.config import Platform, PlatformConfig
+
+    logger = logging.getLogger(__name__)
+
+    # ── Constants ────────────────────────────────────────────────────────────
+
+    # Public Fluxer endpoints (fallback when no FLUXER_INSTANCE_URL is set)
+    PUBLIC_API_URL = "https://api.fluxer.app/v1"
+    PUBLIC_GATEWAY_URL = "wss://gateway.fluxer.app"
+
+    # Well-known discovery path
+    WELL_KNOWN_PATH = "/.well-known/fluxer"
+
+    # Gateway opcodes (Discord-compatible protocol)
+    OP_DISPATCH = 0
+    OP_HEARTBEAT = 1
+    OP_IDENTIFY = 2
+    OP_PRESENCE_UPDATE = 3
+    OP_VOICE_STATE_UPDATE = 4
+    OP_RESUME = 6
+    OP_RECONNECT = 7
+    OP_REQUEST_GUILD_MEMBERS = 8
+    OP_INVALID_SESSION = 9
+    OP_HELLO = 10
+    OP_HEARTBEAT_ACK = 11
+
+    # Message type constants
+    MESSAGE_TYPE_DEFAULT = 0
+    MESSAGE_TYPE_REPLY = 19
+
+    # ── Dataclasses ──────────────────────────────────────────────────────────
+
+
+    @dataclass
+    class FluxerEndpoints:
+        """Discovered endpoints from /.well-known/fluxer."""
+
+        gateway: str
+        api: str
+        api_public: str
+        media: str = ""
+        static_cdn: str = ""
+
+        @classmethod
+        def from_well_known(cls, data: dict) -> FluxerEndpoints:
+            """Parse endpoints from the well-known discovery document."""
+            eps = data.get("endpoints", {})
+            return cls(
+                gateway=eps.get("gateway", PUBLIC_GATEWAY_URL),
+                api=eps.get("api", PUBLIC_API_URL),
+                api_public=eps.get("api_public", PUBLIC_API_URL),
+                media=eps.get("media", ""),
+                static_cdn=eps.get("static_cdn", ""),
+            )
+
+        @classmethod
+        def public(cls) -> FluxerEndpoints:
+            """Return the public Fluxer cloud endpoints."""
+            return cls(
+                gateway=PUBLIC_GATEWAY_URL,
+                api=PUBLIC_API_URL,
+                api_public=PUBLIC_API_URL,
+                media="https://fluxerusercontent.com",
+                static_cdn="https://fluxerstatic.com",
+            )
+
+
+    # ── Adapter ──────────────────────────────────────────────────────────────
+
+
+    class FluxerAdapter(BasePlatformAdapter):
+        """Adapter for the Fluxer messaging platform (self-hosted or cloud)."""
+
+        def __init__(self, config: PlatformConfig):
+            super().__init__(config, Platform("fluxer"))
+            extra = config.extra or {}
+
+            self.token = os.getenv("FLUXER_TOKEN", "") or extra.get("token", "")
+            self.channel = os.getenv("FLUXER_CHANNEL", "") or extra.get("channel", "")
+            self.instance_url = (
+                os.getenv("FLUXER_INSTANCE_URL", "").rstrip("/")
+                or extra.get("instance_url", "")
+            )
+
+            # Discovered endpoints (filled in connect())
+            self.endpoints: FluxerEndpoints = FluxerEndpoints.public()
+
+            # Gateway state
+            self._ws: Optional[aiohttp.ClientWebSocketResponse] = None
+            self._http_session: Optional[aiohttp.ClientSession] = None
+            self._discovery_session: Optional[aiohttp.ClientSession] = None
+            self._heartbeat_task: Optional[asyncio.Task] = None
+            self._running = False
+            self._session_id: Optional[str] = None
+            self._sequence: Optional[int] = None
+            self._heartbeat_interval: float = 41.25
+            self._last_heartbeat_ack: float = 0.0
+            self._bot_user_id: Optional[str] = None
+            self._bot_username: Optional[str] = None
+
+        # ── Endpoint Discovery ───────────────────────────────────────────────
+
+        async def _discover_endpoints(self) -> FluxerEndpoints:
+            """Fetch /.well-known/fluxer and return discovered endpoints.
+
+            Falls back to public cloud endpoints when no instance URL is
+            configured or the discovery request fails.
+            """
+            base_url = self.instance_url
+            if not base_url:
+                logger.debug(
+                    "No FLUXER_INSTANCE_URL set, using public cloud endpoints"
+                )
+                return FluxerEndpoints.public()
+
+            url = f"{base_url}{WELL_KNOWN_PATH}"
+            logger.info("Discovering Fluxer endpoints from %s", url)
+
+            session = self._ensure_discovery_session()
+
+            try:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        eps = FluxerEndpoints.from_well_known(data)
+                        logger.info(
+                            "Discovered endpoints: gateway=%s api=%s",
+                            eps.gateway,
+                            eps.api,
+                        )
+                        return eps
+                    else:
+                        logger.warning(
+                            "Discovery endpoint returned %d, falling back to public",
+                            resp.status,
+                        )
+            except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as exc:
+                logger.warning(
+                    "Endpoint discovery failed (%s), using public fallback",
+                    exc,
+                )
+
+            return FluxerEndpoints.public()
+
+        def _ensure_discovery_session(self) -> aiohttp.ClientSession:
+            """Get or create a lightweight HTTP session for discovery."""
+            if self._discovery_session is None or self._discovery_session.closed:
+                self._discovery_session = aiohttp.ClientSession(
+                    headers={"User-Agent": "HermesAgent/1.0"},
+                )
+            return self._discovery_session
+
+        def _ensure_api_session(self) -> aiohttp.ClientSession:
+            """Get or create an authenticated HTTP session for API calls."""
+            if self._http_session is None or self._http_session.closed:
+                self._http_session = aiohttp.ClientSession(
+                    headers={
+                        "Authorization": f"Bot {self.token}",
+                        "Content-Type": "application/json",
+                        "User-Agent": "HermesAgent/1.0",
+                    }
+                )
+            return self._http_session
+
+        @property
+        def api_url(self) -> str:
+            """Return the REST API base URL (API endpoint)."""
+            return self.endpoints.api_public.rstrip("/") + "/v1"
+
+        @property
+        def gateway_url(self) -> str:
+            """Return the WebSocket gateway URL."""
+            return self.endpoints.gateway
+
+        # ── Lifecycle ────────────────────────────────────────────────────────
+
+        async def connect(self) -> bool:
+            """Connect to the Fluxer gateway and REST API."""
+            if not self.token:
+                logger.error("FLUXER_TOKEN is not set")
+                return False
+
+            self._running = True
+
+            # Discover endpoints before connecting
+            self.endpoints = await self._discover_endpoints()
+
+            # Create authenticated API session
+            self._ensure_api_session()
+
+            # Start the gateway connection in a background task
+            asyncio.create_task(self._gateway_loop())
+
+            self._mark_connected()
+            logger.info(
+                "Fluxer adapter connected (gateway=%s api=%s channel=%s)",
+                self.gateway_url,
+                self.api_url,
+                self.channel,
+            )
+            return True
+
+        async def disconnect(self) -> None:
+            """Cleanly shut down the adapter."""
+            self._running = False
+
+            if self._heartbeat_task and not self._heartbeat_task.done():
+                self._heartbeat_task.cancel()
+                try:
+                    await self._heartbeat_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                self._heartbeat_task = None
+
+            if self._ws and not self._ws.closed:
+                await self._ws.close(code=1000, message=b"Shutting down")
+                self._ws = None
+
+            for session_name in ("_http_session", "_discovery_session"):
+                session = getattr(self, session_name, None)
+                if session and not session.closed:
+                    await session.close()
+
+            self._mark_disconnected()
+            logger.info("Fluxer adapter disconnected")
+
+        # ── Sending Messages ─────────────────────────────────────────────────
+
+        async def send(
+            self,
+            chat_id: str,
+            content: str,
+            reply_to: Optional[str] = None,
+            metadata: Optional[dict] = None,
+        ) -> SendResult:
+            """Send a message to a Fluxer channel via REST API.
+
+            Args:
+                chat_id: The channel ID to send to.
+                content: The message text.
+                reply_to: Optional message ID to reply to.
+                metadata: Optional metadata dict (e.g., {"embeds": [...]}).
+
+            Returns:
+                SendResult indicating success or failure.
+            """
+            session = self._ensure_api_session()
+
+            payload: dict[str, Any] = {"content": content}
+
+            if reply_to:
+                payload["message_reference"] = {
+                    "channel_id": chat_id,
+                    "message_id": reply_to,
+                    "type": 0,  # Default (reply)
+                }
+                payload.setdefault("allowed_mentions", {})
+                payload["allowed_mentions"]["replied_user"] = True
+
+            if metadata and "embeds" in metadata:
+                payload["embeds"] = metadata["embeds"]
+
+            url = f"{self.api_url}/channels/{chat_id}/messages"
+
+            try:
+                async with session.post(url, json=payload) as resp:
+                    if resp.status in (200, 201):
+                        data = await resp.json()
+                        message_id = data.get("id", "")
+                        logger.debug(
+                            "Message sent to %s (id=%s)", chat_id, message_id
+                        )
+                        return SendResult(success=True, message_id=message_id)
+                    else:
+                        error_text = await resp.text()
+                        logger.error(
+                            "Failed to send message to %s: %d %s",
+                            chat_id,
+                            resp.status,
+                            error_text,
+                        )
+                        return SendResult(
+                            success=False,
+                            error=f"HTTP {resp.status}: {error_text}",
+                        )
+            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                logger.error("Failed to send message to %s: %s", chat_id, exc)
+                return SendResult(success=False, error=str(exc))
+
+        async def send_typing(self, chat_id: str) -> None:
+            """Send typing indicator to a channel."""
+            session = self._ensure_api_session()
+            try:
+                url = f"{self.api_url}/channels/{chat_id}/typing"
+                async with session.post(url, json={}):
+                    pass
+            except Exception:
+                pass
+
+        async def get_chat_info(self, chat_id: str) -> dict:
+            """Fetch metadata about a channel."""
+            session = self._ensure_api_session()
+            url = f"{self.api_url}/channels/{chat_id}"
+            try:
+                async with session.get(url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        channel_type = "dm"
+                        if data.get("type") == 0:
+                            channel_type = "text"
+                        elif data.get("type") == 1:
+                            channel_type = "dm"
+                        elif data.get("type") == 3:
+                            channel_type = "group"
+                        return {
+                            "name": data.get("name") or data.get("id", chat_id),
+                            "type": channel_type,
+                        }
+            except Exception:
+                pass
+
+            return {"name": chat_id, "type": "dm"}
+
+        # ── Gateway Internals ────────────────────────────────────────────────
+
+        async def _gateway_loop(self) -> None:
+            """Main gateway connection loop with auto-reconnect."""
+            while self._running:
+                try:
+                    gw_url = self.gateway_url
+                    logger.debug("Connecting to gateway: %s", gw_url)
+
+                    async with aiohttp.ClientSession(
+                        headers={"User-Agent": "HermesAgent/1.0"}
+                    ) as session:
+                        async with session.ws_connect(
+                            gw_url,
+                            heartbeat=30.0,
+                            max_msg_size=0,  # no limit
+                        ) as ws:
+                            self._ws = ws
+                            await self._handle_gateway(ws)
+                except asyncio.CancelledError:
+                    break
+                except (aiohttp.ClientError, OSError) as exc:
+                    if not self._running:
+                        break
+                    logger.warning(
+                        "Gateway connection failed: %s. Retrying in 5s...", exc
+                    )
+                    await asyncio.sleep(5)
+                except Exception as exc:
+                    logger.error("Gateway error: %s", exc, exc_info=True)
+                    if not self._running:
+                        break
+                    await asyncio.sleep(5)
+
+            # Loop exited; ensure cleanup
+            if self._heartbeat_task and not self._heartbeat_task.done():
+                self._heartbeat_task.cancel()
+
+        async def _handle_gateway(
+            self, ws: aiohttp.ClientWebSocketResponse
+        ) -> None:
+            """Handle the WebSocket message stream."""
+            self._session_id = None
+            self._sequence = None
+
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    data = json.loads(msg.data)
+                    await self._handle_dispatch(ws, data)
+                elif msg.type == aiohttp.WSMsgType.CLOSED:
+                    logger.debug(
+                        "Gateway closed (code=%s, message=%s)",
+                        msg.data,
+                        msg.extra,
+                    )
+                    break
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    logger.error("Gateway error: %s", msg.data)
+                    break
+
+        async def _handle_dispatch(
+            self, ws: aiohttp.ClientWebSocketResponse, data: dict
+        ) -> None:
+            """Process a gateway dispatch message."""
+            op = data.get("op")
+            seq = data.get("s")
+            event_data = data.get("d", {})
+            event_name = data.get("t", "")
+
+            if seq is not None:
+                self._sequence = seq
+
+            if op == OP_HELLO:
+                interval = event_data.get("heartbeat_interval", 41250) / 1000.0
+                self._heartbeat_interval = interval
+                await self._identify(ws)
+                self._start_heartbeat(ws)
+
+            elif op == OP_HEARTBEAT:
+                # Gateway requested an immediate heartbeat
+                await self._send_heartbeat(ws)
+
+            elif op == OP_HEARTBEAT_ACK:
+                self._last_heartbeat_ack = time.monotonic()
+
+            elif op == OP_DISPATCH:
+                await self._handle_event(event_name, event_data)
+
+            elif op == OP_RECONNECT:
+                logger.info("Gateway requested reconnect")
+                raise aiohttp.WebSocketError(4000, "Reconnect requested")
+
+            elif op == OP_INVALID_SESSION:
+                can_resume = event_data
+                if can_resume:
+                    logger.warning("Invalid session, attempting resume...")
+                    await self._resume(ws)
+                else:
+                    logger.warning("Invalid session, re-identifying...")
+                    await self._identify(ws)
+
+        async def _identify(self, ws: aiohttp.ClientWebSocketResponse) -> None:
+            """Send IDENTIFY payload to the gateway."""
+            payload = {
+                "op": OP_IDENTIFY,
+                "d": {
+                    "token": self.token,
+                    "properties": {
+                        "os": "linux",
+                        "browser": "hermes_agent",
+                        "device": "hermes_agent",
+                    },
+                    "intents": 513,  # GUILD_MESSAGES (1<<9) + DIRECT_MESSAGES (1<<12)
+                    "compress": False,
+                    "large_threshold": 250,
+                },
+            }
+            logger.debug("Sending IDENTIFY")
+            await ws.send_json(payload)
+
+        async def _resume(self, ws: aiohttp.ClientWebSocketResponse) -> None:
+            """Send RESUME payload to the gateway."""
+            if not self._session_id:
+                await self._identify(ws)
+                return
+
+            payload = {
+                "op": OP_RESUME,
+                "d": {
+                    "token": self.token,
+                    "session_id": self._session_id,
+                    "seq": self._sequence,
+                },
+            }
+            logger.debug(
+                "Sending RESUME (session=%s, seq=%s)",
+                self._session_id,
+                self._sequence,
+            )
+            await ws.send_json(payload)
+
+        async def _send_heartbeat(
+            self, ws: aiohttp.ClientWebSocketResponse
+        ) -> None:
+            """Send a heartbeat to the gateway."""
+            payload = {"op": OP_HEARTBEAT, "d": self._sequence}
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                pass
+
+        def _start_heartbeat(
+            self, ws: aiohttp.ClientWebSocketResponse
+        ) -> None:
+            """Start the background heartbeat task."""
+            if self._heartbeat_task and not self._heartbeat_task.done():
+                self._heartbeat_task.cancel()
+
+            async def _heartbeat_loop():
+                while self._running:
+                    try:
+                        await asyncio.sleep(self._heartbeat_interval)
+                        await self._send_heartbeat(ws)
+                    except asyncio.CancelledError:
+                        break
+                    except Exception:
+                        break
+
+            self._heartbeat_task = asyncio.create_task(_heartbeat_loop())
+
+        async def _handle_event(self, event_name: str, data: dict) -> None:
+            """Route dispatch events to appropriate handlers."""
+            if event_name == "READY":
+                self._session_id = data.get("session_id")
+                self._bot_user_id = data.get("user", {}).get("id", "")
+                self._bot_username = data.get("user", {}).get("username", "")
+                logger.info(
+                    "Fluxer bot ready: %s (id=%s)",
+                    self._bot_username,
+                    self._bot_user_id,
+                )
+
+            elif event_name == "RESUMED":
+                logger.info("Session resumed (session_id=%s)", self._session_id)
+
+            elif event_name == "MESSAGE_CREATE":
+                await self._handle_message_create(data)
+
+            elif event_name in (
+                "MESSAGE_UPDATE",
+                "MESSAGE_DELETE",
+                "MESSAGE_DELETE_BULK",
+                "TYPING_START",
+                "CHANNEL_CREATE",
+                "CHANNEL_UPDATE",
+                "CHANNEL_DELETE",
+                "GUILD_CREATE",
+                "GUILD_UPDATE",
+                "GUILD_DELETE",
+                "GUILD_MEMBER_ADD",
+                "GUILD_MEMBER_REMOVE",
+                "GUILD_MEMBER_UPDATE",
+                "PRESENCE_UPDATE",
+            ):
+                pass  # Received but not processed yet
+
+        async def _handle_message_create(self, data: dict) -> None:
+            """Process an incoming message."""
+            # Ignore bot's own messages and other bots
+            author = data.get("author", {})
+            if author.get("id") == self._bot_user_id:
+                return
+            if author.get("bot") is True:
+                return
+
+            # Only handle default messages and replies
+            msg_type = data.get("type", MESSAGE_TYPE_DEFAULT)
+            if msg_type not in (MESSAGE_TYPE_DEFAULT, MESSAGE_TYPE_REPLY):
+                return
+
+            content = data.get("content", "")
+            if not content and not data.get("attachments"):
+                return
+
+            channel_id = data.get("channel_id", "")
+            message_id = data.get("id", "")
+            guild_id = data.get("guild_id")
+
+            user_id = author.get("id", "")
+            username = author.get("username", "")
+            discriminator = author.get("discriminator", "")
+            display_name = (
+                f"{username}#{discriminator}" if discriminator else username
+            )
+
+            # Determine channel name for source
+            channel_name = channel_id
+            if guild_id:
+                channel_name = f"{guild_id}/{channel_id}"
+
+            # Build MessageEvent and forward to gateway
+            source = self.build_source(
+                chat_id=channel_id,
+                chat_name=channel_name,
+                chat_type="dm" if not guild_id else "text",
+                user_id=user_id,
+                user_name=display_name,
+            )
+
+            # Check if this is a reply and extract the replied message id
+            reply_to_id = None
+            msg_ref = data.get("message_reference")
+            if msg_ref:
+                reply_to_id = msg_ref.get("message_id")
+
+            # Build the event with extra metadata
+            extra_metadata: dict[str, Any] = {
+                "guild_id": guild_id,
+                "channel_id": channel_id,
+                "author_id": user_id,
+                "bot_id": self._bot_user_id,
+                "reply_to_id": reply_to_id,
+            }
+
+            event = MessageEvent(
+                text=content,
+                message_type=MessageType.TEXT,
+                source=source,
+                message_id=message_id,
+                extra=extra_metadata,
+            )
+
+            await self.handle_message(event)
+
+
+    # ── Discovery Helper for Standalone Cron ─────────────────────────────────
+
+
+    async def _discover_api_url() -> str:
+        """Discover the API URL from FLUXER_INSTANCE_URL or return public default.
+
+        Used by standalone cron delivery to get the correct endpoint without
+        instantiating the full adapter.
+        """
+        instance_url = os.getenv("FLUXER_INSTANCE_URL", "").strip().rstrip("/")
+        if not instance_url:
+            return PUBLIC_API_URL
+
+        url = f"{instance_url}{WELL_KNOWN_PATH}"
+        try:
+            async with aiohttp.ClientSession(
+                headers={"User-Agent": "HermesAgent/1.0"}
+            ) as session:
+                async with session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        eps = data.get("endpoints", {})
+                        api_public = eps.get("api_public", "")
+                        if api_public:
+                            return api_public.rstrip("/") + "/v1"
+        except Exception:
+            pass
+
+        return PUBLIC_API_URL
+
+
+    # ── Plugin Registration Helpers ──────────────────────────────────────────
+
+
+    def _env_enablement() -> Optional[dict]:
+        """Seed PlatformConfig.extra from env vars."""
+        token = os.getenv("FLUXER_TOKEN", "").strip()
+        channel = os.getenv("FLUXER_CHANNEL", "").strip()
+
+        if not (token and channel):
+            return None
+
+        seed: dict[str, Any] = {
+            "token": token,
+            "channel": channel,
+        }
+
+        instance_url = os.getenv("FLUXER_INSTANCE_URL", "").strip()
+        if instance_url:
+            seed["instance_url"] = instance_url
+
+        home = os.getenv("FLUXER_HOME_CHANNEL", "").strip()
+        if home:
+            seed["home_channel"] = {
+                "chat_id": home,
+                "name": os.getenv("FLUXER_HOME_CHANNEL_NAME", "Home"),
+            }
+
+        return seed
+
+
+    def check_requirements() -> bool:
+        """Check if the required environment is available."""
+        return bool(os.getenv("FLUXER_TOKEN")) and bool(
+            os.getenv("FLUXER_CHANNEL")
+        )
+
+
+    def validate_config(config) -> bool:
+        """Validate that the platform configuration is complete."""
+        if not config:
+            return False
+        extra = getattr(config, "extra", {}) or {}
+        token = os.getenv("FLUXER_TOKEN", "") or extra.get("token", "")
+        channel = os.getenv("FLUXER_CHANNEL", "") or extra.get("channel", "")
+        return bool(token) and bool(channel)
+
+
+    async def _standalone_send_fn(
+        pconfig,
+        chat_id,
+        message,
+        *,
+        thread_id=None,
+        media_files=None,
+        force_document=False,
+    ):
+        """Send a message from a standalone cron process."""
+        token = os.getenv("FLUXER_TOKEN", "") or (
+            (getattr(pconfig, "extra", {}) or {}).get("token", "")
+        )
+
+        if not token:
+            return {"error": "FLUXER_TOKEN not set"}
+
+        # Discover the correct API URL
+        api_url = await _discover_api_url()
+
+        headers = {
+            "Authorization": f"Bot {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "HermesAgent/1.0 (cron)",
+        }
+
+        payload: dict[str, Any] = {"content": message}
+        if thread_id:
+            payload["message_reference"] = {
+                "channel_id": chat_id,
+                "message_id": thread_id,
+                "type": 0,
+            }
+
+        async with aiohttp.ClientSession(headers=headers) as session:
+            try:
+                url = f"{api_url}/channels/{chat_id}/messages"
+                async with session.post(url, json=payload) as resp:
+                    if resp.status in (200, 201):
+                        data = await resp.json()
+                        return {
+                            "success": True,
+                            "message_id": data.get("id", ""),
+                        }
+                    else:
+                        error_text = await resp.text()
+                        return {"error": f"HTTP {resp.status}: {error_text}"}
+            except Exception as exc:
+                return {"error": str(exc)}
+
+
+    def _apply_yaml_config(
+        yaml_cfg: dict, platform_cfg: dict
+    ) -> Optional[dict]:
+        """Translate config.yaml fluxer: keys into env vars / extras."""
+        if "instance_url" in platform_cfg and not os.getenv(
+            "FLUXER_INSTANCE_URL"
+        ):
+            os.environ["FLUXER_INSTANCE_URL"] = platform_cfg["instance_url"]
+        if "channel" in platform_cfg and not os.getenv("FLUXER_CHANNEL"):
+            os.environ["FLUXER_CHANNEL"] = str(platform_cfg["channel"])
+        if "home_channel" in platform_cfg and not os.getenv(
+            "FLUXER_HOME_CHANNEL"
+        ):
+            os.environ["FLUXER_HOME_CHANNEL"] = str(platform_cfg["home_channel"])
+        if "allowed_users" in platform_cfg and not os.getenv(
+            "FLUXER_ALLOWED_USERS"
+        ):
+            allowed = platform_cfg["allowed_users"]
+            if isinstance(allowed, list):
+                allowed = ",".join(str(v) for v in allowed)
+            os.environ["FLUXER_ALLOWED_USERS"] = str(allowed)
+        if "allow_all" in platform_cfg and not os.getenv(
+            "FLUXER_ALLOW_ALL_USERS"
+        ):
+            os.environ["FLUXER_ALLOW_ALL_USERS"] = str(
+                platform_cfg["allow_all"]
+            ).lower()
+        return None  # no extra to merge into PlatformConfig.extra
+
+
+    # ── Plugin Entry Point ───────────────────────────────────────────────────
+
+
+    def register(ctx):
+        """Plugin entry point — called by the Hermes plugin system."""
+        ctx.register_platform(
+            name="fluxer",
+            label="Fluxer",
+            adapter_factory=lambda cfg: FluxerAdapter(cfg),
+            check_fn=check_requirements,
+            validate_config=validate_config,
+            required_env=["FLUXER_TOKEN", "FLUXER_CHANNEL"],
+            install_hint="pip install aiohttp  # already bundled with Hermes",
+            env_enablement_fn=_env_enablement,
+            cron_deliver_env_var="FLUXER_HOME_CHANNEL",
+            standalone_sender_fn=_standalone_send_fn,
+            apply_yaml_config_fn=_apply_yaml_config,
+            allowed_users_env="FLUXER_ALLOWED_USERS",
+            allow_all_env="FLUXER_ALLOW_ALL_USERS",
+            max_message_length=4000,
+            platform_hint=(
+                "You are chatting via Fluxer, a free and open source instant "
+                "messaging platform. Messages support markdown formatting (**bold**, "
+                "*italic*, `code`, ~~strikethrough~~). You can send embeds and "
+                "attachments. Max message length is 4000 characters."
+            ),
+            emoji="💬",
+            allow_update_command=True,
+        )
