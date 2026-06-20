@@ -19,6 +19,7 @@ resources:
   - nats-service.yaml
   - meilisearch-statefulset.yaml
   - meilisearch-service.yaml
+  - meilisearch-key.sops.yaml
   - valkey-deployment.yaml
   - valkey-service.yaml
   - caddy-configmap.yaml
