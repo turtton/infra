@@ -7,7 +7,8 @@ metadata:
 data:
   Caddyfile: |
     :80 {
-        encode zstd gzip
+        @notSW not path /sw.js
+        encode @notSW zstd gzip
 
         handle /_health {
             respond "OK" 200
