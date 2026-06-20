@@ -49,7 +49,13 @@ data:
         }
 
         handle {
-            reverse_proxy app-proxy:8080
+            reverse_proxy app-proxy:8080 {
+                header_down -Content-Security-Policy
+            }
+        }
+
+        header / {
+            Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://*.fluxer.app https://*.fluxerstatic.com https://fluxerstatic.com https://hcaptcha.com https://*.hcaptcha.com https://chat.turtton.net; style-src 'self' 'unsafe-inline' https://*.fluxer.app https://*.fluxerstatic.com https://fluxerstatic.com https://hcaptcha.com https://*.hcaptcha.com https://fonts.googleapis.com https://api.fonts.coollabs.io https://chat.turtton.net https://chat.turtton.net/media; img-src 'self' blob: data: https://*.fluxer.app https://*.fluxerstatic.com https://fluxerstatic.com https://i.ytimg.com https://*.youtube.com https://*.fluxer.media https://fluxer.media https://chat.turtton.net https://chat.turtton.net/media; media-src 'self' blob: https://*.fluxer.app https://*.fluxerstatic.com https://fluxerstatic.com https://*.youtube.com https://*.fluxer.media https://fluxer.media https://chat.turtton.net https://chat.turtton.net/media; font-src 'self' data: https://*.fluxer.app https://*.fluxerstatic.com https://fluxerstatic.com https://fonts.gstatic.com https://api.fonts.coollabs.io https://chat.turtton.net https://chat.turtton.net/media; connect-src 'self' data: https://*.fluxer.app wss://*.fluxer.app https://*.fluxerstatic.com https://fluxerstatic.com https://*.fluxer.media wss://*.fluxer.media https://fluxer-uploads.ewr1.vultrobjects.com https://hcaptcha.com https://*.hcaptcha.com https://fluxerstatus.com https://fluxer.media http://127.0.0.1:21863 http://127.0.0.1:21864 https://chat.turtton.net https://chat.turtton.net/media; frame-src 'self' https://www.youtube.com/embed/ https://www.youtube.com/s/player/ https://hcaptcha.com https://*.hcaptcha.com; worker-src 'self' blob: https://*.fluxer.app https://*.fluxerstatic.com https://fluxerstatic.com blob: https://chat.turtton.net; manifest-src 'self' https://*.fluxer.app https://*.fluxerstatic.com https://fluxerstatic.com https://chat.turtton.net; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
         }
     }
 
