@@ -27,6 +27,18 @@ spec:
       nats:
         url: nats://nats.fluxer.svc.cluster.local:4222
       shard:
-        replicas: 1
+        replicas: 0
       router:
         replicas: 1
+      extraEnv:
+        - name: FLUXER_MEDIA_PROXY_ENDPOINT
+          value: http://media-proxy:8080
+        - name: FLUXER_MEDIA_PROXY_PUBLIC_ENDPOINT
+          value: https://chat.turtton.net/media
+        - name: FLUXER_STATIC_CDN_ENDPOINT
+          value: https://chat.turtton.net
+        - name: FLUXER_MEDIA_PROXY_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: media_proxy_secret_key

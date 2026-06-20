@@ -27,6 +27,6 @@ spec:
       nats:
         url: nats://nats.fluxer.svc.cluster.local:4222
       shard:
-        replicas: 1
+        replicas: 0
       router:
         replicas: 1
