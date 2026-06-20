@@ -1,0 +1,84 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fluxer-media-proxy
+  namespace: fluxer
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./deploy/helm/media-proxy
+      version: "0.1.0"
+      sourceRef:
+        kind: GitRepository
+        name: fluxer-upstream
+        namespace: fluxer
+      interval: 1h
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: media-proxy
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+          - target:
+              kind: Deployment
+              name: static-proxy
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+  values:
+    global:
+      registry: ghcr.io/fluxerapp
+      namespace: fluxer
+
+    mediaProxy:
+      image: fluxer-media-proxy
+      tag: v1
+      replicas: 1
+      port: 8080
+      nsfwServiceEndpoint: ""
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - toliworker-1
+                      - toliworker-2
+                      - toliworker-3
+      env:
+        - name: FLUXER_MEDIA_PROXY_STORAGE_BACKEND
+          value: s3
+        - name: FLUXER_MEDIA_PROXY_MODE
+          value: upload
+        - name: FLUXER_MEDIA_PROXY_UPLOAD_RELAY_SECRET_BASE64
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-upload-relay
+              key: relay_secret_base64
+
+    staticProxy:
+      image: fluxer-media-proxy
+      tag: v1
+      replicas: 1
+      port: 8080
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - toliworker-1
+                      - toliworker-2
+                      - toliworker-3
+      env:
+        - name: FLUXER_MEDIA_PROXY_MODE
+          value: static

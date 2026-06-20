@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy
+  namespace: fluxer
+spec:
+  type: ClusterIP
+  selector:
+    app: caddy
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+    - name: internal
+      port: 8088
+      targetPort: internal
+      protocol: TCP

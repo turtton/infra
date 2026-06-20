@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: fluxer-upload-relay
+    namespace: fluxer
+type: Opaque
+stringData:
+    relay_secret_base64: ENC[AES256_GCM,data:PGV3iXuX6Sp+iUfUM1bK5LpLIfiKU5al3/FVP43DjMu05mOQXCsfWVHLP0s=,iv:pZQKFJvnc1YSZvtNc03rKRehQosCoQ6VIR8Bes2IbMY=,tag:cXw5sdOVy4k1huTdRFkcdg==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBSR282dUxVYlNWQTd4eWYx
+            aGFuSjNwaU5UMnBLamNuZkcyNHBiTFBhUmljCnNWcUQ0SHlqNENjcTF2cHNWWVZC
+            dU1nemJSNmhFOG1JRDJTdkt1R05VSWsKLS0tIEhGTVlETDJ3cElBMmIxS2FJY05Q
+            K0pVOEdYbi9qbmpCaDZiQUd3akdjOWMKheuuUzdULZYZeF5gJp/jNvl0L+qz3yRP
+            uTXMAoTHhtgRzdTgTd7EhKxJn4R1epusB9SVc0rsNWCi3y+J7sQj4g==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-06-20T03:09:11Z"
+    mac: ENC[AES256_GCM,data:iymqjisfRqqGSdOT7b8VZNqZZKvE2VigU0824D8xRCZLvb6tscK1jwF2JygS6SerRZr16/ABEfKcuWw8Rsh2s6aK2bi1gJ/9rOG3V5s0FasF8KOvUQfpKIYL2J50L3FzO2yYDIGQL+2NyXhPQJnuQVpK68I5qQFuaJqbau2d04k=,iv:oayG+5EEDOZpa+IDO2fC6x+qMoz6DGAu8rXm3ozpGi8=,tag:tDFRW3jTP8f1KkDBbq0iQQ==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0

@@ -1,0 +1,69 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fluxer-admin
+  namespace: fluxer
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./deploy/helm/admin
+      version: "0.1.0"
+      sourceRef:
+        kind: GitRepository
+        name: fluxer-upstream
+        namespace: fluxer
+      interval: 1h
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: admin
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+  values:
+    global:
+      registry: ghcr.io/fluxerapp
+      namespace: fluxer
+
+    app:
+      name: admin
+      image: fluxer-admin
+      tag: v1
+      replicas: 1
+      port: 8080
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - toliworker-1
+                      - toliworker-2
+                      - toliworker-3
+      env:
+        - name: FLUXER_ADMIN_BASE_PATH
+          value: /admin
+        - name: FLUXER_API_ENDPOINT
+          value: http://api.fluxer.svc.cluster.local:8080
+        - name: FLUXER_ADMIN_ENDPOINT
+          value: https://chat.turtton.net/admin
+        - name: FLUXER_APP_ENDPOINT
+          value: https://chat.turtton.net
+        - name: FLUXER_MEDIA_ENDPOINT
+          value: https://chat.turtton.net/media
+        - name: FLUXER_ADMIN_SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: admin_secret_key_base
+        - name: FLUXER_ADMIN_OAUTH_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: admin_oauth_client_secret

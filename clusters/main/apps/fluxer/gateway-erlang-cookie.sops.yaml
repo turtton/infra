@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: fluxer-gateway-erlang-cookie
+    namespace: fluxer
+type: Opaque
+stringData:
+    cookie: ENC[AES256_GCM,data:Jglzi7Q6OUyWVYuhookelxb2NtLYG18561KDAO5feQQ=,iv:m8g0GFt2oN5pz9tGAVQTz2nOpfYPU6aafewWC8mSApw=,tag:1f/WUyahGRpcqruJTmHDIA==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB6N2gwTTBXMFQ3MWpmb3dY
+            WWJlUW1kWHB4ekZ1dDBnS0Y5dVZMYzNUTVhnCk9RS0h2Q1dFUmRDbndSWDRORjhV
+            VXlZYzlKTUE0amhzdVdwYUVSM2o5MTAKLS0tIG4yaW9FVkQ2SGNZSHRnZlpYOTA0
+            ZHFiYkU5ei9HSXAzanp4bHlYSjg1V0EKUyJuVLW/py098rYyzCUEJIWoCQN+y24K
+            ynzEdiXSyx2s0m4ZiK/sAhTK94DyJ8ZLeHxaMTKqiFewmcWjvBw+Xg==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-06-20T03:08:59Z"
+    mac: ENC[AES256_GCM,data:7Nx+v0ftSNGq/Qf3FkSJ5E8jH/5qG8tP0HPGM94lww1RdI0UrsvOkax2kmwu9VZh+HR4Xch4CjDR7SnVcvrfQK+b1WUAL6SjdW6Gdxh2Njg2aB4XfI4R5tO1mOdhEqVYln42gv80uHwITPGY6928/noZ78q9fQjLKUsJqQAhqUI=,iv:41MkkaIDZ0jlICL/RvWKkpnSxxn9Q+NWVGENuifzeDY=,tag:dmiwCgBw7N2uJAg3qxfRDA==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0

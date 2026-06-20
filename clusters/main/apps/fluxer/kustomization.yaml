@@ -1,0 +1,28 @@
+# WARNING: This kustomization must ONLY reference files within this directory.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - source-gitrepository.yaml
+  - gateway-erlang-cookie.sops.yaml
+  - r2-credentials.sops.yaml
+  - runtime-keys.sops.yaml
+  - upload-relay.sops.yaml
+  - helmrelease-api.yaml
+  - helmrelease-app-proxy.yaml
+  - helmrelease-admin.yaml
+  - helmrelease-media-proxy.yaml
+  - helmrelease-gateway.yaml
+  - cnpg-cluster.yaml
+  - scheduled-backup.yaml
+  - seaweedfs-statefulset.yaml
+  - seaweedfs-service.yaml
+  - nats-statefulset.yaml
+  - nats-service.yaml
+  - meilisearch-statefulset.yaml
+  - meilisearch-service.yaml
+  - valkey-deployment.yaml
+  - valkey-service.yaml
+  - caddy-configmap.yaml
+  - caddy-deployment.yaml
+  - caddy-service.yaml

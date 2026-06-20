@@ -1,0 +1,154 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fluxer-api
+  namespace: fluxer
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./deploy/helm/api
+      version: "0.1.0"
+      sourceRef:
+        kind: GitRepository
+        name: fluxer-upstream
+        namespace: fluxer
+      interval: 1h
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: api
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+  values:
+    global:
+      registry: ghcr.io/fluxerapp
+      namespace: fluxer
+
+    app:
+      name: api
+      image: fluxer-api
+      tag: v1
+      replicas: 1
+      port: 8080
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - toliworker-1
+                      - toliworker-2
+                      - toliworker-3
+      env:
+        - name: FLUXER_ENV
+          value: production
+        - name: NODE_ENV
+          value: production
+        - name: NODE_TLS_REJECT_UNAUTHORIZED
+          value: "0"
+        - name: FLUXER_SELF_HOSTED
+          value: "true"
+        - name: FLUXER_BASE_DOMAIN
+          value: chat.turtton.net
+        - name: FLUXER_PUBLIC_SCHEME
+          value: https
+        - name: FLUXER_PUBLIC_PORT
+          value: "443"
+        - name: FLUXER_DATABASE_BACKEND
+          value: postgres
+        - name: FLUXER_POSTGRES_HOST
+          value: fluxer-db-rw.fluxer.svc.cluster.local
+        - name: FLUXER_POSTGRES_PORT
+          value: "5432"
+        - name: FLUXER_POSTGRES_DATABASE
+          value: fluxer
+        - name: FLUXER_POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-db-app
+              key: username
+        # CNPG auto-creates fluxer-db-app with the PostgreSQL password.
+        - name: FLUXER_POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-db-app
+              key: password
+        - name: FLUXER_POSTGRES_SSLMODE
+          value: require
+        - name: FLUXER_KV_URL
+          value: redis://valkey.fluxer.svc.cluster.local:6379/0
+        - name: FLUXER_NATS_URL
+          value: nats://nats.fluxer.svc.cluster.local:4222
+        - name: FLUXER_SEARCH_ENGINE
+          value: meilisearch
+        - name: FLUXER_SEARCH_URL
+          value: http://meilisearch.fluxer.svc.cluster.local:7700
+        - name: FLUXER_S3_ENDPOINT
+          value: http://seaweedfs.fluxer.svc.cluster.local:8333
+        - name: FLUXER_S3_REGION
+          value: us-east-1
+        - name: FLUXER_S3_FORCE_PATH_STYLE
+          value: "true"
+        - name: FLUXER_S3_BUCKET_UPLOADS
+          value: fluxer
+        - name: FLUXER_TRUST_CLIENT_IP_HEADER
+          value: "true"
+        - name: FLUXER_CLIENT_IP_HEADER_NAME
+          value: x-forwarded-for
+        - name: FLUXER_SUDO_MODE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: sudo_mode_secret
+        - name: FLUXER_CONNECTION_INITIATION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: connection_initiation_secret
+        - name: FLUXER_VAPID_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: vapid_public_key
+        - name: FLUXER_VAPID_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: vapid_private_key
+        - name: FLUXER_MEDIA_PROXY_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: media_proxy_secret_key
+        - name: FLUXER_INTERNAL_API_ENDPOINT
+          value: http://api.fluxer.svc.cluster.local:8080
+        - name: FLUXER_INTERNAL_GATEWAY_ENDPOINT
+          value: http://gateway.fluxer.svc.cluster.local:8080
+        - name: FLUXER_INTERNAL_MEDIA_PROXY_ENDPOINT
+          value: http://media-proxy.fluxer.svc.cluster.local:8080
+        - name: FLUXER_MEDIA_PROXY_ENDPOINT
+          value: http://media-proxy.fluxer.svc.cluster.local:8080
+        - name: FLUXER_LIVEKIT_ENABLED
+          value: "false"
+        - name: FLUXER_EMAIL_ENABLED
+          value: "false"
+        - name: FLUXER_CAPTCHA_ENABLED
+          value: "false"
+        - name: FLUXER_SNOWFLAKE_SERVICE_BATCH_SIZE
+          value: "128"
+        - name: FLUXER_SNOWFLAKE_SERVICE_LOW_WATERMARK
+          value: "32"
+        - name: FLUXER_SNOWFLAKE_SERVICE_MAX_BUFFER_AGE_MS
+          value: "5000"
+        - name: FLUXER_MEDIA_PROXY_UPLOAD_RELAY_SECRET_BASE64
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-upload-relay
+              key: relay_secret_base64

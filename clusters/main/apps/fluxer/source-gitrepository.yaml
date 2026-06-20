@@ -1,0 +1,15 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: fluxer-upstream
+  namespace: fluxer
+spec:
+  interval: 1h
+  url: https://github.com/fluxerapp/fluxer
+  ref:
+    tag: v1
+  ignore: |
+    # Only include deploy/helm/ directory
+    /*
+    !/deploy/helm/

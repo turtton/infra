@@ -1,0 +1,84 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fluxer-gateway
+  namespace: fluxer
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./deploy/helm/gateway
+      version: "0.1.0"
+      sourceRef:
+        kind: GitRepository
+        name: fluxer-upstream
+        namespace: fluxer
+      interval: 1h
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: gateway
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/imagePullSecrets
+  values:
+    global:
+      registry: ghcr.io/fluxerapp
+      namespace: fluxer
+
+    gateway:
+      image: fluxer-gateway
+      tag: v1
+      replicas: 1
+      port: 8080
+      nodeSelector: {}
+      tolerations: []
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - toliworker-1
+                      - toliworker-2
+                      - toliworker-3
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: gateway
+                    app.kubernetes.io/instance: fluxer-gateway
+                topologyKey: kubernetes.io/hostname
+      env:
+        - name: FLUXER_GATEWAY_MEDIA_PROXY_ENDPOINT
+          value: https://chat.turtton.net/media
+        - name: FLUXER_GATEWAY_STATIC_CDN_ENDPOINT
+          value: https://chat.turtton.net
+        - name: FLUXER_GATEWAY_LOGGER_LEVEL
+          value: info
+        - name: FLUXER_MEDIA_PROXY_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: media_proxy_secret_key
+
+    cluster:
+      enabled: true
+      discoveryDnsName: fluxer-gateway-headless.fluxer.svc.cluster.local
+      discoveryNodeBasename: fluxer_gateway
+      erlangDistribution:
+        port: 8081
+        epmdPort: 4369
+      erlangCookieSecret:
+        name: fluxer-gateway-erlang-cookie
+        key: cookie
+
+    roles:
+      enabled: false
