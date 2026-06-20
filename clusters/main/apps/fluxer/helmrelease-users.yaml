@@ -15,16 +15,6 @@ spec:
         name: fluxer-upstream
         namespace: fluxer
       interval: 1h
-  postRenderers:
-    - kustomize:
-        patches:
-          - target:
-              kind: StatefulSet
-              name: users-shard
-            patch: |-
-              - op: replace
-                path: /spec/replicas
-                value: 0
   values:
     global:
       registry: ghcr.io/fluxerapp
@@ -40,3 +30,27 @@ spec:
         replicas: 1
       router:
         replicas: 1
+      extraEnv:
+        - name: FLUXER_POSTGRES_HOST
+          value: fluxer-db-rw.fluxer.svc.cluster.local
+        - name: FLUXER_POSTGRES_PORT
+          value: "5432"
+        - name: FLUXER_POSTGRES_DATABASE
+          value: fluxer
+        - name: FLUXER_POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-db-app
+              key: username
+        - name: FLUXER_POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-db-app
+              key: password
+        - name: FLUXER_POSTGRES_SSL
+          value: "true"
+        - name: FLUXER_POSTGRES_SSL_CA
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-db-ca
+              key: ca.crt
