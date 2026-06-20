@@ -67,6 +67,26 @@ spec:
             secretKeyRef:
               name: fluxer-upload-relay
               key: relay_secret_base64
+        - name: FLUXER_S3_ENDPOINT
+          value: http://seaweedfs.fluxer.svc.cluster.local:8333
+        - name: FLUXER_S3_REGION
+          value: us-east-1
+        - name: FLUXER_S3_FORCE_PATH_STYLE
+          value: "true"
+        - name: FLUXER_S3_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-s3-credentials
+              key: FLUXER_S3_ACCESS_KEY_ID
+        - name: FLUXER_S3_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-s3-credentials
+              key: FLUXER_S3_SECRET_ACCESS_KEY
+        - name: FLUXER_S3_BUCKET_CDN
+          value: fluxer
+        - name: FLUXER_S3_BUCKET_UPLOADS
+          value: fluxer
 
     staticProxy:
       image: fluxer-media-proxy
@@ -90,5 +110,29 @@ spec:
             secretKeyRef:
               name: fluxer-runtime-keys
               key: media_proxy_secret_key
+        - name: FLUXER_MEDIA_PROXY_STORAGE_BACKEND
+          value: s3
         - name: FLUXER_MEDIA_PROXY_MODE
           value: static
+        - name: FLUXER_S3_ENDPOINT
+          value: http://seaweedfs.fluxer.svc.cluster.local:8333
+        - name: FLUXER_S3_REGION
+          value: us-east-1
+        - name: FLUXER_S3_FORCE_PATH_STYLE
+          value: "true"
+        - name: FLUXER_S3_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-s3-credentials
+              key: FLUXER_S3_ACCESS_KEY_ID
+        - name: FLUXER_S3_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-s3-credentials
+              key: FLUXER_S3_SECRET_ACCESS_KEY
+        - name: FLUXER_S3_BUCKET_CDN
+          value: fluxer
+        - name: FLUXER_S3_BUCKET_STATIC
+          value: fluxer
+        - name: FLUXER_S3_BUCKET_UPLOADS
+          value: fluxer
