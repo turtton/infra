@@ -103,6 +103,11 @@ spec:
             secretKeyRef:
               name: fluxer-runtime-keys
               key: admin_secret_key_base
+        - name: FLUXER_ADMIN_OAUTH_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: admin_oauth_client_secret
         - name: FLUXER_SUDO_MODE_SECRET
           valueFrom:
             secretKeyRef:
