@@ -12,6 +12,10 @@ resources:
   - helmrelease-admin.yaml
   - helmrelease-media-proxy.yaml
   - helmrelease-gateway.yaml
+  - helmrelease-snowflakes.yaml
+  - helmrelease-users.yaml
+  - helmrelease-messages.yaml
+  - helmrelease-unfurl.yaml
   - cnpg-cluster.yaml
   - seaweedfs-statefulset.yaml
   - seaweedfs-service.yaml

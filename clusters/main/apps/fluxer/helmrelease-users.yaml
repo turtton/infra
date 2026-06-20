@@ -1,0 +1,32 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fluxer-users
+  namespace: fluxer
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./deploy/helm/users
+      version: "0.1.0"
+      sourceRef:
+        kind: GitRepository
+        name: fluxer-upstream
+        namespace: fluxer
+      interval: 1h
+  values:
+    global:
+      registry: ghcr.io/fluxerapp
+      namespace: fluxer
+
+    svc:
+      name: users
+      image: fluxer-users
+      tag: v1
+      nats:
+        url: nats://nats.fluxer.svc.cluster.local:4222
+      shard:
+        replicas: 1
+      router:
+        replicas: 1
