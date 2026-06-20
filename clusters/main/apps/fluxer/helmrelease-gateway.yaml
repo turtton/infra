@@ -75,6 +75,8 @@ spec:
           value: https://chat.turtton.net
         - name: FLUXER_GATEWAY_LOGGER_LEVEL
           value: info
+        - name: FLUXER_INTERNAL_API_ENDPOINT
+          value: http://api.fluxer.svc.cluster.local:8080
         - name: FLUXER_NATS_URL
           value: nats://nats.fluxer.svc.cluster.local:4222
         - name: FLUXER_GATEWAY_RPC_AUTH_TOKEN
