@@ -57,6 +57,10 @@ spec:
           value: https://chat.turtton.net
         - name: FLUXER_MEDIA_ENDPOINT
           value: https://chat.turtton.net/media
+        - name: FLUXER_TRUST_CLIENT_IP_HEADER
+          value: "true"
+        - name: FLUXER_CLIENT_IP_HEADER_NAME
+          value: x-forwarded-for
         - name: FLUXER_ADMIN_SECRET_KEY_BASE
           valueFrom:
             secretKeyRef:

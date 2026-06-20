@@ -84,6 +84,10 @@ spec:
           value: "true"
         - name: FLUXER_BASE_DOMAIN
           value: chat.turtton.net
+        - name: FLUXER_TRUST_CLIENT_IP_HEADER
+          value: "true"
+        - name: FLUXER_CLIENT_IP_HEADER_NAME
+          value: x-forwarded-for
         - name: FLUXER_PUBLIC_SCHEME
           value: https
         - name: FLUXER_PUBLIC_PORT
