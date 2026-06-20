@@ -15,6 +15,16 @@ spec:
         name: fluxer-upstream
         namespace: fluxer
       interval: 1h
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: StatefulSet
+              name: users-shard
+            patch: |-
+              - op: replace
+                path: /spec/replicas
+                value: 0
   values:
     global:
       registry: ghcr.io/fluxerapp
