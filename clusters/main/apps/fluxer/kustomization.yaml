@@ -3,21 +3,30 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - namespace.yaml
+  - source-gitrepository.yaml
+  - gateway-erlang-cookie.sops.yaml
   - runtime-keys.sops.yaml
-  # fluxer-server (monolith)
-  - fluxer-server-config.yaml
-  - fluxer-server-pvc.yaml
-  - fluxer-server-deployment.yaml
-  - fluxer-server-service.yaml
-  # Infrastructure services
+  - upload-relay.sops.yaml
+  - helmrelease-api.yaml
+  - helmrelease-app-proxy.yaml
+  - helmrelease-admin.yaml
+  - helmrelease-media-proxy.yaml
+  - helmrelease-gateway.yaml
+  - helmrelease-snowflakes.yaml
+  - helmrelease-users.yaml
+  - helmrelease-messages.yaml
+  - helmrelease-unfurl.yaml
+  - cnpg-cluster.yaml
+  - seaweedfs-statefulset.yaml
+  - seaweedfs-service.yaml
   - nats-statefulset.yaml
   - nats-service.yaml
-  - meilisearch-key.sops.yaml
   - meilisearch-statefulset.yaml
   - meilisearch-service.yaml
+  - meilisearch-key.sops.yaml
+  - s3-credentials.sops.yaml
   - valkey-deployment.yaml
   - valkey-service.yaml
-  # Reverse proxy
   - caddy-configmap.yaml
   - caddy-deployment.yaml
   - caddy-service.yaml

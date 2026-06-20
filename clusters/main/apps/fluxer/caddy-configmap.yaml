@@ -15,43 +15,54 @@ data:
         }
 
         handle_path /api/* {
-            reverse_proxy fluxer-server:8080
+            reverse_proxy api:8080
         }
 
         handle /gateway {
             rewrite * /
-            reverse_proxy fluxer-server:8080
+            reverse_proxy gateway:8080
         }
 
         handle_path /gateway/* {
-            reverse_proxy fluxer-server:8080
+            reverse_proxy gateway:8080
         }
 
         handle_path /media/* {
-            reverse_proxy fluxer-server:8080
+            reverse_proxy media-proxy:8080
         }
 
         handle /admin {
             rewrite * /
-            reverse_proxy fluxer-server:8080
+            reverse_proxy admin:8080
         }
 
         handle_path /admin/* {
-            reverse_proxy fluxer-server:8080
+            reverse_proxy admin:8080
+        }
+
+        @staticAssets path /fonts/* /emoji/* /libs/* /avatars/* /badges/* /desktop/* /embeds/*
+        handle @staticAssets {
+            reverse_proxy static-proxy:8080
+        }
+
+        handle /web/* {
+            reverse_proxy https://fluxerstatic.com {
+                header_up Host fluxerstatic.com
+            }
         }
 
         handle /.well-known/* {
-            reverse_proxy fluxer-server:8080
+            reverse_proxy api:8080
         }
 
         handle /sw.js {
             header Cache-Control "no-cache, no-store"
             header CDN-Cache-Control "no-cache"
-            reverse_proxy fluxer-server:8080
+            reverse_proxy app-proxy:8080
         }
 
         handle {
-            reverse_proxy fluxer-server:8080
+            reverse_proxy app-proxy:8080
         }
     }
 
