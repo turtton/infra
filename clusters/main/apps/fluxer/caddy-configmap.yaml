@@ -48,6 +48,12 @@ data:
             reverse_proxy api:8080
         }
 
+        handle /sw.js {
+            reverse_proxy app-proxy:8080 {
+                header_down Cache-Control "no-cache"
+            }
+        }
+
         handle {
             reverse_proxy app-proxy:8080
         }
