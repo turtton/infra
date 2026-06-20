@@ -50,7 +50,8 @@ data:
 
         handle /sw.js {
             reverse_proxy app-proxy:8080 {
-                header_down Cache-Control "no-cache"
+                header_down Cache-Control "no-cache, no-store"
+                header_down CDN-Cache-Control "no-cache"
             }
         }
 
