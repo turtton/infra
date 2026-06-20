@@ -9,6 +9,10 @@ data:
     :80 {
         encode zstd gzip
 
+        handle /_health {
+            respond "OK" 200
+        }
+
         handle_path /api/* {
             reverse_proxy api:8080
         }

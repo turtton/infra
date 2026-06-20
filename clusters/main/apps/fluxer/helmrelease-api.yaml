@@ -131,6 +131,10 @@ spec:
           value: http://media-proxy.fluxer.svc.cluster.local:8080
         - name: FLUXER_MEDIA_PROXY_ENDPOINT
           value: http://media-proxy.fluxer.svc.cluster.local:8080
+        - name: FLUXER_S3_ACCESS_KEY_ID
+          value: some_key
+        - name: FLUXER_S3_SECRET_ACCESS_KEY
+          value: some_secret
         - name: FLUXER_LIVEKIT_ENABLED
           value: "false"
         - name: FLUXER_EMAIL_ENABLED
