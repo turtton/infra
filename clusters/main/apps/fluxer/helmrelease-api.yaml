@@ -118,6 +118,11 @@ spec:
             secretKeyRef:
               name: fluxer-runtime-keys
               key: connection_initiation_secret
+        - name: FLUXER_GATEWAY_RPC_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: gateway_rpc_auth_token
         - name: FLUXER_VAPID_PUBLIC_KEY
           valueFrom:
             secretKeyRef:
