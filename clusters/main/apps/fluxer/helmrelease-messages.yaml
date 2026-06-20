@@ -31,6 +31,8 @@ spec:
       router:
         replicas: 1
       extraEnv:
+        - name: FLUXER_DATABASE_BACKEND
+          value: postgres
         - name: FLUXER_POSTGRES_HOST
           value: fluxer-db-rw.fluxer.svc.cluster.local
         - name: FLUXER_POSTGRES_PORT
