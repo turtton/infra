@@ -107,11 +107,6 @@ spec:
                     app.kubernetes.io/instance: fluxer-gateway
                 topologyKey: kubernetes.io/hostname
       env:
-        # Common environment (matching docker-compose &fluxer-env)
-        - name: FLUXER_ENV
-          value: production
-        - name: NODE_ENV
-          value: production
         - name: FLUXER_SELF_HOSTED
           value: "true"
         - name: FLUXER_BASE_DOMAIN

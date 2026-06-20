@@ -140,10 +140,6 @@ spec:
           value: "true"
         - name: FLUXER_S3_BUCKET_UPLOADS
           value: fluxer
-        - name: FLUXER_TRUST_CLIENT_IP_HEADER
-          value: "true"
-        - name: FLUXER_CLIENT_IP_HEADER_NAME
-          value: x-forwarded-for
         - name: FLUXER_ADMIN_SECRET_KEY_BASE
           valueFrom:
             secretKeyRef:
