@@ -98,6 +98,11 @@ spec:
           value: "true"
         - name: FLUXER_CLIENT_IP_HEADER_NAME
           value: x-forwarded-for
+        - name: FLUXER_ADMIN_SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: admin_secret_key_base
         - name: FLUXER_SUDO_MODE_SECRET
           valueFrom:
             secretKeyRef:
