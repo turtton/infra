@@ -49,9 +49,7 @@ data:
         }
 
         handle {
-            reverse_proxy app-proxy:8080 {
-                header_down -Content-Security-Policy
-            }
+            reverse_proxy app-proxy:8080
         }
 
         header / {
