@@ -43,7 +43,7 @@ spec:
               mountPath: /opt/data
       containers:
         - name: fluxer-server
-          image: ghcr.io/fluxerworld/fluxer-server:stable
+          image: ghcr.io/fluxerapp/fluxer-server:stable
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
