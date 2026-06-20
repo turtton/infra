@@ -5,7 +5,6 @@ resources:
   - namespace.yaml
   - source-gitrepository.yaml
   - gateway-erlang-cookie.sops.yaml
-  - r2-credentials.sops.yaml
   - runtime-keys.sops.yaml
   - upload-relay.sops.yaml
   - helmrelease-api.yaml
@@ -14,7 +13,6 @@ resources:
   - helmrelease-media-proxy.yaml
   - helmrelease-gateway.yaml
   - cnpg-cluster.yaml
-  - scheduled-backup.yaml
   - seaweedfs-statefulset.yaml
   - seaweedfs-service.yaml
   - nats-statefulset.yaml

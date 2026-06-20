@@ -14,22 +14,6 @@ spec:
   storage:
     size: 5Gi
     storageClass: longhorn
-  backup:
-    barmanObjectStore:
-      destinationPath: s3://forgejo-backup/fluxer-cnpg/
-      endpointURL: https://db189f6278d9d9fbdfd8dbf99a5e8c95.r2.cloudflarestorage.com
-      s3Credentials:
-        accessKeyId:
-          name: fluxer-r2-credentials
-          key: ACCESS_KEY_ID
-        secretAccessKey:
-          name: fluxer-r2-credentials
-          key: SECRET_ACCESS_KEY
-      wal:
-        compression: gzip
-      data:
-        compression: gzip
-    retentionPolicy: "15d"
   monitoring:
     enablePodMonitor: true
   postgresql:
