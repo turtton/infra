@@ -20,6 +20,7 @@ resources:
   - meilisearch-statefulset.yaml
   - meilisearch-service.yaml
   - meilisearch-key.sops.yaml
+  - s3-credentials.sops.yaml
   - valkey-deployment.yaml
   - valkey-service.yaml
   - caddy-configmap.yaml
