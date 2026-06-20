@@ -52,4 +52,4 @@ spec:
         - name: PUBLIC_BOOTSTRAP_API_PUBLIC_ENDPOINT
           value: https://chat.turtton.net/api
         - name: DISCOVERY_UPSTREAM_URL
-          value: http://api.fluxer.svc.cluster.local:8080/.well-known/fluxer
+          value: http://caddy:80/.well-known/fluxer
