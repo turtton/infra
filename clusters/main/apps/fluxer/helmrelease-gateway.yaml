@@ -59,6 +59,8 @@ spec:
                     app.kubernetes.io/instance: fluxer-gateway
                 topologyKey: kubernetes.io/hostname
       env:
+        - name: FLUXER_GATEWAY_PORT
+          value: "8080"
         - name: FLUXER_GATEWAY_MEDIA_PROXY_ENDPOINT
           value: https://chat.turtton.net/media
         - name: FLUXER_GATEWAY_STATIC_CDN_ENDPOINT
