@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: meilisearch-key
+    namespace: fluxer
+type: Opaque
+stringData:
+    MEILI_MASTER_KEY: ENC[AES256_GCM,data:ZaUyfzCHY6BNLkaQz8zJNSQh8P+nxOCI1xI7mZnwlBCcjyt5Ed3PjiP9yQ==,iv:xcMqflIkUT3ABbw7teN3ZmVoXBEo4zrXv4uRY5DE1Dg=,tag:pozP8RWgbnlBGX9JrpPBCA==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBVemlwbjNmTXJ1UThVUmo5
+            bU5jTjdXTkJWUFhBcnROSE16LzE5UzZlQlVzCk82MGJ4K3ozRDF1MWdlNXM5N2dq
+            MjFwdWlwdVJUVTBsb2RIeWJEdjlIcHMKLS0tIDZmc3hCdHZ1WWNyWmZRUDdERWlW
+            SkNub3dZSjNpclA4RFBNeTNMYjU2amsKsINaK0WKopuSInLZR3j9U6K+Mr1t26Cd
+            +4sud5kjRYUfgw6AP1IW+TPwsCkep2B1idpPoXV7UymP1JUm/gehJQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-06-20T03:53:32Z"
+    mac: ENC[AES256_GCM,data:zyrKI6j2/PBpeeP8+2yhEmzw7hrupmR3grvgwIDcyTepSda5gtMJHaV0hvFmiZMIWFd9YHS7NlWCi//jSLSvdgg8pFkOhABc55STACyVrEYWEqGclfuGIoel8Qfq0fV4J3lJ31fDBlUV/T3DRihMJmilQnTG4T/4TdCYjSP++II=,iv:6gMonmA+WNc5xfCH0xHxytWxRRKmQCmfUPwEJZc0wSM=,tag:hs40A+xjMoLgAAD8hf5twg==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0

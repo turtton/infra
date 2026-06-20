@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: meilisearch-key
-  namespace: fluxer
-type: Opaque
-stringData:
-  MEILI_MASTER_KEY: qF5sYUmJw0evaZU_J8xMF_oQnvqZNkpS7y2px8gvj1o
