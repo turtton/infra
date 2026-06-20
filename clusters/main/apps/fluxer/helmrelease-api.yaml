@@ -47,10 +47,6 @@ spec:
                       - toliworker-2
                       - toliworker-3
       env:
-        - name: FLUXER_ENV
-          value: production
-        - name: NODE_ENV
-          value: production
         - name: NODE_TLS_REJECT_UNAUTHORIZED
           value: "0"
         - name: FLUXER_SELF_HOSTED

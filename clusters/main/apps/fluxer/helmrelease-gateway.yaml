@@ -24,6 +24,8 @@ spec:
             patch: |-
               - op: remove
                 path: /spec/template/spec/imagePullSecrets
+              - op: remove
+                path: /spec/template/spec/nodeSelector
   values:
     global:
       registry: ghcr.io/fluxerapp

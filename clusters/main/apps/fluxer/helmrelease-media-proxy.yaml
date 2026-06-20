@@ -53,6 +53,11 @@ spec:
                       - toliworker-2
                       - toliworker-3
       env:
+        - name: FLUXER_MEDIA_PROXY_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: media_proxy_secret_key
         - name: FLUXER_MEDIA_PROXY_STORAGE_BACKEND
           value: s3
         - name: FLUXER_MEDIA_PROXY_MODE
@@ -80,5 +85,10 @@ spec:
                       - toliworker-2
                       - toliworker-3
       env:
+        - name: FLUXER_MEDIA_PROXY_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fluxer-runtime-keys
+              key: media_proxy_secret_key
         - name: FLUXER_MEDIA_PROXY_MODE
           value: static
