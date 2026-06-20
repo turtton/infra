@@ -16,6 +16,31 @@ spec:
         app.kubernetes.io/name: fluxer-server
         app.kubernetes.io/instance: fluxer-server
     spec:
+      initContainers:
+        - name: download-nsfw-model
+          image: curlimages/curl:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /opt/data/model.onnx ]; then
+                echo "Downloading NSFW model..."
+                mkdir -p /opt/data
+                curl -fsSL -o /opt/data/model.onnx https://github.com/fluxerworld/fluxerworld/releases/download/nsfw-model/model.onnx
+                echo "Download complete"
+              else
+                echo "Model already exists"
+              fi
+          volumeMounts:
+            - name: model-data
+              mountPath: /opt/data
       containers:
         - name: fluxer-server
           image: ghcr.io/fluxerworld/fluxer-server:stable
@@ -81,6 +106,8 @@ spec:
               readOnly: true
             - name: data
               mountPath: /usr/src/app/data
+            - name: model-data
+              mountPath: /opt/data
           ports:
             - name: http
               containerPort: 8080
@@ -115,3 +142,5 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: fluxer-server-data
+        - name: model-data
+          emptyDir: {}
