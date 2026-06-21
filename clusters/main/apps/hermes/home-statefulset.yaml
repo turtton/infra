@@ -32,7 +32,7 @@ spec:
             - sh
             - -c
             - |
-              sed 's|\${OPENAI_API_KEY}|'"$OPENAI_API_KEY"'|g' /template/config.yaml > /opt/data/config.yaml && \\
+              sed 's|\${OPENAI_API_KEY}|'"$OPENAI_API_KEY"'|g' /template/config.yaml > /opt/data/config.yaml && \
               chmod 644 /opt/data/config.yaml
           env:
             - name: OPENAI_API_KEY
@@ -129,6 +129,8 @@ spec:
                 - SETPCAP
           env:
             - name: HERMES_HOME
+              value: /opt/data
+            - name: HOME
               value: /opt/data
             - name: PATH
               value: /opt/data/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

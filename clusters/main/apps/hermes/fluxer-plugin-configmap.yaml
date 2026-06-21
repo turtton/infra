@@ -194,6 +194,13 @@ data:
             self._bot_user_id: Optional[str] = None
             self._bot_username: Optional[str] = None
             self._pending_reactions: set[str] = set()
+            self._require_mention = (
+                os.getenv("FLUXER_REQUIRE_MENTION", extra.get("require_mention", "false"))
+            )
+            if isinstance(self._require_mention, str):
+                self._require_mention = self._require_mention.strip().lower() in {"true", "1", "yes", "on"}
+            else:
+                self._require_mention = bool(self._require_mention)
 
         # ── Endpoint Discovery ───────────────────────────────────────────────
 
@@ -361,7 +368,7 @@ data:
                 logger.error("Failed to send message to %s: %s", chat_id, exc)
                 return SendResult(success=False, error=str(exc))
 
-        async def send_typing(self, chat_id: str) -> None:
+        async def send_typing(self, chat_id: str, metadata=None) -> None:
             """Send typing indicator to a channel."""
             session = self._ensure_api_session()
             try:
@@ -636,6 +643,14 @@ data:
             message_id = data.get("id", "")
             guild_id = data.get("guild_id")
 
+            # require_mention check for guild/group messages
+            if guild_id and self._require_mention:
+                mentions = data.get("mentions", [])
+                bot_mentioned = any(m.get("id") == self._bot_user_id for m in mentions) if isinstance(mentions, list) else False
+                if not bot_mentioned:
+                    logger.debug("[fluxer] ignoring guild message (require_mention=true, bot not mentioned)")
+                    return
+
             user_id = author.get("id", "")
             username = author.get("username", "")
             discriminator = author.get("discriminator", "")
@@ -826,6 +841,12 @@ data:
         ):
             os.environ["FLUXER_ALLOW_ALL_USERS"] = str(
                 platform_cfg["allow_all"]
+            ).lower()
+        if "require_mention" in platform_cfg and not os.getenv(
+            "FLUXER_REQUIRE_MENTION"
+        ):
+            os.environ["FLUXER_REQUIRE_MENTION"] = str(
+                platform_cfg["require_mention"]
             ).lower()
         return None  # no extra to merge into PlatformConfig.extra
 
