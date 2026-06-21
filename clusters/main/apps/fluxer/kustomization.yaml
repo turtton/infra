@@ -30,3 +30,8 @@ resources:
   - caddy-configmap.yaml
   - caddy-deployment.yaml
   - caddy-service.yaml
+  - livekit-helmrepository.yaml
+  - livekit-helmrelease.yaml
+  - livekit-keys.sops.yaml
+  - tailscale-livekit-auth.sops.yaml
+  - livekit-tailscale-forwarder.yaml

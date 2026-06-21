@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: livekit-keys
+    namespace: fluxer
+type: Opaque
+stringData:
+    LIVEKIT_API_KEY: ENC[AES256_GCM,data:NgfGGTeg,iv:oljG88pqaLyuufyPnejqfSkyMdGj2kWGm7Vxo6zqhIo=,tag:PmCmSzwS5gPjvB9JkCQZ5Q==,type:str]
+    LIVEKIT_API_SECRET: ENC[AES256_GCM,data:QmWOHI8VNzSmxPD+8EbF7uM+vnZf,iv:oeTDQE5jy8fs+B9KZmRHBvOzOndb1e0sCz98Ooi9Ems=,tag:Ce8Ou7XYfITaupviglIJSA==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBKS1dwcTY2UXpCQXh4L1pT
+            M2lqWS9HYVdUQXlxeDhHelg2UWRKZ0lGSzNZClpIWEdYNjJBVXlYR1p3RHpQeGdk
+            YzR2d1VBUkdtMjJ2ZUhhVWlHaDl6dzAKLS0tIGxNdVhDdGg0Mk9TK2FqZmx1bVZD
+            NVFqTTVGVCtPUTRIdmszdjZvMERXcTQKJoxeIC+myIIx09xMbyBKq9srsNeXjk+P
+            CZgU7QijZj+f3dQVR5q5gBEf40VsDKh+hExkjrGbFAyjgwSNuLzMrA==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-06-21T02:58:46Z"
+    mac: ENC[AES256_GCM,data:vtkK7iPI6corz0HULaGWwdposu0TqJNqiMmqClHb8tPe1r5pQPerCUcdKwCbDgamQjcPcYMNb9Jgc1MlISs6/ZaejiaEaYdqw8aP5p8EELv2SMsYzbU9EThJKXLdHrcCiMtERmm/hNbW3l1QhUSX8BOUSUrdjxwy7zU//4h8nA0=,iv:sKQspaxq0XlGLYW5wibb0PKOzDG+rnaNe24ihh1O4Ow=,tag:vkAYML9n3QHiizPo0TZ6XA==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0

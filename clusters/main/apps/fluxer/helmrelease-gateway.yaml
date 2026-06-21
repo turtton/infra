@@ -267,7 +267,7 @@ spec:
         enabled: true
         replicas: 1
       calls:
-        enabled: false
+        enabled: true
       push:
         enabled: true
         replicas: 1

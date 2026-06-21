@@ -1,0 +1,63 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: livekit
+  namespace: fluxer
+spec:
+  interval: 1h
+  targetNamespace: fluxer
+  chart:
+    spec:
+      chart: livekit-server
+      version: "1.9.0"
+      sourceRef:
+        kind: HelmRepository
+        name: livekit
+        namespace: flux-system
+      interval: 1h
+  values:
+    fullnameOverride: livekit
+    podHostNetwork: false
+    replicaCount: 1
+    terminationGracePeriodSeconds: 18000
+
+    livekit:
+      port: 7880
+      log_level: info
+      rtc:
+        port_range_start: null
+        port_range_end: null
+        tcp_port: 7881
+        use_external_ip: true
+        force_tcp: true
+      redis:
+        address: valkey.fluxer.svc.cluster.local:6379
+        db: 0
+      keys:
+        fluxer: "placeholder-change-me"
+      webhook:
+        urls:
+          - http://api:8080/webhooks/livekit
+        api_key: fluxer
+
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                    - toliworker-1
+                    - toliworker-2
+                    - toliworker-3
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: livekit-livekit-server
+            patch: |-
+              - op: remove
+                path: /spec/template/spec/containers/0/ports/0/hostPort

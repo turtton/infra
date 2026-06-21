@@ -1,0 +1,78 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: livekit-tailscale-forwarder
+  namespace: fluxer
+  labels:
+    app: livekit-tailscale-forwarder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: livekit-tailscale-forwarder
+  template:
+    metadata:
+      labels:
+        app: livekit-tailscale-forwarder
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - toliworker-1
+                      - toliworker-2
+                      - toliworker-3
+      containers:
+        - name: tailscale
+          image: tailscale/tailscale:v1.82.0
+          imagePullPolicy: Always
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |-
+              tailscaled --tun=userspace-networking --state=mem: --socket=/tmp/tailscaled.sock &
+              sleep 5
+              tailscale --socket=/tmp/tailscaled.sock up \
+                --authkey="${TS_AUTHKEY}" \
+                --hostname=livekit-media
+              sleep 3
+              exec tailscale --socket=/tmp/tailscaled.sock funnel --tcp 7881 tcp://livekit.fluxer.svc.cluster.local:7881
+          env:
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: tailscale-livekit-auth
+                  key: TS_AUTHKEY
+          ports:
+            - name: media-tcp
+              containerPort: 7881
+              protocol: TCP
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: livekit-tailscale-forwarder
+  namespace: fluxer
+  labels:
+    app: livekit-tailscale-forwarder
+spec:
+  type: ClusterIP
+  selector:
+    app: livekit-tailscale-forwarder
+  ports:
+    - name: media-tcp
+      port: 7881
+      targetPort: media-tcp
+      protocol: TCP

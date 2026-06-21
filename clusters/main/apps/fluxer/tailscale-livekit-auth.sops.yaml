@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: tailscale-livekit-auth
+    namespace: fluxer
+type: Opaque
+stringData:
+    TS_AUTHKEY: ENC[AES256_GCM,data:mS/6YTck3yTgjmErp5yBeOElf17sNM7EDHJD+6ksmHIJ7ZN1i7xbg/JgbJSOAhpO7uMeQh0DDnYYvsOARok=,iv:Qr3cNHx+2kEvKPa1Z4r/asbgRQBhRVFASHyMXV55BSw=,tag:penImn1pUYsdoqbhNv453A==,type:str]
+sops:
+    age:
+        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBXNFlkejZuMXVhZjJkdlJn
+            TmxFeVZEaWdndkxURWl6cGMxNndxSmllUkE0Ck9mM2JCbkxDZ0FtbnA4U29NK0hy
+            K2ViUVhJeUlwR29HT2R4b1ZENjRBcEkKLS0tIEVRV2FSelZXNllEdEhTeWRIOGwx
+            RzgyVGtaV1FzSEN1QmV2Z3RvQzVQc1EK57U+yNS+NF/dwEw6f7cMSi0zKTfRrRLd
+            kLZGEkcvBIwPOZ6Vna9joojrmKo4rUPKiCxPzki5J2NOkeBoth53Pw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-06-21T04:23:50Z"
+    mac: ENC[AES256_GCM,data:5CZlTGAKMrp2xCh214/bsObwKYHzbnyl8Lr2AnZgvtpdcgWI7tLDVRIvtlsTT5pfUrftDVy4FKc3jM8lMgGk62FGzPKO7ruEOS07urQv0LtN8iZOSj4Xq62Bw6wiLzfIlztw8avrlQFUw/tCwGekRSLS+1nx6azb0Xj6AnOtaRU=,iv:gPbUmGZVo2p2PaCHvMDFjNBH4H2ZiKshQMujc2GqZPY=,tag:v04t3lTUdTgXAMc1z9N63Q==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0
