@@ -44,3 +44,4 @@ data:
     platforms:
       fluxer:
         enabled: true
+        require_mention: true

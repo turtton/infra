@@ -193,6 +193,7 @@ data:
             self._last_heartbeat_ack: float = 0.0
             self._bot_user_id: Optional[str] = None
             self._bot_username: Optional[str] = None
+            self._pending_reactions: set[str] = set()
 
         # ── Endpoint Discovery ───────────────────────────────────────────────
 
@@ -236,8 +237,10 @@ data:
 
         @property
         def gateway_url(self) -> str:
-            """Return the WebSocket gateway URL."""
-            return self.endpoints.gateway
+            """Return the WebSocket gateway URL with API version."""
+            base = self.endpoints.gateway
+            separator = "&" if "?" in base else "?"
+            return f"{base}{separator}v=1&encoding=json"
 
         # ── Lifecycle ────────────────────────────────────────────────────────
 
@@ -337,6 +340,10 @@ data:
                         logger.debug(
                             "Message sent to %s (id=%s)", chat_id, message_id
                         )
+                        # Swap ⏳→✅ on replied-to message
+                        if reply_to and reply_to in self._pending_reactions:
+                            self._pending_reactions.discard(reply_to)
+                            asyncio.ensure_future(self.send_reaction(chat_id, reply_to, "\u2705"))
                         return SendResult(success=True, message_id=message_id)
                     else:
                         error_text = await resp.text()
@@ -363,6 +370,19 @@ data:
                     pass
             except Exception as exc:
                 logger.debug("Failed to send typing indicator to %s: %s", chat_id, exc)
+
+        async def send_reaction(self, channel_id: str, message_id: str, emoji: str) -> None:
+            """Add an emoji reaction to a message."""
+            session = self._ensure_api_session()
+            import urllib.parse
+            encoded = urllib.parse.quote(emoji, safe="")
+            url = f"{self.api_url}/channels/{channel_id}/messages/{message_id}/reactions/{encoded}/@me"
+            try:
+                async with session.put(url) as resp:
+                    if resp.status not in (200, 204):
+                        logger.debug("Failed to add reaction %s to %s: %d", emoji, message_id, resp.status)
+            except Exception as exc:
+                logger.debug("Failed to add reaction %s to %s: %s", emoji, message_id, exc)
 
         async def get_chat_info(self, chat_id: str) -> dict:
             """Fetch metadata about a channel."""
@@ -643,22 +663,18 @@ data:
             if msg_ref:
                 reply_to_id = msg_ref.get("message_id")
 
-            # Build the event with extra metadata
-            extra_metadata: dict[str, Any] = {
-                "guild_id": guild_id,
-                "channel_id": channel_id,
-                "author_id": user_id,
-                "bot_id": self._bot_user_id,
-                "reply_to_id": reply_to_id,
-            }
-
             event = MessageEvent(
                 text=content,
                 message_type=MessageType.TEXT,
                 source=source,
                 message_id=message_id,
-                extra=extra_metadata,
+                reply_to_message_id=reply_to_id,
+                raw_message=data,
             )
+
+            # Add processing reaction (fire-and-forget)
+            self._pending_reactions.add(message_id)
+            asyncio.ensure_future(self.send_reaction(channel_id, message_id, "\u23f3"))
 
             await self.handle_message(event)
 
