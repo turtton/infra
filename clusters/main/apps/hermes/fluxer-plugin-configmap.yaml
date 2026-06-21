@@ -113,7 +113,9 @@ data:
         @classmethod
         def from_well_known(cls, data: dict) -> FluxerEndpoints:
             """Parse endpoints from the well-known discovery document."""
-            eps = data.get("endpoints", {})
+            eps = data.get("endpoints")
+            if not isinstance(eps, dict):
+                return cls.public()
             return cls(
                 gateway=eps.get("gateway", PUBLIC_GATEWAY_URL),
                 api=eps.get("api", PUBLIC_API_URL),
@@ -132,6 +134,32 @@ data:
                 media="https://fluxerusercontent.com",
                 static_cdn="https://fluxerstatic.com",
             )
+
+
+    async def _fetch_well_known(base_url: str) -> dict | None:
+        """Fetch /.well-known/fluxer discovery document for the given instance URL.
+
+        Returns the parsed JSON response on success, or None on failure.
+        Uses a fresh HTTP session for each call.
+        """
+        if not base_url:
+            return None
+        url = f"{base_url}{WELL_KNOWN_PATH}"
+        try:
+            async with aiohttp.ClientSession(
+                headers={"User-Agent": "HermesAgent/1.0"}
+            ) as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if isinstance(data, dict):
+                            return data
+                        logger.warning("Discovery endpoint returned non-dict JSON, ignoring")
+                    else:
+                        logger.warning("Discovery endpoint returned %d, falling back", resp.status)
+        except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as exc:
+            logger.warning("Well-known discovery failed for %s: %s", base_url, exc)
+        return None
 
 
     # ── Adapter ──────────────────────────────────────────────────────────────
@@ -157,7 +185,6 @@ data:
             # Gateway state
             self._ws: Optional[aiohttp.ClientWebSocketResponse] = None
             self._http_session: Optional[aiohttp.ClientSession] = None
-            self._discovery_session: Optional[aiohttp.ClientSession] = None
             self._heartbeat_task: Optional[asyncio.Task] = None
             self._running = False
             self._session_id: Optional[str] = None
@@ -177,47 +204,18 @@ data:
             """
             base_url = self.instance_url
             if not base_url:
-                logger.debug(
-                    "No FLUXER_INSTANCE_URL set, using public cloud endpoints"
-                )
+                logger.debug("No FLUXER_INSTANCE_URL set, using public cloud endpoints")
                 return FluxerEndpoints.public()
 
-            url = f"{base_url}{WELL_KNOWN_PATH}"
-            logger.info("Discovering Fluxer endpoints from %s", url)
+            logger.info("Discovering Fluxer endpoints from %s/.well-known/fluxer", base_url)
+            data = await _fetch_well_known(base_url)
+            if data is not None:
+                eps = FluxerEndpoints.from_well_known(data)
+                logger.info("Discovered endpoints: gateway=%s api=%s", eps.gateway, eps.api)
+                return eps
 
-            session = self._ensure_discovery_session()
-
-            try:
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        eps = FluxerEndpoints.from_well_known(data)
-                        logger.info(
-                            "Discovered endpoints: gateway=%s api=%s",
-                            eps.gateway,
-                            eps.api,
-                        )
-                        return eps
-                    else:
-                        logger.warning(
-                            "Discovery endpoint returned %d, falling back to public",
-                            resp.status,
-                        )
-            except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as exc:
-                logger.warning(
-                    "Endpoint discovery failed (%s), using public fallback",
-                    exc,
-                )
-
+            logger.warning("Endpoint discovery failed, using public fallback")
             return FluxerEndpoints.public()
-
-        def _ensure_discovery_session(self) -> aiohttp.ClientSession:
-            """Get or create a lightweight HTTP session for discovery."""
-            if self._discovery_session is None or self._discovery_session.closed:
-                self._discovery_session = aiohttp.ClientSession(
-                    headers={"User-Agent": "HermesAgent/1.0"},
-                )
-            return self._discovery_session
 
         def _ensure_api_session(self) -> aiohttp.ClientSession:
             """Get or create an authenticated HTTP session for API calls."""
@@ -285,7 +283,7 @@ data:
                 await self._ws.close(code=1000, message=b"Shutting down")
                 self._ws = None
 
-            for session_name in ("_http_session", "_discovery_session"):
+            for session_name in ("_http_session",):
                 session = getattr(self, session_name, None)
                 if session and not session.closed:
                     await session.close()
@@ -363,8 +361,8 @@ data:
                 url = f"{self.api_url}/channels/{chat_id}/typing"
                 async with session.post(url, json={}):
                     pass
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to send typing indicator to %s: %s", chat_id, exc)
 
         async def get_chat_info(self, chat_id: str) -> dict:
             """Fetch metadata about a channel."""
@@ -385,8 +383,8 @@ data:
                             "name": data.get("name") or data.get("id", chat_id),
                             "type": channel_type,
                         }
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to fetch channel info for %s: %s", chat_id, exc)
 
             return {"name": chat_id, "type": "dm"}
 
@@ -502,7 +500,7 @@ data:
                         "browser": "hermes_agent",
                         "device": "hermes_agent",
                     },
-                    "intents": 513,  # GUILD_MESSAGES (1<<9) + DIRECT_MESSAGES (1<<12)
+                    "intents": 513,  # GUILDS (1<<0) + GUILD_MESSAGES (1<<9)
                     "compress": False,
                     "large_threshold": 250,
                 },
@@ -678,22 +676,13 @@ data:
         if not instance_url:
             return PUBLIC_API_URL
 
-        url = f"{instance_url}{WELL_KNOWN_PATH}"
-        try:
-            async with aiohttp.ClientSession(
-                headers={"User-Agent": "HermesAgent/1.0"}
-            ) as session:
-                async with session.get(
-                    url, timeout=aiohttp.ClientTimeout(total=10)
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        eps = data.get("endpoints", {})
-                        api_public = eps.get("api_public", "")
-                        if api_public:
-                            return api_public.rstrip("/") + "/v1"
-        except Exception:
-            pass
+        data = await _fetch_well_known(instance_url)
+        if isinstance(data, dict):
+            eps = data.get("endpoints")
+            if isinstance(eps, dict):
+                api_public = eps.get("api_public", "")
+                if isinstance(api_public, str) and api_public:
+                    return api_public.rstrip("/") + "/v1"
 
         return PUBLIC_API_URL
 
@@ -722,7 +711,7 @@ data:
         if home:
             seed["home_channel"] = {
                 "chat_id": home,
-                "name": os.getenv("FLUXER_HOME_CHANNEL_NAME", "Home"),
+                "name": (os.getenv("FLUXER_HOME_CHANNEL_NAME") or "").strip() or home,
             }
 
         return seed
