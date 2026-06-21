@@ -48,7 +48,7 @@ spec:
             - -ec
           args:
             - |-
-              tailscaled --tun=userspace-networking --state=mem: --socket=/tmp/tailscaled.sock &
+              tailscaled --tun=userspace-networking --state=/var/lib/tailscale/tailscaled.state --socket=/tmp/tailscaled.sock &
               sleep 5
               tailscale --socket=/tmp/tailscaled.sock up \
                 --authkey="${TS_AUTHKEY}" \
@@ -61,12 +61,18 @@ spec:
                 secretKeyRef:
                   name: tailscale-livekit-auth
                   key: TS_AUTHKEY
+          volumeMounts:
+            - name: tailscale-state
+              mountPath: /var/lib/tailscale
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - ALL
+      volumes:
+        - name: tailscale-state
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

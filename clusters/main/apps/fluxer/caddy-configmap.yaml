@@ -71,7 +71,7 @@ data:
         }
 
         handle_path /livekit/* {
-            reverse_proxy livekit:80
+            reverse_proxy livekit:7880
         }
 
         handle {
