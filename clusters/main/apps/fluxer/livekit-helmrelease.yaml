@@ -23,6 +23,9 @@ spec:
     replicaCount: 1
     terminationGracePeriodSeconds: 600
 
+    image:
+      tag: v1.10.0
+
     livekit:
       port: 7880
       log_level: info
