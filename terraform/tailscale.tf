@@ -107,7 +107,7 @@ resource "tailscale_acl" "this" {
 
     nodeAttrs = [
       {
-        target = ["autogroup:member", "tag:attic"]
+        target = ["autogroup:member", "tag:attic", "tag:k8s"]
         attr   = ["funnel"]
       },
     ]
