@@ -70,6 +70,10 @@ data:
             reverse_proxy app-proxy:8080
         }
 
+        handle /livekit {
+            reverse_proxy livekit:7880
+        }
+
         handle_path /livekit/* {
             reverse_proxy livekit:7880
         }

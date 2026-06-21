@@ -34,4 +34,5 @@ resources:
   - livekit-helmrelease.yaml
   - livekit-keys.sops.yaml
   - tailscale-livekit-auth.sops.yaml
+  - livekit-tailscale-rbac.yaml
   - livekit-tailscale-forwarder.yaml
