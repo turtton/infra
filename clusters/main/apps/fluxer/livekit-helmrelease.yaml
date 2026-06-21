@@ -34,7 +34,7 @@ spec:
         force_tcp: true
       turn:
         enabled: true
-        domain: livekit-media.taile2777.ts.net
+        domain: livekit-media-1.taile2777.ts.net
         tls_port: 7881
         external_tls: true
       redis:
