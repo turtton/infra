@@ -35,7 +35,7 @@ spec:
       turn:
         enabled: true
         domain: livekit-media-1.taile2777.ts.net
-        tls_port: 7881
+        tls_port: 5349
         external_tls: true
       redis:
         address: valkey.fluxer.svc.cluster.local:6379

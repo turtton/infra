@@ -52,6 +52,24 @@ spec:
             capabilities:
               drop:
                 - ALL
+        - name: socat-turn
+          image: alpine/socat:1.8.0.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - socat
+          args:
+            - TCP-LISTEN:5349,fork,reuseaddr
+            - TCP:livekit.fluxer.svc.cluster.local:5349
+          ports:
+            - name: turn-tls
+              containerPort: 5349
+              protocol: TCP
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
         - name: tailscale
           image: tailscale/tailscale:v1.82.0
           imagePullPolicy: Always
@@ -66,7 +84,9 @@ spec:
                 --authkey="${TS_AUTHKEY}" \
                 --hostname=livekit-media
               sleep 3
-              exec tailscale --socket=/tmp/tailscaled.sock funnel --tcp 7881 tcp://127.0.0.1:7881
+              tailscale --socket=/tmp/tailscaled.sock funnel --tcp 7881 tcp://127.0.0.1:7881
+              tailscale --socket=/tmp/tailscaled.sock funnel --tcp 5349 tcp://127.0.0.1:5349
+              wait
           env:
             - name: TS_AUTHKEY
               valueFrom:
@@ -95,4 +115,8 @@ spec:
     - name: media-tcp
       port: 7881
       targetPort: media-tcp
+      protocol: TCP
+    - name: turn-tls
+      port: 5349
+      targetPort: turn-tls
       protocol: TCP
