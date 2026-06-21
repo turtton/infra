@@ -84,8 +84,8 @@ spec:
                 --authkey="${TS_AUTHKEY}" \
                 --hostname=livekit-media
               sleep 3
-              tailscale --socket=/tmp/tailscaled.sock funnel --tcp 7881 tcp://127.0.0.1:7881
-              tailscale --socket=/tmp/tailscaled.sock funnel --tcp 5349 tcp://127.0.0.1:5349
+              tailscale --socket=/tmp/tailscaled.sock funnel --tcp 7881 tcp://127.0.0.1:7881 &
+              tailscale --socket=/tmp/tailscaled.sock funnel --tcp 5349 tcp://127.0.0.1:5349 &
               wait
           env:
             - name: TS_AUTHKEY
