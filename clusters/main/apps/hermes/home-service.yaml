@@ -14,7 +14,3 @@ spec:
       port: 9119
       targetPort: 9119
       protocol: TCP
-    - name: webhook
-      port: 8644
-      targetPort: 8644
-      protocol: TCP

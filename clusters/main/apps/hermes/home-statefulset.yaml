@@ -65,10 +65,11 @@ spec:
             - sh
             - -c
             - |
-              mkdir -p /opt/data/.hermes/plugins/fluxer && \
-              cp /plugin-seed/plugin.yaml /opt/data/.hermes/plugins/fluxer/plugin.yaml && \
-              cp /plugin-seed/adapter.py /opt/data/.hermes/plugins/fluxer/adapter.py && \
-              chmod -R 755 /opt/data/.hermes/plugins/fluxer
+              mkdir -p /opt/data/plugins/fluxer && \
+              cp /plugin-seed/plugin.yaml /opt/data/plugins/fluxer/plugin.yaml && \
+              cp /plugin-seed/adapter.py /opt/data/plugins/fluxer/adapter.py && \
+              cp /plugin-seed/__init__.py /opt/data/plugins/fluxer/__init__.py && \
+              chmod -R 755 /opt/data/plugins/fluxer
           volumeMounts:
             - name: plugin-seed
               mountPath: /plugin-seed
@@ -233,4 +234,3 @@ spec:
         resources:
           requests:
             storage: 5Gi
-

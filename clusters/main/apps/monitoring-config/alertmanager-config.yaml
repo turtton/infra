@@ -35,9 +35,6 @@ spec:
             name: alertmanager-discord-webhook
             key: webhook-url
           sendResolved: true
-      webhookConfigs:
-        - url: http://hermes-home.hermes.svc.cluster.local:8644/webhooks/k8s-alerts
-          sendResolved: false
   inhibitRules:
     - sourceMatch:
         - name: severity

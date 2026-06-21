@@ -723,7 +723,6 @@ data:
             os.getenv("FLUXER_CHANNEL")
         )
 
-
     def validate_config(config) -> bool:
         """Validate that the platform configuration is complete."""
         if not config:
@@ -844,3 +843,6 @@ data:
             emoji="💬",
             allow_update_command=True,
         )
+
+  __init__.py: |
+    from .adapter import register
