@@ -30,6 +30,7 @@ spec:
       rtc:
         port_range_start: 0
         port_range_end: 0
+        tcp_port: 0
         use_external_ip: true
         force_tcp: true
       turn:
