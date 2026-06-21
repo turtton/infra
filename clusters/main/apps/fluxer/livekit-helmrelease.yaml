@@ -16,6 +16,7 @@ spec:
         name: livekit
         namespace: flux-system
       interval: 1h
+  values:
     fullnameOverride: livekit
     loadBalancer:
       servicePort: 7880
@@ -48,7 +49,6 @@ spec:
         urls:
           - http://api:8080/webhooks/livekit
         api_key: fluxer
-
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
