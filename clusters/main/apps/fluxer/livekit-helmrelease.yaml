@@ -28,8 +28,8 @@ spec:
       port: 7880
       log_level: info
       rtc:
-        port_range_start: null
-        port_range_end: null
+        port_range_start: 0
+        port_range_end: 0
         tcp_port: 7881
         use_external_ip: true
         force_tcp: true
