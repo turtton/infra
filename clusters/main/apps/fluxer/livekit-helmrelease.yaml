@@ -33,6 +33,8 @@ spec:
         tcp_port: 7881
         use_external_ip: true
         force_tcp: true
+        ice_hosts:
+          - livekit-media.taile2777.ts.net
       redis:
         address: valkey.fluxer.svc.cluster.local:6379
         db: 0
