@@ -39,6 +39,8 @@ data:
     logging:
       level: info
     platforms:
+      fluxer:
+        enabled: true
       webhook:
         enabled: true
         extra:

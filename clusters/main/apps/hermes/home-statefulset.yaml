@@ -59,6 +59,21 @@ spec:
               mountPath: /skill-seed
             - name: data
               mountPath: /opt/data
+        - name: init-plugin
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /opt/data/.hermes/plugins/fluxer && \
+              cp /plugin-seed/plugin.yaml /opt/data/.hermes/plugins/fluxer/plugin.yaml && \
+              cp /plugin-seed/adapter.py /opt/data/.hermes/plugins/fluxer/adapter.py && \
+              chmod -R 755 /opt/data/.hermes/plugins/fluxer
+          volumeMounts:
+            - name: plugin-seed
+              mountPath: /plugin-seed
+            - name: data
+              mountPath: /opt/data
         - name: install-tools
           image: alpine:latest
           command:
@@ -132,6 +147,15 @@ spec:
               value: "275915497353117697,299106923741970432,280320003159490561"
             - name: DISCORD_REQUIRE_MENTION
               value: "true"
+            - name: FLUXER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: FLUXER_TOKEN
+            - name: FLUXER_CHANNEL
+              value: "1517888841577398272"
+            - name: FLUXER_INSTANCE_URL
+              value: "https://chat.turtton.net"
             - name: HERMES_DASHBOARD
               value: "1"
             - name: HERMES_DASHBOARD_INSECURE
@@ -185,6 +209,9 @@ spec:
                   items:
                     - key: SKILL.md
                       path: config-ops/SKILL.md
+        - name: plugin-seed
+          configMap:
+            name: hermes-fluxer-plugin
         - name: run
           emptyDir:
             medium: Memory
