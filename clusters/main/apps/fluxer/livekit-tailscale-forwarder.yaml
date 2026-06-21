@@ -28,6 +28,18 @@ spec:
                       - toliworker-2
                       - toliworker-3
       containers:
+        - name: socat
+          image: alpine/socat:1.8.0.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - socat
+          args:
+            - TCP-LISTEN:7881,fork,reuseaddr
+            - TCP:livekit.fluxer.svc.cluster.local:7881
+          ports:
+            - name: media-tcp
+              containerPort: 7881
+              protocol: TCP
         - name: tailscale
           image: tailscale/tailscale:v1.82.0
           imagePullPolicy: Always
@@ -42,17 +54,13 @@ spec:
                 --authkey="${TS_AUTHKEY}" \
                 --hostname=livekit-media
               sleep 3
-              exec tailscale --socket=/tmp/tailscaled.sock funnel --tcp 7881 tcp://livekit.fluxer.svc.cluster.local:7881
+              exec tailscale --socket=/tmp/tailscaled.sock funnel --tcp 7881 tcp://127.0.0.1:7881
           env:
             - name: TS_AUTHKEY
               valueFrom:
                 secretKeyRef:
                   name: tailscale-livekit-auth
                   key: TS_AUTHKEY
-          ports:
-            - name: media-tcp
-              containerPort: 7881
-              protocol: TCP
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
