@@ -30,9 +30,13 @@ spec:
       rtc:
         port_range_start: 0
         port_range_end: 0
-        tcp_port: 7881
         use_external_ip: true
         force_tcp: true
+      turn:
+        enabled: true
+        domain: livekit-media.taile2777.ts.net
+        tls_port: 7881
+        external_tls: true
       redis:
         address: valkey.fluxer.svc.cluster.local:6379
         db: 0
