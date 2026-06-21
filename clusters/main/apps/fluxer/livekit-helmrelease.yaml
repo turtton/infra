@@ -16,12 +16,6 @@ spec:
         name: livekit
         namespace: flux-system
       interval: 1h
-  valuesFrom:
-    - kind: Secret
-      name: livekit-keys
-      valuesKey: LIVEKIT_API_SECRET
-      targetPath: livekit.keys.fluxer
-  values:
     fullnameOverride: livekit
     loadBalancer:
       servicePort: 7880
@@ -45,7 +39,8 @@ spec:
       redis:
         address: valkey.fluxer.svc.cluster.local:6379
         db: 0
-      keys: {}
+      keys:
+        fluxer: "placeholder-change-me"
       webhook:
         urls:
           - http://api:8080/webhooks/livekit
