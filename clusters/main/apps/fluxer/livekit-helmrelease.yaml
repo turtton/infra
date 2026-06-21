@@ -57,7 +57,7 @@ spec:
         patches:
           - target:
               kind: Deployment
-              name: livekit-livekit-server
+              name: livekit
             patch: |-
               - op: remove
                 path: /spec/template/spec/containers/0/ports/0/hostPort
