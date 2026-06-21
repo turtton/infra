@@ -22,7 +22,7 @@ spec:
       servicePort: 7880
     podHostNetwork: false
     replicaCount: 1
-    terminationGracePeriodSeconds: 18000
+    terminationGracePeriodSeconds: 600
 
     livekit:
       port: 7880
@@ -40,8 +40,10 @@ spec:
       redis:
         address: valkey.fluxer.svc.cluster.local:6379
         db: 0
-      keys:
-        fluxer: "placeholder-change-me"
+      keys: {}
+      storeKeysInSecret:
+        enabled: true
+        existingSecret: livekit-keys
       webhook:
         urls:
           - http://api:8080/webhooks/livekit

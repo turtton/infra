@@ -34,24 +34,7 @@ spec:
                       - toliworker-2
                       - toliworker-3
       containers:
-        - name: socat
-          image: alpine/socat:1.8.0.1
-          imagePullPolicy: IfNotPresent
-          command:
-            - socat
-          args:
-            - TCP-LISTEN:7881,fork,reuseaddr
-            - TCP:livekit.fluxer.svc.cluster.local:7881
-          ports:
-            - name: media-tcp
-              containerPort: 7881
-              protocol: TCP
-          securityContext:
-            privileged: false
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+
         - name: socat-turn
           image: alpine/socat:1.8.0.1
           imagePullPolicy: IfNotPresent
@@ -59,7 +42,7 @@ spec:
             - socat
           args:
             - TCP-LISTEN:5349,fork,reuseaddr
-            - TCP:livekit.fluxer.svc.cluster.local:5349
+            - TCP:livekit-turn.fluxer.svc.cluster.local:443
           ports:
             - name: turn-tls
               containerPort: 5349
@@ -67,9 +50,14 @@ spec:
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
             capabilities:
               drop:
                 - ALL
+            seccompProfile:
+              type: RuntimeDefault
         - name: tailscale
           image: tailscale/tailscale:v1.82.0
           imagePullPolicy: Always
@@ -83,8 +71,6 @@ spec:
               tailscale --socket=/tmp/tailscaled.sock up \
                 --authkey="${TS_AUTHKEY}" \
                 --hostname=livekit-media
-              sleep 3
-              tailscale --socket=/tmp/tailscaled.sock funnel --tcp 7881 tcp://127.0.0.1:7881 &
               sleep 3
               tailscale --socket=/tmp/tailscaled.sock funnel --tcp 5349 tcp://127.0.0.1:5349 &
               wait
@@ -113,10 +99,6 @@ spec:
   selector:
     app: livekit-tailscale-forwarder
   ports:
-    - name: media-tcp
-      port: 7881
-      targetPort: media-tcp
-      protocol: TCP
     - name: turn-tls
       port: 5349
       targetPort: turn-tls
