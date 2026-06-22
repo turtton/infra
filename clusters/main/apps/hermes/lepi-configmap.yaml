@@ -42,4 +42,4 @@ data:
       - discord
     discord:
       history_backfill: true
-      history_backfill_limit: 50
+      history_backfill_limit: 3
