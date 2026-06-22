@@ -38,6 +38,11 @@ data:
       mode: auto
     logging:
       level: info
+    toolsets:
+      - discord
+    discord:
+      history_backfill: true
+      history_backfill_limit: 50
     plugins:
       enabled:
         - fluxer
