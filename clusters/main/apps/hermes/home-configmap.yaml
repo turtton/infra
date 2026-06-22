@@ -38,6 +38,8 @@ data:
       mode: auto
     logging:
       level: info
+    toolsets:
+      - discord
     plugins:
       enabled:
         - fluxer

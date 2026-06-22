@@ -38,3 +38,5 @@ data:
       mode: auto
     logging:
       level: info
+    toolsets:
+      - discord
