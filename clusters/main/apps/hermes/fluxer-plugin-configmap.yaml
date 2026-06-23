@@ -41,6 +41,14 @@ data:
         description: "Set to 'true' to allow all users to talk to the bot"
         prompt: "Allow all users"
         password: false
+      - name: FLUXER_HISTORY_BACKFILL
+        description: "Enable backfill of recent channel messages for context (default: true)"
+        prompt: "Enable history backfill"
+        password: false
+      - name: FLUXER_HISTORY_BACKFILL_LIMIT
+        description: "Max messages to scan backwards for context (default: 50)"
+        prompt: "History backfill limit"
+        password: false
   adapter.py: |
     """
     Fluxer platform adapter for Hermes Agent.
@@ -691,7 +699,130 @@ data:
             self._pending_reactions.add(message_id)
             asyncio.ensure_future(self.send_reaction(channel_id, message_id, "\u23f3"))
 
+            # ── History backfill ──────────────────────────────────────────
+            # Fetch recent channel messages for conversational context.
+            # Skips DMs — every DM message triggers the bot, so the session
+            # transcript already has the full history.
+            if guild_id and self._fluxer_history_backfill():
+                _backfill_text = await self._fetch_channel_context(
+                    channel_id=channel_id,
+                    before_message_id=message_id,
+                )
+                if _backfill_text:
+                    event.channel_context = _backfill_text
+
             await self.handle_message(event)
+
+
+    # ── Fluxer History Backfill ──────────────────────────────────────────
+
+    def _fluxer_history_backfill(self) -> bool:
+        """Return whether history backfill is enabled for channel messages."""
+        configured = self.config.extra.get("history_backfill")
+        if configured is not None:
+            if isinstance(configured, str):
+                return configured.lower() not in {"false", "0", "no", "off"}
+            return bool(configured)
+        return os.getenv("FLUXER_HISTORY_BACKFILL", "true").lower() in {"true", "1", "yes"}
+
+    def _fluxer_history_backfill_limit(self) -> int:
+        """Return the max number of messages to scan backwards for context."""
+        configured = self.config.extra.get("history_backfill_limit")
+        if configured is not None:
+            try:
+                return int(configured)
+            except (ValueError, TypeError):
+                pass
+        raw = os.getenv("FLUXER_HISTORY_BACKFILL_LIMIT", "50")
+        try:
+            return int(raw)
+        except (ValueError, TypeError):
+            return 50
+
+    async def _fetch_channel_context(
+        self,
+        channel_id: str,
+        before_message_id: str,
+    ) -> str:
+        """Fetch recent channel messages for conversational context.
+
+        Scans backwards from *before_message_id* and collects messages
+        until it hits a message sent by this bot (the natural partition
+        point between bot turns) or reaches ``history_backfill_limit``.
+
+        Returns a formatted block like::
+
+            [Recent channel messages]
+            [Alice] some message
+            [Bob [bot]] another message
+
+        Returns an empty string if no context is available.
+        """
+        limit = self._fluxer_history_backfill_limit()
+        if limit <= 0:
+            return ""
+
+        session = self._ensure_api_session()
+
+        try:
+            # Fetch messages before the current one (newest-first)
+            params = {"before": before_message_id, "limit": str(limit)}
+            url = f"{self.api_url}/channels/{channel_id}/messages"
+            async with session.get(url, params=params) as resp:
+                if resp.status != 200:
+                    logger.debug(
+                        "[%s] Failed to fetch channel history: HTTP %d",
+                        self.name, resp.status,
+                    )
+                    return ""
+                messages = await resp.json()
+
+            if not isinstance(messages, list) or not messages:
+                return ""
+
+            # Filter and format messages, newest-first.  Stop at our own
+            # (conversational) message — this is the partition point.
+            collected: list[tuple[str, str]] = []  # (message_id, line)
+            for msg in messages:
+                # Skip non-default message types (system, etc.)
+                if msg.get("type", 0) not in (0, 19):  # DEFAULT, REPLY
+                    continue
+
+                author = msg.get("author", {})
+
+                # Stop at our own message — everything before is already
+                # in the session transcript (or too old to matter).
+                if author.get("id") == self._bot_user_id:
+                    break
+
+                content = msg.get("content", "") or ""
+                # Skip empty messages with no attachments
+                if not content and not msg.get("attachments"):
+                    continue
+
+                username = author.get("username", "unknown")
+                display_name = author.get("global_name") or username
+                if author.get("bot"):
+                    display_name = f"{display_name} [bot]"
+
+                mid = msg.get("id", "")
+                collected.append((mid, f"[{display_name}] {content}"))
+
+            if not collected:
+                return ""
+
+            # Reverse for chronological order (API returns newest-first)
+            collected.reverse()
+
+            return "[Recent channel messages]\n" + "\n".join(
+                line for _mid, line in collected
+            )
+
+        except Exception as exc:
+            logger.warning(
+                "[%s] Failed to fetch channel history: %s", self.name, exc
+            )
+            return ""
 
 
     # ── Discovery Helper for Standalone Cron ─────────────────────────────────
@@ -848,6 +979,18 @@ data:
             os.environ["FLUXER_REQUIRE_MENTION"] = str(
                 platform_cfg["require_mention"]
             ).lower()
+        if "history_backfill" in platform_cfg and not os.getenv(
+            "FLUXER_HISTORY_BACKFILL"
+        ):
+            os.environ["FLUXER_HISTORY_BACKFILL"] = str(
+                platform_cfg["history_backfill"]
+            ).lower()
+        if "history_backfill_limit" in platform_cfg and not os.getenv(
+            "FLUXER_HISTORY_BACKFILL_LIMIT"
+        ):
+            os.environ["FLUXER_HISTORY_BACKFILL_LIMIT"] = str(
+                platform_cfg["history_backfill_limit"]
+            )
         return None  # no extra to merge into PlatformConfig.extra
 
 
