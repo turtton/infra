@@ -48,7 +48,7 @@ spec:
               mountPath: /config
       containers:
         - name: iceshrimp
-          image: iceshrimp.dev/iceshrimp/iceshrimp:latest
+          image: iceshrimp.dev/iceshrimp/iceshrimp:v2026.5.1
           ports:
             - containerPort: 3000
           env:
