@@ -72,14 +72,7 @@ spec:
                   optional: true
           volumeMounts:
             - name: config
-              mountPath: /home/opencode/.config/opencode-go/opencode.jsonc
-              subPath: opencode.jsonc
-            - name: config
-              mountPath: /home/opencode/.config/opencode-go/oh-my-openagent.json
-              subPath: oh-my-openagent.json
-            - name: config
-              mountPath: /home/opencode/.config/opencode-go/AGENTS.md
-              subPath: AGENTS.md
+              mountPath: /home/opencode/.config/opencode-go
             - name: data
               mountPath: /workspaces
           resources:
