@@ -64,12 +64,6 @@ spec:
               value: /home/opencode/.config/opencode-go
             - name: OPENCODE_CONFIG
               value: /home/opencode/.config/opencode-go/opencode.jsonc
-            - name: OPENCODE_SERVER_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: opencode-server-secrets
-                  key: password
-                  optional: true
             - name: GITHUB_TOKEN
               valueFrom:
                 secretKeyRef:
