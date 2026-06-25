@@ -433,12 +433,6 @@ data:
           "repetitionThresholdPercent": 90,
           "maxToolCalls": 400
         }
-      },
-      "skills": {
-        "sources": [
-          "/home/turtton/.config/opencode-go/skill/final-review",
-          "/home/turtton/.config/opencode-go/skill/git-commit"
-        ]
       }
     }
   AGENTS.md: |

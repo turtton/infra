@@ -28,11 +28,17 @@ spec:
             - sh
             - -c
             - |
-              mkdir -p /workspaces && chown 1000:1000 /workspaces && \
+              mkdir -p /workspaces && chown 1000:1000 /workspaces
               mkdir -p /home/opencode/.config/opencode-go
+              cp -L /config-tmp/* /home/opencode/.config/opencode-go/
+              chown -R 1000:1000 /home/opencode/.config/opencode-go
           volumeMounts:
             - name: data
               mountPath: /workspaces
+            - name: config-tmp
+              mountPath: /config-tmp
+            - name: config
+              mountPath: /home/opencode/.config/opencode-go
       containers:
         - name: opencode-server
           image: ghcr.io/anomalyco/opencode:latest
@@ -91,6 +97,8 @@ spec:
             initialDelaySeconds: 15
       volumes:
         - name: config
+          emptyDir: {}
+        - name: config-tmp
           configMap:
             name: opencode-server-config
   volumeClaimTemplates:
