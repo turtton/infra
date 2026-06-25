@@ -10,6 +10,5 @@ resources:
   - iceshrimp
   - nextcloud
   - hermes
-  - opencode
   - woodpecker
   - fluxer

@@ -47,11 +47,3 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - apps-overview.json=dashboards/apps-overview.json
-  - name: grafana-dashboard-opencode
-    namespace: monitoring
-    options:
-      labels:
-        grafana_dashboard: "1"
-      disableNameSuffixHash: true
-    files:
-      - opencode.json=dashboards/opencode.json

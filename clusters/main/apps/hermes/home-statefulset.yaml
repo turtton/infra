@@ -91,9 +91,6 @@ spec:
               mv /tmp/gh_2.67.0_linux_amd64/bin/gh /opt/data/bin/gh && \
               chmod +x /opt/data/bin/gh && \
               rm -rf /tmp/gh* && \
-              curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path && \
-              mv ~/.opencode/bin/opencode /opt/data/bin/opencode && \
-              chmod +x /opt/data/bin/opencode
           volumeMounts:
             - name: data
               mountPath: /opt/data
@@ -217,11 +214,6 @@ spec:
                   items:
                     - key: SKILL.md
                       path: config-ops/SKILL.md
-              - configMap:
-                  name: hermes-opencode-bridge-skill
-                  items:
-                    - key: SKILL.md
-                      path: opencode-bridge/SKILL.md
         - name: plugin-seed
           configMap:
             name: hermes-fluxer-plugin

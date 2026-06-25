@@ -6,7 +6,6 @@ locals {
   tunnel_ingress = {
     grafana  = "http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80"
     longhorn = "http://longhorn-frontend.longhorn-system.svc.cluster.local:80"
-    opencode   = "http://opencode-server.opencode.svc.cluster.local:4096"
     livesync = "http://couchdb.obsidian-livesync.svc.cluster.local:5984"
     kameuo   = "http://iceshrimp-web.iceshrimp.svc.cluster.local:3000"
     forgejo    = "http://forgejo-http.forgejo.svc.cluster.local:3000"
@@ -14,7 +13,7 @@ locals {
     chat       = "http://caddy.fluxer.svc.cluster.local:80"
   }
 
-  access_protected_hostnames = ["grafana", "longhorn", "opencode"]
+  access_protected_hostnames = ["grafana", "longhorn"]
 }
 
 resource "cloudflare_zero_trust_tunnel_cloudflared" "homelab" {
