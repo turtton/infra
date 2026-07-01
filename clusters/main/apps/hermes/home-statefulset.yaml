@@ -163,8 +163,16 @@ spec:
               value: "1517827818073882624"
             - name: HERMES_DASHBOARD
               value: "1"
-            - name: HERMES_DASHBOARD_INSECURE
-              value: "1"
+            - name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: DASHBOARD_USERNAME
+            - name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: DASHBOARD_PASSWORD_HASH
           ports:
             - name: http
               containerPort: 9119
