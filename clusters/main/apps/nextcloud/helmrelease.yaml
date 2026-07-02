@@ -34,8 +34,6 @@ spec:
 
     nextcloud:
       host: nextcloud
-      trustedDomains:
-        - nextcloud.turtton.net
       podSecurityContext:
         fsGroup: 33
       existingSecret:
@@ -71,6 +69,15 @@ spec:
             'trusted_proxies' => array(
               '10.244.0.0/16',
               '100.64.0.0/10',
+            ),
+          );
+        trusted-domains.config.php: |-
+          <?php
+          $CONFIG = array(
+            'trusted_domains' => array(
+              0 => 'nextcloud',
+              1 => 'nextcloud.taile2777.ts.net',
+              2 => 'nextcloud.turtton.net',
             ),
           );
 
