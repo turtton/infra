@@ -34,6 +34,8 @@ spec:
 
     nextcloud:
       host: nextcloud
+      trustedDomains:
+        - nextcloud.turtton.net
       podSecurityContext:
         fsGroup: 33
       existingSecret:
