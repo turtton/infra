@@ -46,7 +46,7 @@ spec:
                 - ReadWriteOnce
               resources:
                 requests:
-                  storage: 20Gi
+                  storage: 60Gi
         additionalScrapeConfigs:
           - job_name: pve-main
             metrics_path: /metrics
