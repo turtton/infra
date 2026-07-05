@@ -50,9 +50,7 @@ spec:
       persistence:
         enabled: true
         storageClass: longhorn
-        size: 10Gi
-        annotations:
-          data.longhorn.io/number-of-replicas: "2"
+        size: 5Gi
       resources:
         requests:
           cpu: 100m
