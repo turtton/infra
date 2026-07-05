@@ -56,6 +56,8 @@ spec:
               # Kubernetes projected ConfigMap volumes use atomic mounts with symlinks.
               # cp -r copies symlinks as-is, leaving broken links under /opt/data/skills.
               # Use cp -rL to follow symlinks and re-seed each skill directory fresh.
+              # /opt/data/skills must be group-writable so the hermes user can install
+              # bundled skills into category subdirectories (e.g. creative/, apple/).
               mkdir -p /opt/data/skills && \
               cd /skill-seed && \
               for src in *; do
@@ -63,7 +65,7 @@ spec:
                 rm -rf "/opt/data/skills/$src"
                 cp -rL "$src" "/opt/data/skills/$src"
               done && \
-              chmod -R 755 /opt/data/skills
+              chmod -R 775 /opt/data/skills
           volumeMounts:
             - name: skill-seed
               mountPath: /skill-seed
