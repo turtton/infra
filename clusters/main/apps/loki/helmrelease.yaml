@@ -51,6 +51,8 @@ spec:
         enabled: true
         storageClass: longhorn
         size: 10Gi
+        annotations:
+          data.longhorn.io/number-of-replicas: "2"
       resources:
         requests:
           cpu: 100m
