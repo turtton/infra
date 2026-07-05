@@ -147,8 +147,16 @@ spec:
               value: "true"
             - name: HERMES_DASHBOARD
               value: "1"
-            - name: HERMES_DASHBOARD_INSECURE
-              value: "1"
+            - name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-lepi-secrets
+                  key: DASHBOARD_USERNAME
+            - name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-lepi-secrets
+                  key: DASHBOARD_PASSWORD
           ports:
             - name: http
               containerPort: 9119

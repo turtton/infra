@@ -179,11 +179,11 @@ spec:
                 secretKeyRef:
                   name: hermes-home-secrets
                   key: DASHBOARD_USERNAME
-            - name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH
+            - name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: hermes-home-secrets
-                  key: DASHBOARD_PASSWORD_HASH
+                  key: DASHBOARD_PASSWORD
           ports:
             - name: http
               containerPort: 9119
