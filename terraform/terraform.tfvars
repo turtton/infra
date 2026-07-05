@@ -28,24 +28,15 @@ workers = {
     host_node    = "data"
     vm_id        = 1010
     ip           = "192.168.10.120"
-    cpu          = 1
-    ram          = 4096 # 4GB - Longhornストレージ専用
-    disk_size    = 100
+    cpu          = 2
+    ram          = 8192 # 8GB - Longhornストレージ専用 (worker-1/3統合)
+    disk_size    = 450
     datastore_id = "data-pve"
   }
   worker-2 = {
     host_node    = "data"
     vm_id        = 1011
     ip           = "192.168.10.121"
-    cpu          = 1
-    ram          = 4096 # 4GB - Longhornストレージ専用
-    disk_size    = 350
-    datastore_id = "data-pve"
-  }
-  worker-3 = {
-    host_node    = "data"
-    vm_id        = 1012
-    ip           = "192.168.10.122"
     cpu          = 1
     ram          = 4096 # 4GB - Longhornストレージ専用
     disk_size    = 350
