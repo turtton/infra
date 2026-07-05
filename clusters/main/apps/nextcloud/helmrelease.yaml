@@ -103,6 +103,8 @@ spec:
       storageClass: longhorn
       accessMode: ReadWriteOnce
       size: 250Gi
+      annotations:
+        data.longhorn.io/number-of-replicas: "2"
 
     resources:
       requests:

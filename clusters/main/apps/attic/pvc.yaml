@@ -4,6 +4,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: attic-data
   namespace: attic
+  annotations:
+    data.longhorn.io/number-of-replicas: "2"
 spec:
   storageClassName: longhorn
   accessModes:
