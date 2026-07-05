@@ -14,6 +14,10 @@ spec:
   storage:
     size: 10Gi
     storageClass: longhorn
+    pvcTemplate:
+      metadata:
+        annotations:
+          data.longhorn.io/number-of-replicas: "2"
   monitoring:
     enablePodMonitor: false
   postgresql:

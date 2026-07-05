@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: couchdb-data
   namespace: obsidian-livesync
+  annotations:
+    data.longhorn.io/number-of-replicas: "2"
 spec:
   storageClassName: longhorn
   accessModes:

@@ -36,6 +36,10 @@ spec:
       vault:
         size: 2Gi
         storageClassName: longhorn
+        annotations:
+          data.longhorn.io/number-of-replicas: "2"
       data:
         size: 512Mi
         storageClassName: longhorn
+        annotations:
+          data.longhorn.io/number-of-replicas: "2"
