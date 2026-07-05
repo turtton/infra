@@ -1,0 +1,45 @@
+model:
+  provider: custom
+  default: deepseek-v4-pro
+  base_url: https://crof.ai/v1
+  api_key: ${OPENAI_API_KEY}
+personality:
+  name: Main Assistant
+  restrict_to_workspace: false
+tools:
+  append_file: true
+  edit_file: true
+  read_file: true
+  write_file: true
+  list_dir: true
+  exec: true
+  web: true
+  web_fetch: true
+  send_file: true
+  spawn: true
+  subagent: true
+  message: true
+  cron: true
+  skills: true
+  find_skills: true
+  install_skill: true
+skills:
+  external_dirs:
+    - /opt/data/skills
+approvals:
+  mode: auto
+logging:
+  level: info
+toolsets:
+  - discord
+platform_toolsets:
+  discord:
+    - hermes-discord
+    - discord
+plugins:
+  enabled:
+    - fluxer
+platforms:
+  fluxer:
+    enabled: true
+    require_mention: true

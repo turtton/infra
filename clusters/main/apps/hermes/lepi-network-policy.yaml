@@ -1,0 +1,30 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-hermes-lepi-egress
+  namespace: hermes
+  labels:
+    app: hermes-lepi
+spec:
+  podSelector:
+    matchLabels:
+      app: hermes-lepi
+  policyTypes:
+    - Egress
+  egress:
+    # External HTTPS (Discord, GitHub, Crof AI API, etc.)
+    - ports:
+        - protocol: TCP
+          port: 443
+    # DNS resolution
+    - ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    # Other services within the namespace
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP

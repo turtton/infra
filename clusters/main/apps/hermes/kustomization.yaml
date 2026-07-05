@@ -3,23 +3,38 @@
 # which will cause "kustomize build failed" errors in Flux.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: hermes
 resources:
   - namespace.yaml
-  - home-configmap.yaml
   - home-serviceaccount.yaml
   - home-rbac.yaml
+  - home-network-policy.yaml
   - home-statefulset.yaml
-  - lepi-configmap.yaml
   - lepi-serviceaccount.yaml
   - lepi-rbac.yaml
+  - lepi-network-policy.yaml
   - lepi-statefulset.yaml
-  - config-ops-skill.yaml
-  - github-ops-skill.yaml
-  - fluxer-plugin-configmap.yaml
-  - home-secrets.sops.yaml
-  - lepi-secrets.sops.yaml
   - home-service.yaml
   - lepi-service.yaml
   - home-ingress.yaml
   - lepi-ingress.yaml
-
+  - home-secrets.sops.yaml
+  - lepi-secrets.sops.yaml
+configMapGenerator:
+  - name: hermes-home-config
+    files:
+      - config.yaml=home/config.yaml
+  - name: hermes-lepi-config
+    files:
+      - config.yaml=lepi/config.yaml
+  - name: hermes-config-ops-skill
+    files:
+      - SKILL.md=skills/config-ops/SKILL.md
+  - name: hermes-github-ops-skill
+    files:
+      - SKILL.md=skills/github-ops/SKILL.md
+  - name: hermes-fluxer-plugin
+    files:
+      - plugin.yaml=plugins/fluxer/plugin.yaml
+      - adapter.py=plugins/fluxer/adapter.py
+      - __init__.py=plugins/fluxer/__init__.py
