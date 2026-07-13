@@ -1,7 +1,7 @@
 ---
 name: config-ops
-description: Kubernetesマニフェストの設定変更を安全にテストし、GitOpsリポジトリにPRを作成して永続化する
-version: 1.0.0
+description: turtton/infra GitOpsリポジトリのKubernetesマニフェスト（Flux）を変更する際のワークフロー。infraリポジトリやFlux、k8sマニフェストに関する作業を始める前に必ずロードすること。
+version: 1.1.0
 ---
 
 # config-ops
@@ -11,6 +11,12 @@ version: 1.0.0
 ## 役割
 
 Kubernetesマニフェストの設定変更を安全にテストし、GitOpsリポジトリにPRを作成して永続化する。
+
+## ⚠️ 最重要ルール: 決してPRを自分でマージしない
+
+PRを作成したら**ユーザー（turtton）に報告してマージを待つこと**。
+自分で `gh pr merge` を実行してはならない。
+CIチェックが自動実行されるため、その結果もユーザーに伝えること。
 
 ## ワークフロー
 
@@ -55,6 +61,12 @@ gh pr create \
   --base main
 ```
 
+### 3. PR作成後
+
+- CI（dry-run/plan）が自動実行されるのを待つ
+- 結果をユーザーに報告する
+- **ユーザーがマージを指示するまで決してマージしない**
+
 ## Git Identity
 
 git操作時は以下のidentityを使用:
@@ -84,6 +96,7 @@ clusters/main/apps/hermes/
 - **SOPS暗号化ファイル**: `*.sops.yaml` は直接編集不可。シークレット変更が必要な場合はオーナーに報告
 - **CIチェック**: PRではdry-runが自動実行される
 - このエージェントは設定変更のみ担当。アプリケーションロジックの変更は行わない
+- **絶対にPRを自分でマージしないこと**
 
 ## 認証
 
