@@ -34,14 +34,7 @@ spec:
             - sh
             - -c
             - |
-              sed 's|\${OPENAI_API_KEY}|'"$OPENAI_API_KEY"'|g' /template/config.yaml > /opt/data/config.yaml && \
-              chmod 644 /opt/data/config.yaml
-          env:
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: hermes-lepi-secrets
-                  key: OPENAI_API_KEY
+              cp /template/config.yaml /opt/data/config.yaml
           volumeMounts:
             - name: config-template
               mountPath: /template
