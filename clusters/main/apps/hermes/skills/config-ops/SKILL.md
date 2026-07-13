@@ -1,7 +1,7 @@
 ---
 name: config-ops
-description: turtton/infra GitOpsリポジトリのKubernetesマニフェスト（Flux）を変更する際のワークフロー。infraリポジトリやFlux、k8sマニフェストに関する作業を始める前に必ずロードすること。
-version: 1.1.0
+description: turtton/infra GitOpsリポジトリのKubernetesマニフェストやHermes Agentの設定（config.yaml, plugins, skills, ツール類）を変更する際のワークフロー。infraリポジトリ、Flux、k8sマニフェスト、Hermesの設定変更に関する作業を始める前に必ずロードすること。
+version: 1.2.0
 ---
 
 # config-ops
@@ -10,13 +10,13 @@ version: 1.1.0
 
 ## 役割
 
-Kubernetesマニフェストの設定変更を安全にテストし、GitOpsリポジトリにPRを作成して永続化する。
+KubernetesマニフェストやHermes Agentの設定変更を安全にテストし、GitOpsリポジトリにPRを作成して永続化する。
 
 ## ⚠️ 最重要ルール: 決してPRを自分でマージしない
 
 PRを作成したら**ユーザー（turtton）に報告してマージを待つこと**。
 自分で `gh pr merge` を実行してはならない。
-CIチェックが自動実行されるため、その結果もユーザーに伝えること。
+また `gh pr review --approve` も実行しないこと（approveはユーザー判断）。
 
 ## ワークフロー
 
@@ -33,7 +33,7 @@ gh auth setup-git
 git config --global user.name "github-actions[bot]"
 git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-# リポジトリをワークスペース内にクローン
+# リポジトリをワークスペース内にクローン（既に /opt/data/infra にあればそれを使う）
 git clone https://github.com/turtton/infra.git ./infra-pr
 cd ./infra-pr
 
@@ -43,6 +43,10 @@ git checkout -b hermes/config-update-$(date +%Y%m%d-%H%M%S)
 # 対象ファイルを編集
 # - home インスタンス: clusters/main/apps/hermes/home-*.yaml
 # - lepi インスタンス: clusters/main/apps/hermes/lepi-*.yaml
+# - Hermes config: clusters/main/apps/hermes/home/config.yaml, lepi/config.yaml
+# - Hermes plugins: clusters/main/apps/hermes/plugins/*/
+# - Hermes skills: clusters/main/apps/hermes/skills/*/SKILL.md
+# - ConfigMap source: clusters/main/apps/hermes/kustomization.yaml
 
 # コミット＆プッシュ
 git add .
@@ -61,11 +65,30 @@ gh pr create \
   --base main
 ```
 
-### 3. PR作成後
+### 3. CI確認 → レビュー＆修正ループ
 
-- CI（dry-run/plan）が自動実行されるのを待つ
-- 結果をユーザーに報告する
-- **ユーザーがマージを指示するまで決してマージしない**
+PR作成後、以下のループを実行する：
+
+```bash
+# CIの完了を確認（失敗ステータスがなければ完了）
+gh pr checks <PR番号> --watch
+```
+
+**CI失敗時のルール:**
+- CI（dry-run/plan）が**失敗**した場合、エラーログを確認して**自分で修正**する
+- 修正後、再度 `git push` してCIを再実行
+- CIが通るまで修正を繰り返す
+- どうしても直せない場合は、ユーザーに状況を報告する
+
+**subagentレビューループ:**
+- delegate_taskでsubagentにPRの内容をレビューさせる
+- subagentからOK（マージ可能）の判定が出るまで、修正→再レビューを繰り返す
+- レビューのコンテキストにはPR番号、変更内容、修正意図を必ず含める
+
+### 4. ユーザーに報告
+
+すべてのチェック（CI通過、subagentレビューOK）が完了したら、ユーザーに報告する。
+**自分でマージしないこと。**
 
 ## Git Identity
 
@@ -94,9 +117,11 @@ clusters/main/apps/hermes/
 - **Flux管理**: GitOpsの定義がPod再起動時に適用される。Pod内の設定変更は一時的
 - **Skills永続化**: SkillsディレクトリはPVC上にあり、Pod再起動後も維持される（init containerでConfigMapから初期シード）
 - **SOPS暗号化ファイル**: `*.sops.yaml` は直接編集不可。シークレット変更が必要な場合はオーナーに報告
-- **CIチェック**: PRではdry-runが自動実行される
+- **CIチェック**: PRではdry-runが自動実行される。CIが失敗したら修正して再プッシュすること
+- **subagentレビュー**: 必ずsubagentにレビューさせ、OKが出るまで修正を繰り返すこと
 - このエージェントは設定変更のみ担当。アプリケーションロジックの変更は行わない
 - **絶対にPRを自分でマージしないこと**
+- **`gh pr review --approve` も実行しないこと**
 
 ## 認証
 
