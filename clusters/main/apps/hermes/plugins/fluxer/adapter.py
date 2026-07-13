@@ -212,8 +212,14 @@ class FluxerAdapter(BasePlatformAdapter):
 
     # ── Lifecycle ────────────────────────────────────────────────────────
 
-    async def connect(self) -> bool:
-        """Connect to the Fluxer gateway and REST API."""
+    async def connect(self, *, is_reconnect: bool = False) -> bool:
+        """Connect to the Fluxer gateway and REST API.
+
+        Args:
+            is_reconnect: True when reconnecting after a drop.
+                Currently unused — the Fluxer gateway doesn't buffer
+                an update queue, so a fresh connect is sufficient.
+        """
         if not self.token:
             logger.error("FLUXER_TOKEN is not set")
             return False
