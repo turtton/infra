@@ -158,6 +158,11 @@ class FluxerAdapter(BasePlatformAdapter):
         else:
             self._require_mention = bool(self._require_mention)
 
+        # Channel restriction: when set, only process messages from this channel
+        self._restrict_to_channel = (
+            os.getenv("FLUXER_CHANNEL", "") or extra.get("channel", "")
+        )
+
     # ── Endpoint Discovery ───────────────────────────────────────────────
 
     async def _discover_endpoints(self) -> FluxerEndpoints:
@@ -599,6 +604,14 @@ class FluxerAdapter(BasePlatformAdapter):
         message_id = data.get("id", "")
         guild_id = data.get("guild_id")
 
+        # Channel restriction: only handle messages from the configured channel
+        if self._restrict_to_channel and channel_id != self._restrict_to_channel:
+            logger.debug(
+                "[fluxer] ignoring message from non-restricted channel %s (expected %s)",
+                channel_id, self._restrict_to_channel,
+            )
+            return
+
         # require_mention check for guild/group messages
         if guild_id and self._require_mention:
             mentions = data.get("mentions", [])
@@ -931,6 +944,20 @@ def _apply_yaml_config(
         os.environ["FLUXER_ALLOW_ALL_USERS"] = str(
             platform_cfg["allow_all"]
         ).lower()
+    if "allow_admin_from" in platform_cfg and not os.getenv(
+        "FLUXER_ALLOW_ADMIN_FROM"
+    ):
+        allowed = platform_cfg["allow_admin_from"]
+        if isinstance(allowed, list):
+            allowed = ",".join(str(v) for v in allowed)
+        os.environ["FLUXER_ALLOW_ADMIN_FROM"] = str(allowed)
+    if "user_allowed_commands" in platform_cfg and not os.getenv(
+        "FLUXER_USER_ALLOWED_COMMANDS"
+    ):
+        cmds = platform_cfg["user_allowed_commands"]
+        if isinstance(cmds, list):
+            cmds = ",".join(str(v) for v in cmds)
+        os.environ["FLUXER_USER_ALLOWED_COMMANDS"] = str(cmds)
     if "require_mention" in platform_cfg and not os.getenv(
         "FLUXER_REQUIRE_MENTION"
     ):
@@ -971,6 +998,8 @@ def register(ctx):
         apply_yaml_config_fn=_apply_yaml_config,
         allowed_users_env="FLUXER_ALLOWED_USERS",
         allow_all_env="FLUXER_ALLOW_ALL_USERS",
+        admin_users_env="FLUXER_ALLOW_ADMIN_FROM",
+        user_allowed_commands_env="FLUXER_USER_ALLOWED_COMMANDS",
         max_message_length=4000,
         platform_hint=(
             "You are chatting via Fluxer, a free and open source instant "

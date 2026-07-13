@@ -162,6 +162,8 @@ spec:
                   key: DISCORD_BOT_TOKEN
             - name: DISCORD_ALLOWED_USERS
               value: "275915497353117697,299106923741970432,280320003159490561"
+            - name: DISCORD_ALLOW_ADMIN_FROM
+              value: "1517827818073882624"
             - name: DISCORD_REQUIRE_MENTION
               value: "true"
             - name: FLUXER_TOKEN
@@ -173,7 +175,9 @@ spec:
               value: "1517888841577398272"
             - name: FLUXER_INSTANCE_URL
               value: "https://chat.turtton.net"
-            - name: FLUXER_ALLOWED_USERS
+            - name: FLUXER_ALLOW_ALL_USERS
+              value: "true"
+            - name: FLUXER_ALLOW_ADMIN_FROM
               value: "1517827818073882624"
             - name: HERMES_DASHBOARD
               value: "1"
