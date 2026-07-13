@@ -33,6 +33,14 @@ optional_env:
     description: "Set to 'true' to allow all users to talk to the bot"
     prompt: "Allow all users"
     password: false
+  - name: FLUXER_ALLOW_ADMIN_FROM
+    description: "Comma-separated user IDs with admin privileges (full slash command access)"
+    prompt: "Admin user IDs (comma-separated)"
+    password: false
+  - name: FLUXER_USER_ALLOWED_COMMANDS
+    description: "Comma-separated list of slash commands regular users may run"
+    prompt: "User allowed commands (comma-separated)"
+    password: false
   - name: FLUXER_HISTORY_BACKFILL
     description: "Enable backfill of recent channel messages for context (default: true)"
     prompt: "Enable history backfill"

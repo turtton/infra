@@ -28,6 +28,10 @@ skills:
     - /opt/data/skills
 approvals:
   mode: auto
+delegation:
+  provider: custom
+  model: glm-5.2
+  max_iterations: 50
 logging:
   level: info
 toolsets:
@@ -43,3 +47,4 @@ platforms:
   fluxer:
     enabled: true
     require_mention: true
+    allow_all: true
