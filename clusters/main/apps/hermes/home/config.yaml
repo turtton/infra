@@ -33,6 +33,8 @@ delegation:
   model: glm-5.2
   reasoning_effort: max
   max_iterations: 50
+agent:
+  reasoning_effort: max
 logging:
   level: info
 toolsets:

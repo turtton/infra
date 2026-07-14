@@ -28,6 +28,8 @@ skills:
     - /opt/data/skills
 approvals:
   mode: auto
+agent:
+  reasoning_effort: max
 logging:
   level: info
 toolsets:
