@@ -1,0 +1,14 @@
+model:
+  provider: custom
+  default: glm-5.2
+  base_url: https://crof.ai/v1
+  api_key: ${OPENAI_API_KEY}
+agent:
+  reasoning_effort: max
+  toolsets:
+    - terminal
+    - file
+    - code_execution
+    - kanban
+    - github
+    - skills

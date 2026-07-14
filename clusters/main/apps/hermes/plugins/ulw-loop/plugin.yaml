@@ -1,0 +1,23 @@
+name: ulw-loop
+label: ULW Loop
+kind: plugin
+version: 2.0.0
+description: >-
+  ULW-loop (Explore → Plan → Execute → Verify → Review → Fix) for Hermes Agent.
+  Full implementation with:
+  - Durable state management (goals.json + ledger.jsonl)
+  - Token-based phase transitions (<promise>DONE</promise> protocol)
+  - Quality Gate checks (criteria coverage + adversarial coverage)
+  - Blocker classification and 3-strike escalation
+  - Steering (add/split/revise goals mid-execution)
+  - Auto-resume with 2-strike no-progress cap
+  - Kanban integration for multi-agent orchestration
+  
+  Usage: /ulw-loop <goal description>
+  Steering: /ulw-steer <action> <session-id> <params>
+author: turtton
+
+hooks:
+  - pre_llm_call
+  - post_llm_call
+  - pre_verify
