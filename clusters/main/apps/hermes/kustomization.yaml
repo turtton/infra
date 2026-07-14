@@ -43,3 +43,8 @@ configMapGenerator:
       - plugin.yaml=plugins/ulw-loop/plugin.yaml
       - __init__.py=plugins/ulw-loop/__init__.py
       - ulw_loop.py=plugins/ulw-loop/ulw_loop.py
+  - name: hermes-profiles
+    files:
+      - orchestrator.yaml=home/profiles/orchestrator/config.yaml
+      - executor.yaml=home/profiles/executor/config.yaml
+      - reviewer.yaml=home/profiles/reviewer/config.yaml

@@ -80,6 +80,23 @@ spec:
               mountPath: /plugin-seed
             - name: data
               mountPath: /opt/data
+        - name: init-profiles
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              for profile in orchestrator executor reviewer; do
+                dir="/opt/data/profiles/$profile"
+                mkdir -p "$dir" && \
+                cp "/profile-seed/${profile}.yaml" "$dir/config.yaml" && \
+                chmod -R 755 "$dir"
+              done
+          volumeMounts:
+            - name: profile-seed
+              mountPath: /profile-seed
+            - name: data
+              mountPath: /opt/data
         - name: init-plugin-ulw-loop
           image: busybox:latest
           command:
@@ -260,6 +277,9 @@ spec:
         - name: ulw-loop-plugin-seed
           configMap:
             name: hermes-ulw-loop-plugin
+        - name: profile-seed
+          configMap:
+            name: hermes-profiles
         - name: run
           emptyDir:
             medium: Memory

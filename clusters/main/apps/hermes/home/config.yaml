@@ -43,6 +43,11 @@ platform_toolsets:
 plugins:
   enabled:
     - fluxer
+    - ulw-loop
+kanban:
+  orchestrator_profile: orchestrator
+  dispatch_in_gateway: true
+  auto_decompose: true
 platforms:
   fluxer:
     enabled: true
