@@ -80,6 +80,22 @@ spec:
               mountPath: /plugin-seed
             - name: data
               mountPath: /opt/data
+        - name: init-plugin-ulw-loop
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /opt/data/plugins/ulw-loop && \
+              cp /ulw-loop-plugin-seed/plugin.yaml /opt/data/plugins/ulw-loop/plugin.yaml && \
+              cp /ulw-loop-plugin-seed/__init__.py /opt/data/plugins/ulw-loop/__init__.py && \
+              cp /ulw-loop-plugin-seed/ulw_loop.py /opt/data/plugins/ulw-loop/ulw_loop.py && \
+              chmod -R 755 /opt/data/plugins/ulw-loop
+          volumeMounts:
+            - name: ulw-loop-plugin-seed
+              mountPath: /ulw-loop-plugin-seed
+            - name: data
+              mountPath: /opt/data
         - name: install-tools
           image: alpine:latest
           command:
@@ -241,6 +257,9 @@ spec:
         - name: plugin-seed
           configMap:
             name: hermes-fluxer-plugin
+        - name: ulw-loop-plugin-seed
+          configMap:
+            name: hermes-ulw-loop-plugin
         - name: run
           emptyDir:
             medium: Memory

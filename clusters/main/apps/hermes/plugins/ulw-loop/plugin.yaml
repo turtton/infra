@@ -1,0 +1,10 @@
+name: ulw-loop
+label: ULW Loop
+kind: plugin
+version: 1.0.0
+description: >-
+  ULW-loop (Explore → Plan → Execute → Verify → Review → Fix) for Hermes Agent.
+  Integrates with Kanban to provide multi-agent task decomposition, parallel/serial
+  execution, per-task review loops, and global goal verification.
+  Usage: /ulw-loop <goal description>
+author: turtton
