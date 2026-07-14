@@ -177,8 +177,6 @@ spec:
               value: "https://chat.turtton.net"
             - name: FLUXER_ALLOW_ALL_USERS
               value: "true"
-            - name: FLUXER_ALLOW_ADMIN_FROM
-              value: "1517827818073882624"
             - name: HERMES_DASHBOARD
               value: "1"
             - name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME

@@ -1004,8 +1004,6 @@ def register(ctx):
         apply_yaml_config_fn=_apply_yaml_config,
         allowed_users_env="FLUXER_ALLOWED_USERS",
         allow_all_env="FLUXER_ALLOW_ALL_USERS",
-        admin_users_env="FLUXER_ALLOW_ADMIN_FROM",
-        user_allowed_commands_env="FLUXER_USER_ALLOWED_COMMANDS",
         max_message_length=4000,
         platform_hint=(
             "You are chatting via Fluxer, a free and open source instant "
