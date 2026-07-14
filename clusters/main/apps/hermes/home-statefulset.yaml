@@ -101,12 +101,11 @@ spec:
           image: busybox:latest
           command:
             - sh
+            - -e
             - -c
             - |
               mkdir -p /opt/data/plugins/ulw-loop && \
-              cp /ulw-loop-plugin-seed/plugin.yaml /opt/data/plugins/ulw-loop/plugin.yaml && \
-              cp /ulw-loop-plugin-seed/__init__.py /opt/data/plugins/ulw-loop/__init__.py && \
-              cp /ulw-loop-plugin-seed/ulw_loop.py /opt/data/plugins/ulw-loop/ulw_loop.py && \
+              cp /ulw-loop-plugin-seed/* /opt/data/plugins/ulw-loop/ && \
               chmod -R 755 /opt/data/plugins/ulw-loop
           volumeMounts:
             - name: ulw-loop-plugin-seed

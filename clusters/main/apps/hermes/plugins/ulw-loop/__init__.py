@@ -287,14 +287,7 @@ def _get_active_goal(state_obj: st.UlwState):
 # ---------------------------------------------------------------------------
 
 def handle_steer_command(raw_args: str) -> str | None:
-    """Handle the ``/ulw-steer`` command.
-
-    Syntax::
-
-      /ulw-steer add <session-id> <title> [--desc <description>]
-      /ulw-steer split <session-id> <goal-id> <title1>|<title2>|...
-      /ulw-steer revise <session-id> <goal-id> <criterion-index> <new-text>
-    """
+    """Handle the ``/ulw-steer`` command."""
     if not raw_args.strip():
         return (
             "**使用方法:** `/ulw-steer <action> ...`\n\n"
@@ -303,31 +296,40 @@ def handle_steer_command(raw_args: str) -> str | None:
             "**修正:** `/ulw-steer revise <session-id> <goal-id> <idx> <new-text>`"
         )
 
+    # Compute idempotency key from full raw args
+    import hashlib
+    idempotency_key = hashlib.sha256(raw_args.strip().encode("utf-8")).hexdigest()[:16]
+
     parts = raw_args.strip().split(maxsplit=3)
     action = parts[0].lower()
+    session_id = parts[1] if len(parts) >= 2 else ""
+
+    # Path traversal guard
+    if ".." in session_id or "/" in session_id:
+        return f"❌ Invalid session_id: contains path separators"
 
     if action == "add":
         if len(parts) < 3:
             return "Usage: /ulw-steer add <session-id> <title>"
-        session_id, title = parts[1], parts[2]
+        _, session_id, title = parts[0], parts[1], parts[2]
         state_obj = _get_state(session_id)
         if not state_obj:
             return f"❌ Session {session_id} not found"
-        result = steer.add_subgoal(state_obj, title=title)
+        result = steer.add_subgoal(state_obj, title=title, idempotency_key=idempotency_key)
         _set_state(state_obj)
         return f"✅ {result['message']}"
 
     elif action == "split":
         if len(parts) < 4:
             return "Usage: /ulw-steer split <session-id> <goal-id> <title1>|<title2>|..."
-        session_id, goal_id = parts[1], parts[2]
+        _, session_id, goal_id = parts[0], parts[1], parts[2]
         titles = [t.strip() for t in parts[3].split("|") if t.strip()]
         if not titles:
             return "❌ At least one sub-title required (pipe-separated)"
         state_obj = _get_state(session_id)
         if not state_obj:
             return f"❌ Session {session_id} not found"
-        result = steer.split_subgoal(state_obj, parent_id=goal_id, sub_titles=titles)
+        result = steer.split_subgoal(state_obj, parent_id=goal_id, sub_titles=titles, idempotency_key=idempotency_key)
         _set_state(state_obj)
         if result["success"]:
             return f"✅ {result['message']}"
@@ -336,7 +338,7 @@ def handle_steer_command(raw_args: str) -> str | None:
     elif action == "revise":
         if len(parts) < 5:
             return "Usage: /ulw-steer revise <session-id> <goal-id> <idx> <new-text>"
-        session_id, goal_id = parts[1], parts[2]
+        _, session_id, goal_id = parts[0], parts[1], parts[2]
         try:
             idx = int(parts[3])
         except ValueError:
@@ -345,7 +347,7 @@ def handle_steer_command(raw_args: str) -> str | None:
         state_obj = _get_state(session_id)
         if not state_obj:
             return f"❌ Session {session_id} not found"
-        result = steer.revise_criterion(state_obj, goal_id, idx, text)
+        result = steer.revise_criterion(state_obj, goal_id, idx, text, idempotency_key=idempotency_key)
         _set_state(state_obj)
         if result["success"]:
             return f"✅ {result['message']}"

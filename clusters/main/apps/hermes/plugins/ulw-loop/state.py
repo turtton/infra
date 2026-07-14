@@ -93,6 +93,11 @@ def _get_lock(session_id: str) -> threading.Lock:
 _mutex_lock = threading.Lock()
 
 
+def _is_valid_session_id(session_id: str) -> bool:
+    """Validate session_id — must not contain path traversal sequences."""
+    return bool(session_id) and ".." not in session_id and "/" not in session_id
+
+
 # ---------------------------------------------------------------------------
 # State I/O
 # ---------------------------------------------------------------------------
@@ -103,14 +108,23 @@ def _get_hermes_home() -> Path:
 
 
 def _state_dir(session_id: str) -> Path:
-    """Return the state directory for a session."""
-    d = _get_hermes_home() / "ulw-loop" / session_id
+    """Return the state directory for a session. Does NOT create it."""
+    return _get_hermes_home() / "ulw-loop" / session_id
+
+
+def _ensure_state_dir(session_id: str) -> Path:
+    """Return the state directory, creating it if needed."""
+    d = _state_dir(session_id)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def _goals_path(session_id: str) -> Path:
     return _state_dir(session_id) / "goals.json"
+
+
+def _goals_tmp_path(session_id: str) -> Path:
+    return _state_dir(session_id) / "goals.tmp"
 
 
 def _ledger_path(session_id: str) -> Path:
@@ -123,6 +137,10 @@ def _resume_path(session_id: str) -> Path:
 
 def save_goals(state: UlwState) -> None:
     """Atomically write goals.json."""
+    if not _is_valid_session_id(state.session_id):
+        logger.error("Invalid session_id: %s", state.session_id)
+        return
+    _ensure_state_dir(state.session_id)
     lock = _get_lock(state.session_id)
     with lock:
         path = _goals_path(state.session_id)
@@ -206,11 +224,15 @@ def _goal_from_dict(d: dict) -> Goal:
 
 def ledger_append(session_id: str, event_type: str, payload: dict) -> None:
     """Append an event to the ledger."""
+    if not _is_valid_session_id(session_id):
+        logger.error("Invalid session_id for ledger: %s", session_id)
+        return
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "type": event_type,
         **payload,
     }
+    _ensure_state_dir(session_id)
     path = _ledger_path(session_id)
     try:
         with open(path, "a", encoding="utf-8") as f:
@@ -261,12 +283,15 @@ def ledger_count(session_id: str) -> int:
 
 def save_resume(session_id: str, phase: str, iteration: int) -> None:
     """Write lightweight resume pointer."""
+    if not _is_valid_session_id(session_id):
+        return
     data = {
         "session_id": session_id,
         "phase": phase,
         "iteration": iteration,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    _ensure_state_dir(session_id)
     path = _resume_path(session_id)
     try:
         path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
@@ -276,6 +301,8 @@ def save_resume(session_id: str, phase: str, iteration: int) -> None:
 
 def load_resume(session_id: str) -> Optional[dict]:
     """Read resume pointer, or None."""
+    if not _is_valid_session_id(session_id):
+        return None
     path = _resume_path(session_id)
     if not path.exists():
         return None
@@ -287,6 +314,8 @@ def load_resume(session_id: str) -> Optional[dict]:
 
 def clear_resume(session_id: str) -> None:
     """Remove resume pointer (session complete)."""
+    if not _is_valid_session_id(session_id):
+        return
     path = _resume_path(session_id)
     try:
         if path.exists():

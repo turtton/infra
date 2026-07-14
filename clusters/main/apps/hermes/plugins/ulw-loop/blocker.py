@@ -12,9 +12,10 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
+from . import state as st
+
 logger = logging.getLogger(__name__)
 
-# Blocker categories
 BLOCKER_AUTH = "EXTERNAL_AUTHORIZATION_REQUIRED"
 BLOCKER_NETWORK = "NETWORK_ERROR"
 BLOCKER_COMPILE = "COMPILE_ERROR"
