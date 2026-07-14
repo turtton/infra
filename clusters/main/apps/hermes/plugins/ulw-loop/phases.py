@@ -1,0 +1,193 @@
+"""ULW-loop phase engine — 6-phase state machine.
+
+Phases mirror oh-my-openagent's ULW-loop model:
+
+  explore → plan → execute → verify → review → fix ─→ complete
+                          ↑_____________________________|
+                                    (loop)
+
+Each phase transition is gated by token detection and/or quality gates.
+"""
+
+import logging
+from typing import Optional
+
+from . import state as st
+from . import tokens as tk
+from . import quality_gate as qg
+from . import blocker as bl
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Phase definitions
+# ---------------------------------------------------------------------------
+
+PHASE_EXPLORE = "explore"
+PHASE_PLAN = "plan"
+PHASE_EXECUTE = "execute"
+PHASE_VERIFY = "verify"
+PHASE_REVIEW = "review"
+PHASE_FIX = "fix"
+PHASE_COMPLETE = "complete"
+
+PHASE_CYCLE = [PHASE_EXPLORE, PHASE_PLAN, PHASE_EXECUTE,
+               PHASE_VERIFY, PHASE_REVIEW, PHASE_FIX]
+
+# Human-readable phase labels for system prompt injection
+PHASE_LABELS = {
+    PHASE_EXPLORE: "探索 (Explore)",
+    PHASE_PLAN: "計画 (Plan)",
+    PHASE_EXECUTE: "実行 (Execute)",
+    PHASE_VERIFY: "検証 (Verify)",
+    PHASE_REVIEW: "レビュー (Review)",
+    PHASE_FIX: "修正 (Fix)",
+    PHASE_COMPLETE: "完了 (Complete)",
+}
+
+# Phase descriptions for LLM guidance
+PHASE_DESCRIPTIONS = {
+    PHASE_EXPLORE: (
+        "目標を理解し、要件を明確にします。"
+        "競合するアプローチを調査し、リスクを特定します。"
+        "出力: 調査結果とアプローチの提案"
+    ),
+    PHASE_PLAN: (
+        "ゴールを分解し、acceptance criteria を定義します。"
+        "各ゴールに happy path / edge case / regression の3つの成功基準を設定します。"
+        "出力: ゴール一覧 (goals.json)"
+    ),
+    PHASE_EXECUTE: (
+        "現在のゴールを実装します。"
+        "完了したら `<request_review>` を出力してレビューをリクエストしてください。"
+    ),
+    PHASE_VERIFY: (
+        "実装が acceptance criteria を満たしているか検証します。"
+        "テストを実行し、エビデンスを収集します。"
+        "出力: 検証結果とエビデンス"
+    ),
+    PHASE_REVIEW: (
+        "コードレビューを実施します。"
+        "問題がなければ `<promise>DONE</promise>` を出力して承認します。"
+        "修正が必要な場合は `<request_fix>` を出力して具体的な修正を指示してください。"
+    ),
+    PHASE_FIX: (
+        "レビューで指摘された問題を修正します。"
+        "修正後は再度 verify → review のサイクルに入ります。"
+    ),
+}
+
+
+def phase_index(phase: str) -> int:
+    """Return the numeric index of a phase in the cycle."""
+    try:
+        return PHASE_CYCLE.index(phase)
+    except ValueError:
+        return -1
+
+
+def next_phase(current: str, response_text: str, state_obj: st.UlwState) -> str:
+    """Determine the next phase based on current phase and LLM response tokens.
+
+    Args:
+        current: Current phase string.
+        response_text: The LLM's full response text.
+        state_obj: Current UlwState (may be mutated for blocker tracking).
+
+    Returns:
+        The next phase string.
+    """
+    tokens_found = tk.detect_tokens(response_text)
+
+    # --- TERMINAL: promise DONE in review phase = complete ---
+    if current == PHASE_REVIEW and tk.TOKEN_DONE in tokens_found:
+        st.ledger_append(state_obj.session_id, "phase:complete", {
+            "phase": current,
+            "message": "Reviewer approved with <promise>DONE</promise>",
+        })
+        return PHASE_COMPLETE
+
+    if current == PHASE_VERIFY and tk.TOKEN_VERIFIED in tokens_found:
+        st.ledger_append(state_obj.session_id, "phase:transition", {
+            "from": current,
+            "to": PHASE_REVIEW,
+            "reason": "Verification passed",
+        })
+        return PHASE_REVIEW
+
+    # --- REVIEW → FIX loop ---
+    if current == PHASE_REVIEW and tk.TOKEN_REQUEST_FIX in tokens_found:
+        st.ledger_append(state_obj.session_id, "phase:transition", {
+            "from": current,
+            "to": PHASE_FIX,
+            "reason": "Reviewer requested fixes",
+        })
+        return PHASE_FIX
+
+    if current == PHASE_FIX:
+        # After fix, go back to verify
+        st.ledger_append(state_obj.session_id, "phase:transition", {
+            "from": current,
+            "to": PHASE_VERIFY,
+            "reason": "Fixes applied, re-verifying",
+        })
+        return PHASE_VERIFY
+
+    # --- EXECUTE → REQUEST REVIEW ---
+    if current == PHASE_EXECUTE and tk.TOKEN_REQUEST_REVIEW in tokens_found:
+        st.ledger_append(state_obj.session_id, "phase:transition", {
+            "from": current,
+            "to": PHASE_VERIFY,
+            "reason": "Implementation complete, requesting review",
+        })
+        return PHASE_VERIFY
+
+    # --- Default: linear progression through cycle ---
+    idx = phase_index(current)
+    if 0 <= idx < len(PHASE_CYCLE) - 1:
+        next_p = PHASE_CYCLE[idx + 1]
+        st.ledger_append(state_obj.session_id, "phase:transition", {
+            "from": current,
+            "to": next_p,
+            "reason": "Normal phase progression",
+        })
+        return next_p
+
+    # Fallback: stay in current phase
+    return current
+
+
+def build_phase_prompt(state_obj: st.UlwState) -> str:
+    """Build the phase guidance block for system prompt injection.
+
+    This is injected into the LLM context via ``pre_llm_call`` hook.
+    """
+    phase = state_obj.phase
+    label = PHASE_LABELS.get(phase, phase)
+    desc = PHASE_DESCRIPTIONS.get(phase, "")
+    goals_summary = _goals_summary(state_obj)
+
+    return (
+        f"\n\n===== ULW-LOOP PHASE: {label} =====\n"
+        f"{desc}\n\n"
+        f"目標: {state_obj.brief}\n"
+        f"イテレーション: {state_obj.iteration}\n"
+        f"ゴール進捗: {goals_summary}\n"
+        f"---\n"
+        f"利用可能なトークン:\n"
+        f"  - 完了/承認: `<promise>DONE</promise>`\n"
+        f"  - 検証完了: `<promise>VERIFIED</promise>`\n"
+        f"  - レビュー依頼: `<request_review>`\n"
+        f"  - 修正依頼: `<request_fix>`\n"
+        f"================================"
+    )
+
+
+def _goals_summary(state_obj: st.UlwState) -> str:
+    """Return a compact summary of all goals and their statuses."""
+    parts = []
+    for g in state_obj.goals:
+        done = sum(1 for c in g.criteria if c.passed)
+        total = len(g.criteria)
+        parts.append(f"  [{g.status}] {g.id}: {g.title} ({done}/{total} criteria)")
+    return "\n".join(parts) if parts else "  (未分解)"
