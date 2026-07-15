@@ -72,6 +72,7 @@ class UlwState:
     iteration: int = 1
     no_progress_count: int = 0   # For 2-strike cap
     resume_count: int = 0        # How many times resumed
+    conversation_context: str = ""  # Injected from parent conversation
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +157,7 @@ def save_goals(state: UlwState) -> None:
             "iteration": state.iteration,
             "no_progress_count": state.no_progress_count,
             "resume_count": state.resume_count,
+            "conversation_context": state.conversation_context,
         }
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -181,6 +183,7 @@ def load_goals(session_id: str) -> Optional[UlwState]:
             iteration=data.get("iteration", 1),
             no_progress_count=data.get("no_progress_count", 0),
             resume_count=data.get("resume_count", 0),
+            conversation_context=data.get("conversation_context", ""),
         )
         return state
     except (json.JSONDecodeError, KeyError) as e:

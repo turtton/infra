@@ -51,19 +51,131 @@ def _run_hermes_kanban(args: list[str]) -> dict:
         return {"id": stdout.split()[0] if stdout else "unknown"}
 
 
+def init_ulw_loop(goal: str, context: str = "") -> dict:
+    """Programmatic entry point for mid-conversation ULW-loop activation.
+
+    Creates a Kanban task, initialises durable state with the conversation
+    context embedded, and returns the task/session identifiers.
+
+    The orchestrator profile picks up the Kanban task via auto-decompose
+    and receives the context in its system prompt.
+
+    Args:
+        goal: Brief goal description (used as Kanban task title).
+        context: Full conversation context / discussion history.  This is
+            stored in UlwState.conversation_context and injected into the
+            phase prompt so downstream profiles see it.
+
+    Returns:
+        dict with keys:
+          - success: bool
+          - task_id: str  (Kanban task id, also used as ULW-loop session id)
+          - session_id: str  (same as task_id)
+          - message: str  (human-readable status)
+    """
+    if not goal.strip():
+        return {
+            "success": False,
+            "task_id": "",
+            "session_id": "",
+            "message": "Goal is required",
+        }
+
+    # Phase 1: Init Kanban and create task
+    kanban_body = (
+        f"# ULW-loop Goal\n\n{goal}\n\n"
+        "## Conversation Context\n"
+        f"{context}\n\n"
+        if context else ""
+    ) + (
+        "## Workflow\n"
+        "1. Orchestratorがこのゴールを子タスクに分解\n"
+        "2. 各子タスクが並列/直列で実行 → レビュー → 修正\n"
+        "3. 全子タスク完了後、Orchestratorが全体レビュー\n"
+        "4. ゴール達成確認 → 完了\n\n"
+        "**Note:** The conversation context above contains the discussion "
+        "history, requirements, and decisions that led to this goal. "
+        "Use it to inform decomposition and implementation.\n\n"
+        f"{tk.token_help_text()}"
+    )
+
+    try:
+        _run_hermes_kanban(["init"])
+
+        task = _run_hermes_kanban([
+            "create", goal,
+            "--assignee", ORCHESTRATOR_PROFILE,
+            "--body", kanban_body,
+            "--priority", "2",
+            "--json",
+        ])
+    except RuntimeError as e:
+        logger.error("Failed to create kanban task: %s", e)
+        return {
+            "success": False,
+            "task_id": "",
+            "session_id": "",
+            "message": f"Kanban task creation failed: {e}",
+        }
+
+    task_id = task.get("id", "unknown")
+
+    # Phase 2: Initialize durable ULW-loop state
+    session_id = task_id
+    state_obj = st.UlwState(
+        session_id=session_id,
+        brief=goal,
+        phase=ph.PHASE_EXPLORE,
+        kanban_task_id=task_id,
+        created_at=time.time(),
+        updated_at=time.time(),
+        conversation_context=context,
+    )
+
+    # Generate initial goals (heuristic decomposition)
+    goals = _decompose_goal(goal)
+    state_obj.goals = goals
+
+    # Save state and ledger
+    st.save_goals(state_obj)
+    st.ledger_append(session_id, "ulw:start", {
+        "brief": goal,
+        "task_id": task_id,
+        "has_context": bool(context),
+        "context_length": len(context),
+        "goals": [{"id": g.id, "title": g.title, "criteria": len(g.criteria)}
+                   for g in goals],
+    })
+    st.save_resume(session_id, state_obj.phase, state_obj.iteration)
+
+    return {
+        "success": True,
+        "task_id": task_id,
+        "session_id": session_id,
+        "message": (
+            f"✅ **ULW-loop起動**\n\n"
+            f"**目標:** {goal}\n"
+            f"**KanbanタスクID:** `{task_id}`\n"
+            f"**コンテキスト:** {'あり (' + str(len(context)) + '文字)' if context else 'なし'}\n"
+            f"**担当:** `{ORCHESTRATOR_PROFILE}` (triage → 自動分解)\n\n"
+            f"**自動生成ゴール:**\n" +
+            "\n".join(
+                f"  - `{g.id}`: {g.title} ({len(g.criteria)} criteria)"
+                for g in goals
+            ) +
+            f"\n\n**進行状況の確認:**\n"
+            f"- Dash: `hermes dashboard` → Kanban\n"
+            f"- CLI: `hermes kanban show {task_id}`\n"
+            f"- Watch: `hermes kanban watch`\n"
+            f"- Steer: `/ulw-steer {session_id} <action> ...`"
+        ),
+    }
+
 def handle_ulw_command(raw_args: str) -> Optional[str]:
     """Handle the ``/ulw-loop <goal>`` slash command.
 
-    Workflow:
-      1. Parse the goal description
-      2. Create a Kanban task in triage, assigned to orchestrator
-      3. Initialize ULW-loop state (goals.json + ledger.jsonl)
-      4. Generate initial goals with acceptance criteria
-      5. Return task ID and guidance
-
-    The orchestrator profile picks up the task via Kanban's auto-decompose,
-    and the lifecycle hooks (pre_llm_call, post_llm_call, pre_verify)
-    manage the phase transitions.
+    Delegates to ``init_ulw_loop()`` for the actual work, then formats
+    the result as a text message for the user.
     """
     goal = raw_args.strip()
     if not goal:
@@ -81,80 +193,16 @@ def handle_ulw_command(raw_args: str) -> Optional[str]:
             f"  {tk.token_help_text()}"
         )
 
-    # Phase 1: Init Kanban and create task
-    try:
-        _run_hermes_kanban(["init"])
-
-        task = _run_hermes_kanban([
-            "create", goal,
-            "--assignee", ORCHESTRATOR_PROFILE,
-            "--body", (
-                f"# ULW-loop Goal\n\n{goal}\n\n"
-                "## Workflow\n"
-                "1. Orchestratorがこのゴールを子タスクに分解\n"
-                "2. 各子タスクが並列/直列で実行 → レビュー → 修正\n"
-                "3. 全子タスク完了後、Orchestratorが全体レビュー\n"
-                "4. ゴール達成確認 → 完了\n\n"
-                f"{tk.token_help_text()}"
-            ),
-            "--priority", "2",
-            "--json",
-        ])
-    except RuntimeError as e:
-        logger.error("Failed to create kanban task: %s", e)
-        return (
-            f"❌ **ULW-loop起動エラー**\n"
-            f"Kanbanタスク作成に失敗しました:\n"
-            f"`{e}`\n\n"
-            f"確認事項:\n"
-            f"- `hermes kanban init` が実行済みか\n"
-            f"- `{ORCHESTRATOR_PROFILE}` プロファイルが存在するか (`hermes profile list`)\n"
-            f"- ゲートウェイが起動しているか (`hermes gateway status`)"
-        )
-
-    task_id = task.get("id", "unknown")
-
-    # Phase 2: Initialize durable ULW-loop state
-    session_id = task_id  # Use kanban task id as session id
-    state_obj = st.UlwState(
-        session_id=session_id,
-        brief=goal,
-        phase=ph.PHASE_EXPLORE,
-        kanban_task_id=task_id,
-        created_at=time.time(),
-        updated_at=time.time(),
-    )
-
-    # Generate initial goals (heuristic decomposition)
-    goals = _decompose_goal(goal)
-    state_obj.goals = goals
-
-    # Save state and ledger
-    st.save_goals(state_obj)
-    st.ledger_append(session_id, "ulw:start", {
-        "brief": goal,
-        "task_id": task_id,
-        "goals": [{"id": g.id, "title": g.title, "criteria": len(g.criteria)}
-                   for g in goals],
-    })
-    st.save_resume(session_id, state_obj.phase, state_obj.iteration)
-
-    goals_summary = "\n".join(
-        f"  - `{g.id}`: {g.title} ({len(g.criteria)} criteria)"
-        for g in goals
-    )
-
+    result = init_ulw_loop(goal)
+    if result["success"]:
+        return result["message"]
     return (
-        f"✅ **ULW-loop起動**\n\n"
-        f"**目標:** {goal}\n"
-        f"**KanbanタスクID:** `{task_id}`\n"
-        f"**担当:** `{ORCHESTRATOR_PROFILE}` (triage → 自動分解)\n\n"
-        f"**自動生成ゴール:**\n{goals_summary}\n\n"
-        f"**進行状況の確認:**\n"
-        f"- ダッシュボード: `hermes dashboard` → Kanbanタブ\n"
-        f"- CLI: `hermes kanban show {task_id}`\n"
-        f"- ウォッチ: `hermes kanban watch`\n\n"
-        f"**Steering:** 実行中に計画を変更: `/ulw-steer add {session_id} <title>`"
+        f"❌ **ULW-loop起動エラー**\n"
+        f"{result['message']}\n\n"
+        f"確認事項:\n"
+        f"- `hermes kanban init` が実行済みか\n"
+        f"- `{ORCHESTRATOR_PROFILE}` プロファイルが存在するか (`hermes profile list`)\n"
+        f"- ゲートウェイが起動しているか (`hermes gateway status`)"
     )
 
 

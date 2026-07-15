@@ -161,15 +161,27 @@ def build_phase_prompt(state_obj: st.UlwState) -> str:
     """Build the phase guidance block for system prompt injection.
 
     This is injected into the LLM context via ``pre_llm_call`` hook.
+    If ``conversation_context`` is set on the state, a context block
+    is included so the downstream profile sees the full discussion
+    history that led to this ULW-loop goal.
     """
     phase = state_obj.phase
     label = PHASE_LABELS.get(phase, phase)
     desc = PHASE_DESCRIPTIONS.get(phase, "")
     goals_summary = _goals_summary(state_obj)
 
+    context_block = ""
+    if state_obj.conversation_context:
+        context_block = (
+            f"\n===== CONVERSATION CONTEXT =====\n"
+            f"{state_obj.conversation_context}\n"
+            f"================================\n"
+        )
+
     return (
         f"\n\n===== ULW-LOOP PHASE: {label} =====\n"
         f"{desc}\n\n"
+        f"{context_block}"
         f"目標: {state_obj.brief}\n"
         f"イテレーション: {state_obj.iteration}\n"
         f"ゴール進捗: {goals_summary}\n"
