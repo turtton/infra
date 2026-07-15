@@ -46,6 +46,8 @@ spec:
               value: "unofficial-cc-tweaked-v-1-120-1-cf"
             - name: CF_EXCLUDE_FILES
               value: "cc-tweaked-1.21.1-forge-1.120.0.jar"
+            - name: CF_FORCE_SYNCHRONIZE
+              value: "true"
             - name: MEMORY
               value: "10G"
             - name: OVERRIDE_SERVER_PROPERTIES
