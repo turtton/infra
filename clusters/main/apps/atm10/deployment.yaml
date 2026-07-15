@@ -42,6 +42,8 @@ spec:
                 secretKeyRef:
                   name: atm10-secrets
                   key: CF_API_KEY
+            - name: CF_EXCLUDE_MODS
+              value: "unofficial-cc-tweaked-v-1-120-1-cf"
             - name: MEMORY
               value: "10G"
             - name: OVERRIDE_SERVER_PROPERTIES
