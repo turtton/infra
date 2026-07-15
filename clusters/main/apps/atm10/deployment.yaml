@@ -42,12 +42,6 @@ spec:
                 secretKeyRef:
                   name: atm10-secrets
                   key: CF_API_KEY
-            - name: CF_EXCLUDE_MODS
-              value: "unofficial-cc-tweaked-v-1-120-1-cf"
-            - name: CF_EXCLUDE_FILES
-              value: "cc-tweaked-1.21.1-forge-1.120.0.jar"
-            - name: CF_FORCE_SYNCHRONIZE
-              value: "true"
             - name: MEMORY
               value: "10G"
             - name: OVERRIDE_SERVER_PROPERTIES
@@ -64,6 +58,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: downloads
+              mountPath: /downloads
           livenessProbe:
             tcpSocket:
               port: 25565
@@ -96,3 +92,6 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: atm10-data
+        - name: downloads
+          persistentVolumeClaim:
+            claimName: atm10-downloads

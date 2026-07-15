@@ -4,6 +4,7 @@ namespace: atm10
 resources:
   - namespace.yaml
   - pvc.yaml
+  - downloads-pvc.yaml
   - deployment.yaml
   - service.yaml
   - atm10-secrets.sops.yaml
