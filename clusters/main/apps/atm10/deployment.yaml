@@ -1,0 +1,92 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atm10
+  namespace: atm10
+  labels:
+    app: atm10
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: atm10
+  template:
+    metadata:
+      labels:
+        app: atm10
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: minecraft
+          image: itzg/minecraft-server:latest
+          imagePullPolicy: Always
+          ports:
+            - name: minecraft
+              containerPort: 25565
+              protocol: TCP
+          env:
+            - name: EULA
+              value: "TRUE"
+            - name: TYPE
+              value: AUTO_CURSEFORGE
+            - name: CF_SLUG
+              value: all-the-mods-10
+            - name: CF_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: atm10-secrets
+                  key: CF_API_KEY
+            - name: MEMORY
+              value: "10G"
+            - name: OVERRIDE_SERVER_PROPERTIES
+              value: "TRUE"
+            - name: DIFFICULTY
+              value: normal
+          resources:
+            requests:
+              cpu: 2
+              memory: 8Gi
+            limits:
+              cpu: 4
+              memory: 12Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            tcpSocket:
+              port: 25565
+            initialDelaySeconds: 120
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 25565
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          startupProbe:
+            tcpSocket:
+              port: 25565
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 60
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - toliworker-1
+                      - toliworker-2
+                      - toliworker-3
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: atm10-data
