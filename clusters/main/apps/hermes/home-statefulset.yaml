@@ -112,6 +112,21 @@ spec:
               mountPath: /ulw-loop-plugin-seed
             - name: data
               mountPath: /opt/data
+        - name: init-plugin-skill-gitops
+          image: busybox:latest
+          command:
+            - sh
+            - -e
+            - -c
+            - |
+              mkdir -p /opt/data/plugins/skill-gitops && \
+              cp /skill-gitops-plugin-seed/* /opt/data/plugins/skill-gitops/ && \
+              chmod -R 755 /opt/data/plugins/skill-gitops
+          volumeMounts:
+            - name: skill-gitops-plugin-seed
+              mountPath: /skill-gitops-plugin-seed
+            - name: data
+              mountPath: /opt/data
         - name: install-tools
           image: alpine:latest
           command:
@@ -276,6 +291,9 @@ spec:
         - name: ulw-loop-plugin-seed
           configMap:
             name: hermes-ulw-loop-plugin
+        - name: skill-gitops-plugin-seed
+          configMap:
+            name: hermes-skill-gitops-plugin
         - name: profile-seed
           configMap:
             name: hermes-profiles
