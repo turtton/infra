@@ -1,7 +1,7 @@
 ---
 name: config-ops
 description: turtton/infra GitOpsリポジトリのKubernetesマニフェストやHermes Agentの設定（config.yaml, plugins, skills, ツール類）を変更する際のワークフロー。infraリポジトリ、Flux、k8sマニフェスト、Hermesの設定変更に関する作業を始める前に必ずロードすること。
-version: 1.2.0
+version: 1.3.0
 ---
 
 # config-ops
@@ -111,6 +111,127 @@ clusters/main/apps/hermes/
 ├── config-ops-skill.yaml
 └── github-ops-skill.yaml
 ```
+
+## 重要: 実行環境の認識
+
+このHermes Agentは**クラスタ内Pod**（`hermes-home-0`）で動作している。外部サーバーではない。
+k8s APIにアクセスする前に、以下のチェックを最初に行うこと：
+
+```bash
+# 1. ホスト名でPod内か確認
+hostname                    # → hermes-home-0 ならPod内
+
+# 2. Service Accountトークンの有無
+ls /var/run/secrets/kubernetes.io/serviceaccount/
+# → token, ca.crt, namespace があればPod内
+
+# 3. kubeconfigの存在確認
+ls ~/.kube/config          # → なければ in-cluster セットアップが必要
+
+# 4. K8s API Serverへの接続確認
+kubectl get pods -n atm10  # → タイムアウトする場合は connectivity 参照
+```
+
+### In-Cluster kubectl セットアップ
+
+`~/.kube/config` が存在しない場合、Service Accountトークンを使って設定する：
+
+```bash
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+CA_CRT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+APISERVER="https://10.96.0.1:443"
+
+kubectl config set-cluster in-cluster \
+  --server="$APISERVER" \
+  --certificate-authority="$CA_CRT" \
+  --embed-certs=true
+kubectl config set-credentials hermes-sa --token="$TOKEN"
+kubectl config set-context hermes \
+  --cluster=in-cluster --user=hermes-sa --namespace=atm10
+kubectl config use-context hermes
+```
+
+トークンの詳細（API Server実アドレス等）は以下で確認：
+```bash
+cat /var/run/secrets/kubernetes.io/serviceaccount/token \
+  | cut -d. -f2 | base64 -d | python3 -m json.tool
+```
+→ `iss` フィールドがAPI Serverの実IPとポート（例: `https://192.168.10.110:6443`）
+
+### 代替: OpenTofu経由のkubeconfig取得（クラスタ外/ブートストラップ時）
+
+```bash
+cd terraform/
+tofu output -raw kubeconfig > ~/.kube/config
+```
+
+## トラブルシューティング: K8s API 接続不可
+
+Pod内にいるのに `kubectl` がタイムアウトする場合：
+
+### 症状
+- `10.96.0.1:443`（Kubernetes Service）に接続できない
+- ただし `10.96.0.10:53`（CoreDNS）は到達可能
+- 同一セグメントのノードIPにpingすら通らない
+- `tunl0` インターフェースが存在（CiliumのIPIPトンネル — TalosではCalicoと同様のtunl0が存在する）
+
+### 原因
+- **Cilium/NetworkPolicy** でworkload PodからControl Planeへのegressが制限されている
+- **kube-apiserver** がダウンしている（CoreDNSは生きているので部分停止）
+- **kube-proxy replacement (Cilium eBPF)** が正常動作していない（API ServerエンドポイントがCiliumのService Mapに未登録）
+
+### 診断手順（詳細は `references/k8s-api-connectivity-debug.md`）
+
+#### 1. 環境確認
+```bash
+hostname                    # Pod名: hermes-home-0
+ls /var/run/secrets/kubernetes.io/serviceaccount/  # token, ca.crt
+cat /var/run/secrets/kubernetes.io/serviceaccount/token | cut -d. -f2 | base64 -d | python3 -m json.tool
+```
+
+#### 2. Cilium設定の確認（infraリポジトリ）
+```bash
+grep -A5 k8sService clusters/main/infrastructure/controllers/cilium/helmrelease.yaml
+# → k8sServiceHost: localhost, k8sServicePort: 7445 (KubePrism)
+```
+
+#### 3. ネットワーク切り分け
+```bash
+# 他のClusterIP Serviceが正常か確認
+timeout 3 bash -c 'echo > /dev/tcp/10.96.0.10/53 && echo "CoreDNS OK"'
+timeout 3 bash -c 'echo > /dev/tcp/$HERMES_HOME_SERVICE_HOST/9119 && echo "hermes svc OK"'
+# → OKならCiliumのService LBは動作しているが、kubernetes Serviceのみ問題
+
+# KubePrismエンドポイント
+timeout 5 curl -sk --connect-timeout 5 https://localhost:7445/api --header "Authorization: Bearer $TOKEN"
+# → Podからは到達不能（hostNetwork限定）
+```
+
+#### 4. NetworkPolicy確認
+```yaml
+# clusters/main/apps/hermes/home-network-policy.yaml
+# allow-hermes-home-egress は port 443全宛先へのegressを許可している
+# → NetworkPolicyは原因ではない可能性が高い
+```
+
+#### 5. 切り分けマトリクス
+| チェック | 正常 | 異常パターンA | 異常パターンB |
+|---|---|---|---|
+| CoreDNS (UDP 53) | ✅ | ✅ | ✅ |
+| hermes-home svc | ✅ | ✅ | ❌ |
+| k8s Service (443) | ✅ | ❌ | ❌ |
+| → 推定原因 | - | **API Serverダウン or Cilium eBPF不調** | **Cilium LB全体不調** |
+
+### 報告テンプレート（ユーザー/管理者向け）
+> Pod内からk8s API Serverに接続できない状況です。
+> - 環境: hermes-home-0 (Cilium + KubePrism + kubeProxyReplacement)
+> - CoreDNS (10.96.0.10:53) は到達可能 ✅
+> - hermes-home service (10.109.61.199:9119) は到達可能 ✅
+> - k8s API (10.96.0.1:443) はtimeout ❌
+> - KubePrism (localhost:7445) はPodから到達不能（hostNetwork限定）
+> - NetworkPolicy (allow-hermes-home-egress) はport 443全宛先許可
+> - Cilium eBPF Service MapにAPI Serverエンドポイントが未登録の可能性
+> - 対応: Cilium agent再起動 または talosctl health 確認をお願いします
 
 ## 注意事項
 
