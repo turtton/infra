@@ -47,6 +47,7 @@ plugins:
   enabled:
     - fluxer
     - ulw-loop
+    - skill-gitops
 kanban:
   orchestrator_profile: orchestrator
   dispatch_in_gateway: true
