@@ -51,11 +51,22 @@ def _run_hermes_kanban(args: list[str]) -> dict:
         return {"id": stdout.split()[0] if stdout else "unknown"}
 
 
-def init_ulw_loop(goal: str, context: str = "") -> dict:
+def init_ulw_loop(
+    goal: str,
+    context: str = "",
+    platform: str = "",
+    chat_id: str = "",
+    thread_id: str = "",
+) -> dict:
     """Programmatic entry point for mid-conversation ULW-loop activation.
 
     Creates a Kanban task, initialises durable state with the conversation
     context embedded, and returns the task/session identifiers.
+
+    When ``platform`` and ``chat_id`` are provided, the originating chat is
+    auto-subscribed to the task's terminal events (completed, blocked,
+    gave_up, crashed, timed_out) — so blocked/status notifications arrive
+    back in the Discord/Telegram/etc. thread where ULW-loop was triggered.
 
     The orchestrator profile picks up the Kanban task via auto-decompose
     and receives the context in its system prompt.
@@ -65,6 +76,10 @@ def init_ulw_loop(goal: str, context: str = "") -> dict:
         context: Full conversation context / discussion history.  This is
             stored in UlwState.conversation_context and injected into the
             phase prompt so downstream profiles see it.
+        platform: Messaging platform (e.g. "discord", "telegram"). If
+            provided along with ``chat_id``, auto-subscribes the chat.
+        chat_id: Platform chat/channel ID to subscribe.
+        thread_id: Optional platform thread/topic ID.
 
     Returns:
         dict with keys:
@@ -120,7 +135,27 @@ def init_ulw_loop(goal: str, context: str = "") -> dict:
 
     task_id = task.get("id", "unknown")
 
-    # Phase 2: Initialize durable ULW-loop state
+    # Phase 2: Auto-subscribe the originating chat if platform info is available
+    subscribed = False
+    if platform and chat_id:
+        try:
+            sub_args = [
+                "notify-subscribe", task_id,
+                "--platform", platform,
+                "--chat-id", chat_id,
+            ]
+            if thread_id:
+                sub_args += ["--thread-id", thread_id]
+            _run_hermes_kanban(sub_args)
+            subscribed = True
+            logger.info(
+                "Subscribed %s/%s to task %s",
+                platform, chat_id, task_id,
+            )
+        except RuntimeError as e:
+            logger.warning("Failed to subscribe to task %s: %s", task_id, e)
+
+    # Phase 3: Initialize durable ULW-loop state
     session_id = task_id
     state_obj = st.UlwState(
         session_id=session_id,
@@ -152,12 +187,19 @@ def init_ulw_loop(goal: str, context: str = "") -> dict:
         "success": True,
         "task_id": task_id,
         "session_id": session_id,
+        "subscribed": subscribed,
         "message": (
             f"✅ **ULW-loop起動**\n\n"
             f"**目標:** {goal}\n"
             f"**KanbanタスクID:** `{task_id}`\n"
             f"**コンテキスト:** {'あり (' + str(len(context)) + '文字)' if context else 'なし'}\n"
-            f"**担当:** `{ORCHESTRATOR_PROFILE}` (triage → 自動分解)\n\n"
+            f"**担当:** `{ORCHESTRATOR_PROFILE}` (triage → 自動分解)\n"
+            + (
+                f"**通知:** ✅ このチャットに購読済み（blocked/completed等が自動通知されます）\n"
+                if subscribed else
+                ""
+            ) +
+            "\n"
             f"**自動生成ゴール:**\n" +
             "\n".join(
                 f"  - `{g.id}`: {g.title} ({len(g.criteria)} criteria)"
@@ -176,6 +218,10 @@ def handle_ulw_command(raw_args: str) -> Optional[str]:
 
     Delegates to ``init_ulw_loop()`` for the actual work, then formats
     the result as a text message for the user.
+
+    When called from a gateway session (Discord, Telegram, etc.), the
+    session registry (updated by ``on_session_start``) is read to
+    auto-subscribe the originating chat to the new task's events.
     """
     goal = raw_args.strip()
     if not goal:
@@ -193,8 +239,19 @@ def handle_ulw_command(raw_args: str) -> Optional[str]:
             f"  {tk.token_help_text()}"
         )
 
-    result = init_ulw_loop(goal)
-    if result["success"]:
+    # Try to detect current session's platform for auto-subscribe
+    session_info = st.load_session_registry()
+    platform = session_info.platform if session_info else ""
+    chat_id = session_info.chat_id if session_info else ""
+    thread_id = session_info.thread_id if session_info else ""
+
+    result = init_ulw_loop(
+        goal,
+        platform=platform,
+        chat_id=chat_id,
+        thread_id=thread_id,
+    )
+    if result.get("success"):
         return result["message"]
     return (
         f"❌ **ULW-loop起動エラー**\n"
