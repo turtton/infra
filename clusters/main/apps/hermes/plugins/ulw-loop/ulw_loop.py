@@ -107,7 +107,7 @@ def init_ulw_loop(goal: str, context: str = "") -> dict:
         "     - 完了した作業内容\n"
         "     - ユーザーに必要な操作とその手順\n"
         "     - 完了後に実行するコマンド: `kanban complete <task-id>`\n"
-        "  2. blocked (review-required) で終了し、タスクをblocked状態にする\n"
+        "  2. blocked (review-required) 状態で終了する\n"
         "  3. ユーザーが操作完了後、上記コマンドでタスクを完了 → 子タスクが自動昇格\n\n"
         "### タスク完了後の流れ\n"
         "- ユーザー操作不要で完了 → verify → review に進む\n"
