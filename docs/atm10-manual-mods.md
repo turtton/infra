@@ -148,6 +148,22 @@ kubectl get pods -n atm10 -w
 
 `READY 1/1` になり、`Dedicated server took ... seconds to load` がログに出力されたら成功です。
 
+## MODパック更新時の注意
+
+MODパックを更新する際、`mc-image-helper` は `/downloads` 配下のファイルを `/data` に再配置し、関連する設定ファイルも再生成することがあります。この再配置の影響で、以下の設定がデフォルト値に戻ることがあります。
+
+- **Simple Backups の無効化設定**
+  - ファイル: `/data/config/simplebackups-common.toml`
+  - 確認項目: `enabled = false`
+
+Longhorn による PVC スナップショットバックアップを運用している場合、MOD 側のバックアップが有効になっていると二重でバックアップが実行されてしまいます。MODパック更新後は必ず以下を確認してください。
+
+```bash
+kubectl exec -n atm10 deployment/atm10 -- grep '^enabled' /data/config/simplebackups-common.toml
+```
+
+出力が `enabled = false` ではなく `enabled = true` に戻っていた場合は、再度無効化して pod を再起動してください。
+
 ## トラブルシューティング
 
 ### `Multi-Attach error` でuploader Podが起動しない
