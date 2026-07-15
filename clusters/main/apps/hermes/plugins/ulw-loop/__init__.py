@@ -298,7 +298,7 @@ def _get_active_goal(state_obj: st.UlwState):
 
 
 # ---------------------------------------------------------------------------
-# Steering command handler
+# Session lifecycle hooks
 # ---------------------------------------------------------------------------
 
 def on_session_start(**kw) -> None:
@@ -328,6 +328,13 @@ def on_session_start(**kw) -> None:
         "Session registry updated: %s on %s (chat=%s, thread=%s)",
         session_id, platform, chat_id, thread_id,
     )
+
+# ---------------------------------------------------------------------------
+# Steering command handler
+# ---------------------------------------------------------------------------
+
+
+
 
 def handle_from_context_command(raw_args: str) -> str | None:
     """Handle the ``/ulw-from-context <goal>`` command.

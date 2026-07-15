@@ -331,7 +331,10 @@ def clear_resume(session_id: str) -> None:
 # Session registry (platform/chat_id for auto-subscribe)
 # ---------------------------------------------------------------------------
 
-_SESSION_REGISTRY_PATH = _get_hermes_home() / "ulw-loop" / "_session_registry.json"
+
+def _session_registry_path() -> Path:
+    """Return path to the session registry file (lazy eval)."""
+    return _get_hermes_home() / "ulw-loop" / "_session_registry.json"
 
 
 @dataclass
@@ -347,7 +350,7 @@ class SessionInfo:
 
 def save_session_registry(info: SessionInfo) -> None:
     """Persist a session's platform info to the registry."""
-    path = _SESSION_REGISTRY_PATH
+    path = _session_registry_path()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         data = {
@@ -367,7 +370,7 @@ def save_session_registry(info: SessionInfo) -> None:
 
 def load_session_registry() -> Optional[SessionInfo]:
     """Load the most recent session info from the registry."""
-    path = _SESSION_REGISTRY_PATH
+    path = _session_registry_path()
     if not path.exists():
         return None
     try:
