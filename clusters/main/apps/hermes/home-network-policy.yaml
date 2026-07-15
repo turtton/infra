@@ -14,9 +14,14 @@ spec:
     - Egress
   egress:
     # External HTTPS (Discord, GitHub, Crof AI API, Fluxer, etc.)
+    # Kubernetes API Server service (10.96.0.1:443) is translated to the
+    # apiserver backend port 6443 by Cilium's kube-proxy replacement.
+    # The egress rule must allow the translated port, not only 443.
     - ports:
         - protocol: TCP
           port: 443
+        - protocol: TCP
+          port: 6443
     # DNS resolution
     - ports:
         - protocol: TCP
