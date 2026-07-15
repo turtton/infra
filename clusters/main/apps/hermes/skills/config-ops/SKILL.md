@@ -1,7 +1,7 @@
 ---
 name: config-ops
 description: turtton/infra GitOpsリポジトリのKubernetesマニフェストやHermes Agentの設定（config.yaml, plugins, skills, ツール類）を変更する際のワークフロー。infraリポジトリ、Flux、k8sマニフェスト、Hermesの設定変更に関する作業を始める前に必ずロードすること。
-version: 1.2.0
+version: 1.3.0
 ---
 
 # config-ops
@@ -111,6 +111,81 @@ clusters/main/apps/hermes/
 ├── config-ops-skill.yaml
 └── github-ops-skill.yaml
 ```
+
+## 重要: 実行環境の認識
+
+このHermes Agentは**クラスタ内Pod**（`hermes-home-0`）で動作している。外部サーバーではない。
+k8s APIにアクセスする前に、以下のチェックを最初に行うこと：
+
+```bash
+# 1. ホスト名でPod内か確認
+hostname                    # → hermes-home-0 ならPod内
+
+# 2. Service Accountトークンの有無
+ls /var/run/secrets/kubernetes.io/serviceaccount/
+# → token, ca.crt, namespace があればPod内
+
+# 3. kubeconfigの存在確認
+ls ~/.kube/config          # → なければ in-cluster セットアップが必要
+
+# 4. K8s API Serverへの接続確認
+kubectl get pods -n atm10  # → タイムアウトする場合は connectivity 参照
+```
+
+### In-Cluster kubectl セットアップ
+
+`~/.kube/config` が存在しない場合、Service Accountトークンを使って設定する：
+
+```bash
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+CA_CRT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+APISERVER="https://10.96.0.1:443"
+
+kubectl config set-cluster in-cluster \
+  --server="$APISERVER" \
+  --certificate-authority="$CA_CRT" \
+  --embed-certs=true
+kubectl config set-credentials hermes-sa --token="$TOKEN"
+kubectl config set-context hermes \
+  --cluster=in-cluster --user=hermes-sa --namespace=atm10
+kubectl config use-context hermes
+```
+
+トークンの詳細（API Server実アドレス等）は以下で確認：
+```bash
+cat /var/run/secrets/kubernetes.io/serviceaccount/token \
+  | cut -d. -f2 | base64 -d | python3 -m json.tool
+```
+→ `iss` フィールドがAPI Serverの実IPとポート（例: `https://192.168.10.110:6443`）
+
+### 代替: OpenTofu経由のkubeconfig取得（クラスタ外/ブートストラップ時）
+
+```bash
+cd terraform/
+tofu output -raw kubeconfig > ~/.kube/config
+```
+
+## トラブルシューティング: K8s API 接続不可
+
+Pod内にいるのに `kubectl` がタイムアウトする場合：
+
+### 症状
+- `10.96.0.1:443`（Kubernetes Service）に接続できない
+- ただし `10.96.0.10:53`（CoreDNS）は到達可能
+- 同一セグメントのノードIPにpingすら通らない
+- `tunl0` インターフェースが存在（Calico IPIPトンネル）
+
+### 原因
+- **Calico/NetworkPolicy** でworkload PodからControl Planeへのegressが制限されている
+- **kube-apiserver** がダウンしている（CoreDNSは生きているので部分停止）
+- **kube-proxy/Calico-kube-proxy** のルーティングルールが機能していない
+
+### 対応
+1. ユーザーに状況を報告：「Pod内からk8s API Serverに接続できない」
+2. 上記の切り分け情報（CoreDNSはOK / API Server timeout / 他ノードping不通）を添える
+3. クラスタ管理者（turtton）に確認を依頼する
+
+詳細なデバッグ手順は `references/k8s-api-connectivity-debug.md` を参照。
 
 ## 注意事項
 
