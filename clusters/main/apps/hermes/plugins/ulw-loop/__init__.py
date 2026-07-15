@@ -79,6 +79,12 @@ def _register_hooks(ctx):
     except (AttributeError, TypeError):
         logger.info("pre_verify hook not available in this Hermes version")
 
+    try:
+        ctx.register_hook("on_session_start", on_session_start)
+        hooks_registered += 1
+    except (AttributeError, TypeError):
+        logger.info("on_session_start hook not available in this Hermes version")
+
     logger.info("ULW-loop: registered %d hooks", hooks_registered)
 
 
@@ -292,16 +298,51 @@ def _get_active_goal(state_obj: st.UlwState):
 
 
 # ---------------------------------------------------------------------------
+# Session lifecycle hooks
+# ---------------------------------------------------------------------------
+
+def on_session_start(**kw) -> None:
+    """Record session platform info when a new gateway session starts.
+
+    This hook captures the session_id, platform, chat_id, and thread_id
+    so that ``/ulw-loop`` and ``/ulw-from-context`` can auto-subscribe
+    the originating chat to newly created Kanban tasks.
+    """
+    session_id = kw.get("session_id", "")
+    platform = kw.get("platform", "")
+    chat_id = kw.get("chat_id", "") or kw.get("channel_id", "")
+    thread_id = kw.get("thread_id", "") or kw.get("thread", "")
+    user_id = kw.get("user_id", "")
+
+    if not session_id:
+        return
+
+    st.update_session_registry(
+        session_id=session_id,
+        platform=platform,
+        chat_id=str(chat_id) if chat_id else "",
+        thread_id=str(thread_id) if thread_id else "",
+        user_id=str(user_id) if user_id else "",
+    )
+    logger.debug(
+        "Session registry updated: %s on %s (chat=%s, thread=%s)",
+        session_id, platform, chat_id, thread_id,
+    )
+
+# ---------------------------------------------------------------------------
 # Steering command handler
 # ---------------------------------------------------------------------------
+
+
+
 
 def handle_from_context_command(raw_args: str) -> str | None:
     """Handle the ``/ulw-from-context <goal>`` command.
 
     This command signals the agent to:
       1. Summarise the current conversation context
-      2. Call ``init_ulw_loop(goal, context=<summary>)``
-      3. Start the ULW-loop with full context
+      2. Call ``init_ulw_loop(goal, context=<summary>, platform=..., chat_id=...)``
+      3. Start the ULW-loop with full context and auto-subscribe
 
     The command returns guidance; the actual work is done by the agent
     in the current session via ``init_ulw_loop()``.
@@ -315,18 +356,37 @@ def handle_from_context_command(raw_args: str) -> str | None:
             "**どう動くか:**\n"
             "1. これまでの会話を要約\n"
             "2. 要約をコンテキストとしてULW-loopを起動\n"
-            "3. Orchestratorプロファイルがコンテキスト込みでタスクを実行\n\n"
+            "3. Orchestratorプロファイルがコンテキスト込みでタスクを実行\n"
+            "4. **自動でこのチャットに通知購読**（blocked/completedが届く）\n\n"
             "**エージェントへの指示:**\n"
-            "上記1-2を実行し、結果を報告してください。"
+            "上記1-3を実行し、結果を報告してください。"
         )
+
+    # Read current session info for auto-subscribe
+    session_info = st.load_session_registry()
+    platform = session_info.platform if session_info else ""
+    chat_id = session_info.chat_id if session_info else ""
+    thread_id = session_info.thread_id if session_info else ""
+
+    # Build init_ulw_loop call with subscription params
+    sub_params = ""
+    if platform and chat_id:
+        sub_params = f', platform="{platform}", chat_id="{chat_id}"'
+        if thread_id:
+            sub_params += f', thread_id="{thread_id}"'
 
     return (
         f"🔄 **ULW-loop起動準備**\n\n"
         f"**目標:** {goal}\n\n"
-        f"これまでの会話を要約して、コンテキスト込みのULW-loopを起動します。\n\n"
+        f"これまでの会話を要約して、コンテキスト込みのULW-loopを起動します。\n"
+        + (
+            f"**通知:** 自動でこのチャットに購読されます ✅\n\n"
+            if platform and chat_id else
+            "\n"
+        ) +
         f"**エージェント（私）への指示:**\n"
         f"1. この会話の経緯・要件・決定事項を要約\n"
-        f"2. `init_ulw_loop(goal=\"{goal}\", context=<要約>)` を実行\n"
+        f"2. `init_ulw_loop(goal=\"{goal}\", context=<要約>{sub_params})` を実行\n"
         f"3. 結果を報告"
     )
 
