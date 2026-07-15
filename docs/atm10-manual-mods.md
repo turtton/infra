@@ -148,6 +148,40 @@ kubectl get pods -n atm10 -w
 
 `READY 1/1` になり、`Dedicated server took ... seconds to load` がログに出力されたら成功です。
 
+## OP プレイヤーの管理
+
+サーバーの管理者権限を持たせたいプレイヤーは、`itzg/minecraft-server` の `OPS` 環境変数で起動時に設定できます。
+
+`clusters/main/apps/atm10/deployment.yaml` の `OPS` 環境変数を編集してください。
+
+```yaml
+- name: OPS
+  value: |-
+    player1
+    player2
+```
+
+複数人の場合は改行区切りで追加します。プレイヤー名には Minecraft のユーザー名（UUID でも可）を使用してください。
+
+変更後は Git へコミットして push し、Flux CD の同期を待つか手動で reconcile します。
+
+```bash
+git add clusters/main/apps/atm10/deployment.yaml
+git commit -m 'feat(atm10): update OP players'
+git push origin main
+
+flux reconcile source git flux-system -n flux-system
+flux reconcile kustomization apps -n flux-system
+```
+
+Pod が再起動すると、`mc-image-helper` が `/data/ops.json` を更新します。起動後に以下のように確認できます。
+
+```bash
+kubectl exec -n atm10 deployment/atm10 -- cat /data/ops.json
+```
+
+> **注意**: `EXISTING_OPS_FILE` のデフォルト動作は `SYNC_FILE_MERGE_LIST` です。`OPS` で指定したプレイヤーが既存の `ops.json` にマージされます。完全に上書きしたい場合は `EXISTING_OPS_FILE: SYNCHRONIZE` を追加してください。
+
 ## MODパック更新時の注意
 
 MODパックを更新する際、`mc-image-helper` は `/downloads` 配下のファイルを `/data` に再配置し、関連する設定ファイルも再生成することがあります。この再配置の影響で、以下の設定がデフォルト値に戻ることがあります。

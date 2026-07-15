@@ -48,6 +48,13 @@ spec:
               value: "TRUE"
             - name: DIFFICULTY
               value: normal
+            - name: MOTD
+              value: "%MODPACK_NAME%"
+            - name: ICON
+              value: https://media.forgecdn.net/avatars/thumbnails/1182/438/256/256/638755918649288941.png
+            - name: OPS
+              value: |-
+                turtton
           resources:
             requests:
               cpu: 2
