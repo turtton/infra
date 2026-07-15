@@ -12,7 +12,6 @@ import os
 import shutil
 import subprocess
 import tempfile
-import time
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -29,18 +28,20 @@ def sync_changed_skills(
     infra_skills_dir: Path,
     infra_repo: Path,
     lock_file: Path,
-) -> None:
+) -> str:
     """Check each dirty skill, copy changes to infra repo, create a single PR.
 
     Acquires *lock_file* to prevent concurrent syncs.  Safe to call from a
     background thread — all I/O is local or via subprocess.
+
+    Returns: "done", "locked" (lock held by another sync), or "failed".
     """
     # ── Lock ────────────────────────────────────────────────────────────
     try:
         lock_fd = os.open(str(lock_file), os.O_CREAT | os.O_EXCL | os.O_RDWR)
     except FileExistsError:
         logger.info("skill-gitops: lock held by another process — skipping")
-        return
+        return "locked"
     try:
         _do_sync(skills, skills_dir, infra_skills_dir, infra_repo)
     finally:
@@ -49,6 +50,7 @@ def sync_changed_skills(
             lock_file.unlink(missing_ok=True)
         except OSError:
             pass
+    return "done"
 
 
 # ── Internal ────────────────────────────────────────────────────────────────

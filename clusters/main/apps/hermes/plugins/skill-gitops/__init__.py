@@ -17,7 +17,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # ── Config ──────────────────────────────────────────────────────────────────
-HERMES_HOME = Path(os.environ.get("HERMES_HOME", "/opt/data/.hermes"))
+HERMES_HOME = Path(os.environ.get("HERMES_HOME", "/opt/data"))
 SKILLS_DIR = HERMES_HOME / "skills"
 INFRA_REPO = Path("/opt/data/infra")
 INFRA_SKILLS_DIR = INFRA_REPO / "clusters" / "main" / "apps" / "hermes" / "skills"
@@ -104,17 +104,25 @@ def _flush():
 
 def _sync_with_lock(skills: set[str]):
     """Acquire the filesystem lock, then sync."""
-    # Avoid importing sync.py at module level — discover order may not have
-    # resolved path dependencies yet.
     from . import sync as _sync
 
     try:
-        _sync.sync_changed_skills(
+        result = _sync.sync_changed_skills(
             skills=skills,
             skills_dir=SKILLS_DIR,
             infra_skills_dir=INFRA_SKILLS_DIR,
             infra_repo=INFRA_REPO,
             lock_file=LOCK_FILE,
         )
+
+        if result == "locked":
+            # Another sync is in progress — re-queue these skills
+            with _dirty_lock:
+                _dirty_skills.update(skills)
+            _reschedule_debounce()
+            logger.info(
+                "skill-gitops: lock held, re-queued %d skill(s) for later",
+                len(skills),
+            )
     except Exception:
         logger.exception("skill-gitops: sync failed")
