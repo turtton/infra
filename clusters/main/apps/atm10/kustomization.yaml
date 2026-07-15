@@ -7,4 +7,5 @@ resources:
   - downloads-pvc.yaml
   - deployment.yaml
   - service.yaml
+  - hermes-home-rbac.yaml
   - atm10-secrets.sops.yaml
