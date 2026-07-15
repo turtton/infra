@@ -13,6 +13,7 @@ import logging
 from typing import Any
 
 from . import ulw_loop
+from .ulw_loop import init_ulw_loop, handle_ulw_command
 from . import state as st
 from . import phases as ph
 from . import tokens as tk
@@ -33,6 +34,14 @@ def register(ctx):
         name="ulw-loop",
         handler=ulw_loop.handle_ulw_command,
         description="ULW-loop: 目標をKanbanタスクに分解してマルチエージェントで実行する",
+        args_hint="<goal description>",
+    )
+
+    # Mid-conversation ULW-loop — agent summarises conversation context
+    ctx.register_command(
+        name="ulw-from-context",
+        handler=handle_from_context_command,
+        description="ULW-loop: これまでの会話のコンテキストを要約してULW-loopを起動する",
         args_hint="<goal description>",
     )
 
@@ -285,6 +294,42 @@ def _get_active_goal(state_obj: st.UlwState):
 # ---------------------------------------------------------------------------
 # Steering command handler
 # ---------------------------------------------------------------------------
+
+def handle_from_context_command(raw_args: str) -> str | None:
+    """Handle the ``/ulw-from-context <goal>`` command.
+
+    This command signals the agent to:
+      1. Summarise the current conversation context
+      2. Call ``init_ulw_loop(goal, context=<summary>)``
+      3. Start the ULW-loop with full context
+
+    The command returns guidance; the actual work is done by the agent
+    in the current session via ``init_ulw_loop()``.
+    """
+    goal = raw_args.strip()
+    if not goal:
+        return (
+            "**使用方法:** `/ulw-from-context <目標>`\n\n"
+            "**例:**\n"
+            "  `/ulw-from-context 認証モジュールをREST API化する`\n\n"
+            "**どう動くか:**\n"
+            "1. これまでの会話を要約\n"
+            "2. 要約をコンテキストとしてULW-loopを起動\n"
+            "3. Orchestratorプロファイルがコンテキスト込みでタスクを実行\n\n"
+            "**エージェントへの指示:**\n"
+            "上記1-2を実行し、結果を報告してください。"
+        )
+
+    return (
+        f"🔄 **ULW-loop起動準備**\n\n"
+        f"**目標:** {goal}\n\n"
+        f"これまでの会話を要約して、コンテキスト込みのULW-loopを起動します。\n\n"
+        f"**エージェント（私）への指示:**\n"
+        f"1. この会話の経緯・要件・決定事項を要約\n"
+        f"2. `init_ulw_loop(goal=\"{goal}\", context=<要約>)` を実行\n"
+        f"3. 結果を報告"
+    )
+
 
 def handle_steer_command(raw_args: str) -> str | None:
     """Handle the ``/ulw-steer`` command."""
