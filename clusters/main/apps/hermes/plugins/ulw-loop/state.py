@@ -325,3 +325,82 @@ def clear_resume(session_id: str) -> None:
             path.unlink()
     except OSError:
         pass
+
+
+# ---------------------------------------------------------------------------
+# Session registry (platform/chat_id for auto-subscribe)
+# ---------------------------------------------------------------------------
+
+
+def _session_registry_path() -> Path:
+    """Return path to the session registry file (lazy eval)."""
+    return _get_hermes_home() / "ulw-loop" / "_session_registry.json"
+
+
+@dataclass
+class SessionInfo:
+    """Platform info for a gateway session."""
+    session_id: str
+    platform: str = ""
+    chat_id: str = ""
+    thread_id: str = ""
+    user_id: str = ""
+    updated_at: float = 0.0
+
+
+def save_session_registry(info: SessionInfo) -> None:
+    """Persist a session's platform info to the registry."""
+    path = _session_registry_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "session_id": info.session_id,
+            "platform": info.platform,
+            "chat_id": info.chat_id,
+            "thread_id": info.thread_id,
+            "user_id": info.user_id,
+            "updated_at": info.updated_at or time.time(),
+        }
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        tmp.rename(path)
+    except OSError as e:
+        logger.error("Failed to write session registry: %s", e)
+
+
+def load_session_registry() -> Optional[SessionInfo]:
+    """Load the most recent session info from the registry."""
+    path = _session_registry_path()
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return SessionInfo(
+            session_id=data.get("session_id", ""),
+            platform=data.get("platform", ""),
+            chat_id=data.get("chat_id", ""),
+            thread_id=data.get("thread_id", ""),
+            user_id=data.get("user_id", ""),
+            updated_at=data.get("updated_at", 0.0),
+        )
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("Failed to load session registry: %s", e)
+        return None
+
+
+def update_session_registry(
+    session_id: str,
+    platform: str = "",
+    chat_id: str = "",
+    thread_id: str = "",
+    user_id: str = "",
+) -> None:
+    """Convenience: create SessionInfo and save it."""
+    save_session_registry(SessionInfo(
+        session_id=session_id,
+        platform=platform,
+        chat_id=chat_id,
+        thread_id=thread_id,
+        user_id=user_id,
+        updated_at=time.time(),
+    ))

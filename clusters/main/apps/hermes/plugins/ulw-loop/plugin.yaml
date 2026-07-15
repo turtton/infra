@@ -21,3 +21,4 @@ hooks:
   - pre_llm_call
   - post_llm_call
   - pre_verify
+  - on_session_start
