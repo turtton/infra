@@ -24,6 +24,7 @@ resource "tailscale_acl" "this" {
       "tag:tmp"                 = ["autogroup:admin"]
       "tag:privatecloud"        = ["autogroup:admin"]
       "tag:nix"                 = ["autogroup:admin"]
+      "tag:atm10"               = ["tag:k8s-operator"]
       "tag:attic"               = ["tag:privatecloud", "tag:k8s-operator"]
       "tag:proxmox-cluster"     = ["autogroup:admin"]
       "tag:ci"                  = ["autogroup:admin"]
