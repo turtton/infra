@@ -5,6 +5,7 @@ resources:
   - loki
   - alloy
   - obsidian-livesync
+  - atm10
   - attic
   - forgejo
   - iceshrimp
