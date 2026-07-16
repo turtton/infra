@@ -47,3 +47,11 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - apps-overview.json=dashboards/apps-overview.json
+  - name: grafana-dashboard-atm10
+    namespace: monitoring
+    options:
+      labels:
+        grafana_dashboard: "1"
+      disableNameSuffixHash: true
+    files:
+      - atm10.json=dashboards/atm10.json

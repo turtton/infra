@@ -24,14 +24,28 @@ ATM10 modpackには、作者が自動ダウンロードを拒否しているMOD�
 
 ### Prometheus Exporter
 
-Grafana ダッシュボード用のメトリクスを提供する MOD。`/downloads/mods/` に配置すると起動時に `/data/mods/` にコピーされ、TCP `19565` 番ポートで Prometheus 形式のメトリクスを公開する。
+Grafana ダッシュボード用のメトリクスを提供する MOD。`AUTO_CURSEFORCE` による初回 modpack インストール時は `/downloads/mods/` から `/data/mods/` へのコピーが行われるが、modpack が既にインストールされている状態では自動コピーされないため、uploader Pod を使って `/data/mods/` に直接コピーする。起動後、TCP `19565` 番ポートで Prometheus 形式のメトリクスを公開する。
 
 - SHA-256: `3853ddbfeb3e9ce069c8473eb799f6160c0fb63f1efa4e99e55533dbc45ceff6`
+- ダウンロード: `https://github.com/cpburnz/minecraft-prometheus-exporter/releases/download/1.21.1-neoforge-1.2.1/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar`
 - ソースパス: `/downloads/mods/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar`
 - 実行時パス: `/data/mods/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar`
 - PodMonitor: `clusters/main/apps/atm10/podmonitor.yaml`
 
 ロールバック時は `/downloads/mods/Prometheus-Exporter-*.jar` と `/data/mods/Prometheus-Exporter-*.jar` の両方を削除する。
+
+#### コピー手順
+
+uploader Pod を起動後、以下を実行する。
+
+```bash
+kubectl cp /tmp/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar \
+  atm10/atm10-mod-uploader:/downloads/mods/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar
+
+kubectl exec -n atm10 atm10-mod-uploader -- \
+  cp /downloads/mods/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar \
+  /data/mods/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar
+```
 
 ## 前提条件
 
