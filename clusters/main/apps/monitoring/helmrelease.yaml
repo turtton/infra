@@ -32,6 +32,9 @@ spec:
             - service.instance.id
             - service.namespace
         retention: 7d
+        query:
+          timeout: 60s
+        queryLogFile: /dev/stdout
         resources:
           requests:
             cpu: 200m
@@ -78,15 +81,18 @@ spec:
       resources:
         requests:
           cpu: 100m
-          memory: 128Mi
+          memory: 256Mi
         limits:
-          memory: 512Mi
+          memory: 1Gi
       persistence:
         enabled: true
         storageClassName: longhorn
         size: 2Gi
         annotations:
           data.longhorn.io/number-of-replicas: "2"
+      sidecar:
+        datasources:
+          timeout: 60
       grafana.ini:
         server:
           root_url: https://grafana.turtton.net
