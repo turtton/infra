@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "clusters/**"
+      - "tests/scripts/atm10-observability-test.sh"
+      - ".github/workflows/flux-check.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -29,6 +31,15 @@ jobs:
         run: |
           curl -sL "https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz" | tar xz
           sudo mv kubeconform /usr/local/bin/
+
+      - name: Install yq and jq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.5/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate ATM10 observability contract
+        run: bash tests/scripts/atm10-observability-test.sh
 
       - name: Validate manifests
         id: validate

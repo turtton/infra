@@ -7,5 +7,6 @@ resources:
   - downloads-pvc.yaml
   - deployment.yaml
   - service.yaml
+  - podmonitor.yaml
   - hermes-home-rbac.yaml
   - atm10-secrets.sops.yaml

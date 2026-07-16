@@ -20,6 +20,18 @@ ATM10 modpackには、作者が自動ダウンロードを拒否しているMOD�
 | MOD名 | ファイル名 | ダウンロードURL |
 |---|---|---|
 | unofficial cc:tweaked v 1.120.1 cf | `cc-tweaked-1.21.1-forge-1.120.0.jar` | `https://www.curseforge.com/minecraft/mc-mods/unofficial-cc-tweaked-v-1-120-1-cf/download/8273779` |
+| Prometheus Exporter | `Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar` | `https://github.com/cpburnz/minecraft-prometheus-exporter/releases/download/1.21.1-neoforge-1.2.1/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar` |
+
+### Prometheus Exporter
+
+Grafana ダッシュボード用のメトリクスを提供する MOD。`/downloads/mods/` に配置すると起動時に `/data/mods/` にコピーされ、TCP `19565` 番ポートで Prometheus 形式のメトリクスを公開する。
+
+- SHA-256: `3853ddbfeb3e9ce069c8473eb799f6160c0fb63f1efa4e99e55533dbc45ceff6`
+- ソースパス: `/downloads/mods/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar`
+- 実行時パス: `/data/mods/Prometheus-Exporter-1.21.1-neoforge-1.2.1.jar`
+- PodMonitor: `clusters/main/apps/atm10/podmonitor.yaml`
+
+ロールバック時は `/downloads/mods/Prometheus-Exporter-*.jar` と `/data/mods/Prometheus-Exporter-*.jar` の両方を削除する。
 
 ## 前提条件
 

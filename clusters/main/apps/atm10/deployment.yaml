@@ -30,6 +30,9 @@ spec:
             - name: minecraft
               containerPort: 25565
               protocol: TCP
+            - name: metrics
+              containerPort: 19565
+              protocol: TCP
           env:
             - name: EULA
               value: "TRUE"
