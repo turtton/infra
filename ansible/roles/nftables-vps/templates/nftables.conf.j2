@@ -1,0 +1,50 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # Loopback
+        iifname "lo" accept
+
+        # Established and related
+        ct state established,related accept
+        ct state invalid drop
+
+        # ICMP
+        ip protocol icmp accept
+        ip6 nexthdr icmpv6 accept
+
+        # Public interface: allow specific UDP ports (Tailscale wireguard)
+{% for port in nftables_vps_allowed_udp_ports_public %}
+        iifname "{{ nftables_vps_public_interface }}" udp dport {{ port }} accept
+{% endfor %}
+
+        # Public interface: allow specific TCP ports (usually none)
+{% for port in nftables_vps_allowed_tcp_ports_public %}
+        iifname "{{ nftables_vps_public_interface }}" tcp dport {{ port }} accept
+{% endfor %}
+
+        # Docker bridges
+{% for iface in nftables_vps_docker_interfaces %}
+        iifname "{{ iface }}" accept
+{% endfor %}
+
+        # Tailscale interface
+        iifname "{{ nftables_vps_tailscale_interface }}" accept
+
+        # Log and drop
+        log prefix "nftables dropped input: " limit rate 5/second
+        drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy accept;
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}

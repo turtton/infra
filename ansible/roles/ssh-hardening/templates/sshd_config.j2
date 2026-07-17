@@ -1,0 +1,22 @@
+# Ansible managed: Do not edit manually
+Port {{ ssh_hardening_port }}
+{% if _ssh_hardening_listen_addresses | default([]) | length > 0 %}
+{% for addr in _ssh_hardening_listen_addresses %}
+ListenAddress {{ addr }}
+{% endfor %}
+{% else %}
+# ListenAddress not restricted; sshd listens on all interfaces
+{% endif %}
+PermitRootLogin {{ ssh_hardening_permit_root_login }}
+PasswordAuthentication {{ ssh_hardening_password_authentication }}
+PubkeyAuthentication {{ ssh_hardening_pubkey_authentication }}
+ChallengeResponseAuthentication {{ ssh_hardening_challenge_response_auth }}
+UsePAM {{ ssh_hardening_use_pam }}
+X11Forwarding {{ ssh_hardening_x11_forwarding }}
+AllowUsers {{ ssh_hardening_allow_users }}
+ClientAliveInterval {{ ssh_hardening_client_alive_interval }}
+ClientAliveCountMax {{ ssh_hardening_client_alive_count_max }}
+LoginGraceTime {{ ssh_hardening_login_grace_time }}
+MaxAuthTries {{ ssh_hardening_max_auth_tries }}
+AcceptEnv LANG LC_*
+Subsystem sftp /usr/lib/openssh/sftp-server

@@ -1,0 +1,6 @@
+---
+tailscale_accept_dns: true
+tailscale_accept_routes: false
+tailscale_advertise_tags:
+  - "tag:mcproxy"
+tailscale_extra_args: "--hostname=sakura-mcproxy-1"

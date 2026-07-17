@@ -1,0 +1,8 @@
+---
+haproxy_minecraft_install_dir: /opt/haproxy-minecraft
+haproxy_minecraft_servers:
+  - domain: atm10.turtton.net
+    backend: atm10:25565
+  - domain: build.lepinoid.net
+    backend: testserver:49966
+haproxy_minecraft_image: haproxy:3.2-alpine

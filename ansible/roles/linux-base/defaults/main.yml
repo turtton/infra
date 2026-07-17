@@ -1,0 +1,24 @@
+---
+linux_base_hostname: "{{ inventory_hostname }}"
+linux_base_timezone: Asia/Tokyo
+linux_base_packages:
+  - curl
+  - git
+  - jq
+  - vim
+  - htop
+  - tmux
+  - ca-certificates
+  - gnupg
+  - unzip
+  - wget
+  - lsof
+  - apt-transport-https
+  - software-properties-common
+  - unattended-upgrades
+
+linux_base_journald_system_max_use: 500M
+linux_base_journald_system_max_file_size: 100M
+linux_base_unattended_upgrades_origins:
+  - "origin=Debian,codename=${distro_codename},label=Debian"
+  - "origin=Debian,codename=${distro_codename},label=Debian-Security"

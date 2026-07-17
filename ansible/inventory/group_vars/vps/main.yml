@@ -1,0 +1,9 @@
+---
+# Public keys are non-secret. Private keys and auth-key placeholders must never be committed.
+vps_admin_authorized_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB38oyKKsFHzUx1qtHhFEXu1JyUn/i40oknWLEnngC9d"
+
+# Restrict sshd to Tailscale interface once tailscale0 exists.
+# First vps.yml apply enrolls Tailscale; second apply locks ListenAddress.
+ssh_hardening_listen_interfaces:
+  - tailscale0

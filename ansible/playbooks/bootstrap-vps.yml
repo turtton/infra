@@ -1,0 +1,11 @@
+---
+- name: Bootstrap VPS host
+  hosts: vps
+  gather_facts: false
+  become: true
+  remote_user: debian
+  vars:
+    ansible_user: debian
+  roles:
+    - bootstrap-vps
+

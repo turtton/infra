@@ -1,0 +1,20 @@
+services:
+  haproxy:
+    image: {{ haproxy_minecraft_image }}
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./haproxy_minecraft.lua:/usr/local/etc/haproxy/haproxy_minecraft.lua:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

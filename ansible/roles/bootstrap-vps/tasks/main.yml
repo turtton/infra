@@ -1,0 +1,69 @@
+---
+- name: Verify bootstrap target is explicitly limited
+  ansible.builtin.fail:
+    msg: "bootstrap-vps.yml must be run with --limit os3-387-26840"
+  when: ansible_limit | default('') != 'os3-387-26840'
+
+- name: Ensure python3 is available
+  ansible.builtin.raw: "test -x /usr/bin/python3 || (apt-get update && apt-get install -y python3)"
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Gather facts after python is available
+  ansible.builtin.setup:
+
+- name: Install sudo and acl
+  ansible.builtin.apt:
+    name:
+      - sudo
+      - acl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create ansible group
+  ansible.builtin.group:
+    name: ansible
+    state: present
+
+- name: Create ansible user
+  ansible.builtin.user:
+    name: ansible
+    group: ansible
+    shell: /bin/bash
+    home: /home/ansible
+    create_home: true
+    state: present
+
+- name: Configure passwordless sudo for ansible
+  ansible.builtin.template:
+    src: ansible-sudoers.j2
+    dest: /etc/sudoers.d/ansible
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Create ansible ssh directory
+  ansible.builtin.file:
+    path: /home/ansible/.ssh
+    state: directory
+    owner: ansible
+    group: ansible
+    mode: "0700"
+
+- name: Deploy authorized_keys for ansible
+  ansible.builtin.template:
+    src: authorized_keys.j2
+    dest: /home/ansible/.ssh/authorized_keys
+    owner: ansible
+    group: ansible
+    mode: "0600"
+
+- name: Verify ansible user can use sudo
+  ansible.builtin.command:
+    cmd: sudo -n true
+  become: true
+  become_user: ansible
+  changed_when: false

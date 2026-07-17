@@ -1,0 +1,13 @@
+---
+- name: Configure VPS hosts
+  hosts: vps
+  become: true
+  gather_facts: true
+
+  roles:
+    - linux-base
+    - tailscale
+    - ssh-hardening
+    - docker-host
+    - nftables-vps
+    - haproxy-minecraft

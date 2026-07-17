@@ -1,0 +1,10 @@
+---
+nftables_vps_public_interface: ens3
+nftables_vps_tailscale_interface: tailscale0
+nftables_vps_allowed_udp_ports_public:
+  - 41641
+nftables_vps_allowed_tcp_ports_public:
+  - 25565
+nftables_vps_docker_interfaces:
+  - docker0
+  - "br-*"

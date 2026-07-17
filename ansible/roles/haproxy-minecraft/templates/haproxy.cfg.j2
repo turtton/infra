@@ -1,0 +1,37 @@
+global
+    log stdout format raw local0
+    tune.lua.bool-sample-conversion normal
+    lua-load /usr/local/etc/haproxy/haproxy_minecraft.lua
+
+defaults
+    log global
+    mode tcp
+    option tcplog
+    timeout connect 10s
+    timeout client 1h
+    timeout server 1h
+
+frontend minecraft
+    bind :25565
+
+    # Minecraft Java Editionの最初のHandshakeを待って接続先ホスト名を取得する。
+    tcp-request inspect-delay 5s
+    tcp-request content lua.mc_handshake
+    tcp-request content reject if { var(txn.mc_parse_status) -m str invalid }
+    tcp-request content accept if { var(txn.mc_parse_status) -m str complete }
+    tcp-request content reject if WAIT_END
+
+{% for server in haproxy_minecraft_servers %}
+    use_backend minecraft_{{ loop.index }} if { var(txn.mc_host) -m str {{ server.domain }} }
+{% endfor %}
+
+    # 設定していないドメインやVPSのIP直打ちは拒否する。
+    default_backend reject_unknown_host
+
+{% for server in haproxy_minecraft_servers %}
+backend minecraft_{{ loop.index }}
+    server minecraft_{{ loop.index }} "{{ server.backend }}" check inter 5s fall 3 rise 2 init-addr none
+
+{% endfor %}
+backend reject_unknown_host
+    tcp-request content reject

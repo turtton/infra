@@ -1,0 +1,3 @@
+---
+bootstrap_vps_username: ansible
+bootstrap_vps_sudoers_path: /etc/sudoers.d/ansible

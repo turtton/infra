@@ -1,0 +1,7 @@
+---
+docker_host_log_driver: json-file
+docker_host_log_max_size: 10m
+docker_host_log_max_file: "3"
+docker_host_storage_driver: overlay2
+
+docker_host_deb_arch: "{{ ansible_facts['architecture'] | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}"
