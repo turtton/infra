@@ -5,7 +5,7 @@ metadata:
   namespace: atm10
   annotations:
     tailscale.com/hostname: atm10
-    tailscale.com/tags: "tag:atm10"
+    tailscale.com/tags: "tag:atm10,tag:mcserver"
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale

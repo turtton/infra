@@ -19,7 +19,7 @@ resource "tailscale_acl" "this" {
   acl = jsonencode({
     tagOwners = {
       "tag:client"              = ["autogroup:admin"]
-      "tag:mcserver"            = ["autogroup:admin"]
+      "tag:mcserver"            = ["autogroup:admin", "tag:k8s-operator"]
       "tag:mcproxy"             = ["autogroup:admin"]
       "tag:tmp"                 = ["autogroup:admin"]
       "tag:privatecloud"        = ["autogroup:admin"]
@@ -104,6 +104,10 @@ resource "tailscale_acl" "this" {
         src    = "tag:ci"
         accept = ["192.168.10.100:22", "192.168.10.40:22", "192.168.10.101:22"]
       },
+      {
+        src    = "tag:ci"
+        accept = ["tag:mcproxy:22"]
+      },
     ]
 
     nodeAttrs = [
@@ -160,6 +164,11 @@ resource "tailscale_acl" "this" {
         src = ["tag:proxmox-cluster"]
         dst = ["tag:infra-talos-cluster"]
         ip  = ["*"]
+      },
+      {
+        src = ["tag:ci"]
+        dst = ["tag:mcproxy"]
+        ip  = ["22"]
       },
     ]
   })
