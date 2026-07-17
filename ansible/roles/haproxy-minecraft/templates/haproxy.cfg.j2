@@ -30,7 +30,7 @@ frontend minecraft
 
 {% for server in haproxy_minecraft_servers %}
 backend minecraft_{{ loop.index }}
-    server minecraft_{{ loop.index }} "{{ server.backend }}" check inter 5s fall 3 rise 2 init-addr none
+    server minecraft_{{ loop.index }} "{{ server.backend }}" check inter 5s fall 3 rise 2 init-addr libc,last
 
 {% endfor %}
 backend reject_unknown_host
