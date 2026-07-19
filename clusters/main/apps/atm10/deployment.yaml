@@ -46,7 +46,7 @@ spec:
                   name: atm10-secrets
                   key: CF_API_KEY
             - name: MEMORY
-              value: "10G"
+              value: "12G"
             - name: OVERRIDE_SERVER_PROPERTIES
               value: "TRUE"
             - name: DIFFICULTY
@@ -61,10 +61,10 @@ spec:
           resources:
             requests:
               cpu: 2
-              memory: 8Gi
+              memory: 10Gi
             limits:
               cpu: 4
-              memory: 12Gi
+              memory: 14Gi
           volumeMounts:
             - name: data
               mountPath: /data
