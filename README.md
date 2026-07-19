@@ -35,6 +35,7 @@ Git (このリポジトリ)
 | toliworker-1 | 192.168.10.123 | Worker (Longhornストレージ) | toliunit | 22 | 20GB |
 | toliworker-2 | 192.168.10.124 | Worker (Longhornストレージ) | toliunit | 22 | 20GB |
 | toliworker-3 | 192.168.10.125 | Worker (Longhornストレージ) | toliunit | 22 | 20GB |
+| mainworker-1 | 192.168.10.126 | Worker (Longhornストレージ兼ワークロード) | main | 4 | 20GB |
 
 ## Proxmox Nodes
 

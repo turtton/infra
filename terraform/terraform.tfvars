@@ -87,4 +87,13 @@ workers = {
       { datastore_id = "ssd3", size = 420 },
     ]
   }
+  mainworker-1 = {
+    host_node    = "main"
+    vm_id        = 1016
+    ip           = "192.168.10.126"
+    cpu          = 4
+    ram          = 20480 # 20GB
+    disk_size    = 120
+    datastore_id = "toshibassd"
+  }
 }
