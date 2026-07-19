@@ -95,6 +95,14 @@ spec:
                   - key: kubernetes.io/hostname
                     operator: In
                     values:
+                      - mainworker-1
+            # mainworker-1 が使えない場合のフォールバック
+            - weight: 50
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
                       - toliworker-1
                       - toliworker-2
                       - toliworker-3
