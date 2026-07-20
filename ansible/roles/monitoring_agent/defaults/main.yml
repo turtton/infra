@@ -17,7 +17,5 @@ monitoring_agent_pve_exporter_checksum: "eb3adf202699d10196d24a270a0605b29a1a680
 #   pveum acl modify / --tokens '<user@realm!tokenid>' --roles PVEAuditor
 # See docs/proxmox-prerequisites.md for the full setup and rotation procedure.
 monitoring_agent_pve_exporter_api_user: "monitoring@pve!monitoring"
-# group_vars/vault.sops.yml は旧キー名 pve_exporter_api_token_value のまま運用中のためブリッジ。
-# vault側を新キー名に再暗号化できたら直接値を "" に戻し旧名を廃止する。
-monitoring_agent_pve_exporter_api_token_value: "{{ pve_exporter_api_token_value | default('') }}"
+monitoring_agent_pve_exporter_api_token_value: ""
 monitoring_agent_pve_exporter_verify_ssl: false
