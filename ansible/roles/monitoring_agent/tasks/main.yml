@@ -45,7 +45,7 @@
     mode: "0755"
     owner: root
     group: root
-  notify: restart pve-exporter
+  notify: Restart pve-exporter
 
 - name: Create config directory
   ansible.builtin.file:
@@ -63,7 +63,7 @@
     group: "{{ pve_exporter_group }}"
     mode: "0600"
   no_log: true
-  notify: restart pve-exporter
+  notify: Restart pve-exporter
 
 - name: Deploy systemd service
   ansible.builtin.template:
@@ -73,8 +73,8 @@
     group: root
     mode: "0644"
   notify:
-    - reload systemd
-    - restart pve-exporter
+    - Reload systemd
+    - Restart pve-exporter
 
 - name: Enable and start pve-exporter
   ansible.builtin.systemd:

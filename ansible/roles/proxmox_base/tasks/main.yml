@@ -12,7 +12,7 @@
 - name: Set timezone
   community.general.timezone:
     name: "{{ proxmox_timezone }}"
-  notify: restart chrony
+  notify: Restart chrony
 
 - name: Configure DNS (resolv.conf)
   ansible.builtin.template:
@@ -29,7 +29,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: restart chrony
+  notify: Restart chrony
 
 - name: Enable and start chrony
   ansible.builtin.systemd:
@@ -45,4 +45,4 @@
     group: root
     mode: "0600"
     validate: "sshd -t -f %s"
-  notify: restart sshd
+  notify: Restart sshd

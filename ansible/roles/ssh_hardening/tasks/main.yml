@@ -1,7 +1,9 @@
 ---
 - name: Build ListenAddress list from interfaces
   ansible.builtin.set_fact:
-    _ssh_hardening_listen_addresses: "{{ _ssh_hardening_listen_addresses | default([]) + [hostvars[inventory_hostname]['ansible_' ~ item | replace('-', '_')]['ipv4']['address']] }}"
+    _ssh_hardening_listen_addresses: >-
+      {{ _ssh_hardening_listen_addresses | default([])
+      + [hostvars[inventory_hostname]['ansible_' ~ item | replace('-', '_')]['ipv4']['address']] }}
   loop: "{{ ssh_hardening_listen_interfaces }}"
   when:
     - hostvars[inventory_hostname]['ansible_' ~ item | replace('-', '_')] is defined
@@ -15,7 +17,7 @@
     group: root
     mode: "0644"
     validate: /usr/sbin/sshd -t -f %s
-  notify: restart ssh
+  notify: Restart ssh
 
 - name: Disable ssh socket activation
   ansible.builtin.systemd:
@@ -23,7 +25,7 @@
     state: stopped
     enabled: false
   failed_when: false
-  notify: restart ssh
+  notify: Restart ssh
 
 - name: Ensure ssh service is enabled
   ansible.builtin.systemd:

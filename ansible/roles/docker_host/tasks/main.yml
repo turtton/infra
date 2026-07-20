@@ -16,7 +16,10 @@
 
 - name: Add Docker apt repository
   ansible.builtin.apt_repository:
-    repo: "deb [arch={{ docker_host_deb_arch }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ ansible_facts['distribution_release'] }} stable"
+    repo: >-
+      deb [arch={{ docker_host_deb_arch }} signed-by=/etc/apt/keyrings/docker.gpg]
+      https://download.docker.com/linux/debian
+      {{ ansible_facts['distribution_release'] }} stable
     filename: docker
     state: present
     update_cache: true
@@ -41,7 +44,7 @@
     name: ansible
     groups: docker
     append: true
-  notify: restart docker
+  notify: Restart docker
 
 - name: Configure Docker daemon
   ansible.builtin.template:
@@ -50,7 +53,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: restart docker
+  notify: Restart docker
 
 - name: Enable and start Docker
   ansible.builtin.systemd:

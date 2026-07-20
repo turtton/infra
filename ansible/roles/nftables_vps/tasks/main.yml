@@ -13,7 +13,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: reload nftables
+  notify: Reload nftables
 
 - name: Enable and start nftables
   ansible.builtin.systemd:

@@ -22,7 +22,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: restart haproxy-minecraft
+  notify: Restart haproxy-minecraft
 
 - name: Deploy HAProxy Lua script
   ansible.builtin.copy:
@@ -39,7 +39,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: restart haproxy-minecraft
+  notify: Restart haproxy-minecraft
 
 - name: Deploy systemd service
   ansible.builtin.template:
@@ -49,8 +49,8 @@
     group: root
     mode: "0644"
   notify:
-    - reload systemd
-    - restart haproxy-minecraft
+    - Reload systemd
+    - Restart haproxy-minecraft
 
 - name: Enable and start haproxy-minecraft
   ansible.builtin.systemd:

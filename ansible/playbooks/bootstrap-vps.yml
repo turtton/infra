@@ -8,4 +8,3 @@
     ansible_user: debian
   roles:
     - bootstrap_vps
-

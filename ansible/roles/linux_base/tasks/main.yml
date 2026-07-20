@@ -16,7 +16,7 @@
 - name: Set timezone
   community.general.timezone:
     name: "{{ linux_base_timezone }}"
-  notify: restart systemd-timesyncd
+  notify: Restart systemd-timesyncd
 
 - name: Install unattended-upgrades
   ansible.builtin.apt:
@@ -46,4 +46,4 @@
     owner: root
     group: root
     mode: "0644"
-  notify: restart systemd-journald
+  notify: Restart systemd-journald
