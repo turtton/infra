@@ -94,10 +94,10 @@ infra-repo/
 │   ├── inventory/
 │   │   └── hosts.yml                 # Proxmoxノード一覧・IP定義
 │   ├── roles/
-│   │   ├── proxmox-base/             # 共通パッケージ、NTP、DNS等
-│   │   ├── proxmox-network/          # /etc/network/interfaces 管理
+│   │   ├── proxmox_base/             # 共通パッケージ、NTP、DNS等
+│   │   ├── proxmox_network/          # /etc/network/interfaces 管理
 │   │   ├── wireguard/                # VPN設定（外部ノード接続用）
-│   │   └── monitoring-agent/         # prometheus-pve-exporter
+│   │   └── monitoring_agent/         # prometheus-pve-exporter
 │   └── playbooks/
 │       ├── site.yml                  # フル適用
 │       └── network-update.yml        # IP変更時の一括更新
@@ -505,7 +505,7 @@ flux bootstrap github \
 
 ```
 1. ansible/inventory/hosts.yml のIP更新
-2. ansible/roles/proxmox-network/ の設定更新
+2. ansible/roles/proxmox_network/ の設定更新
 3. commit & push
 4. ansible-playbook playbooks/network-update.yml
 ```

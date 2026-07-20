@@ -2,7 +2,7 @@
 - name: Configure Proxmox nodes
   hosts: proxmox
   roles:
-    - proxmox-base
-    - proxmox-network
+    - proxmox_base
+    - proxmox_network
     - tailscale
-    - monitoring-agent
+    - monitoring_agent

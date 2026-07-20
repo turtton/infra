@@ -47,7 +47,7 @@ apt update && apt install -y python3
 
 ## 3. prometheus-pve-exporter用APIトークンの作成
 
-`monitoring-agent`ロールはProxmox APIにトークン認証で接続する。WebUIまたはCLIでユーザーとトークンを作成する。
+`monitoring_agent`ロールはProxmox APIにトークン認証で接続する。WebUIまたはCLIでユーザーとトークンを作成する。
 
 ### 3.1 ユーザー作成
 
@@ -101,7 +101,7 @@ pveum user token add monitoring@pve monitoring --privsep 1
 
 **出力されるトークン値を控えておくこと。** 再表示はできない。
 
-> **Note:** トークン ID は `ansible/roles/monitoring-agent/defaults/main.yml` の
+> **Note:** トークン ID は `ansible/roles/monitoring_agent/defaults/main.yml` の
 > `pve_exporter_api_user: "monitoring@pve!monitoring"` と一致している必要がある。
 > 異なる ID を使う場合は defaults もしくは group_vars で `pve_exporter_api_user` を
 > `<user>@<realm>!<tokenid>` 形式で上書きすること。
@@ -220,7 +220,7 @@ bigtcze/pve-exporter は upstream PVE API が 401 を返しても自身は HTTP 
 silent failure 設計のため、`up{}` だけでは検知できない。次のいずれかが原因のことが多い。
 
 1. **トークン ID 不一致**
-   - `ansible/roles/monitoring-agent/defaults/main.yml` の `pve_exporter_api_user` と
+   - `ansible/roles/monitoring_agent/defaults/main.yml` の `pve_exporter_api_user` と
      PVE 側の実在トークンが一致していない。
    - 確認: `pveum user token list monitoring@pve`
 2. **token 側 ACL 欠落（privsep=1）**

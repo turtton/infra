@@ -5,9 +5,9 @@
   gather_facts: true
 
   roles:
-    - linux-base
+    - linux_base
     - tailscale
-    - ssh-hardening
-    - docker-host
-    - nftables-vps
-    - haproxy-minecraft
+    - ssh_hardening
+    - docker_host
+    - nftables_vps
+    - haproxy_minecraft
