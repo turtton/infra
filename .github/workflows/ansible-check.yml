@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Ansible
-        run: pip install ansible
+        run: pip install "ansible==14.2.0"
 
       - name: Install SOPS
         run: |
@@ -33,7 +33,7 @@ jobs:
         run: ansible-galaxy collection install -r requirements.yml
 
       - name: Install ansible-lint
-        run: pip install ansible-lint
+        run: pip install "ansible-lint==26.6.0"
 
       - name: Run ansible-lint
         working-directory: ansible
@@ -50,7 +50,7 @@ jobs:
       - name: Assert proxmox-only hosts in site.yml
         working-directory: ansible
         run: |
-          HOSTS=$(ansible-playbook playbooks/site.yml --list-hosts 2>&1 | grep -oP '^\s+\w+')
+          HOSTS=$(ansible-playbook playbooks/site.yml --list-hosts 2>/dev/null | awk '/hosts \([0-9]+\):/{f=1;next} f && NF {gsub(/^ +/, ""); print}')
           EXPECTED="main data toliunit"
           for host in $EXPECTED; do
             if ! echo "$HOSTS" | grep -qw "$host"; then

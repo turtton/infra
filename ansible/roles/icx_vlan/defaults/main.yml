@@ -1,0 +1,14 @@
+---
+icx_vlan_vlans:
+  # UPLINK: ISPルーター(1.1)がstatic route非対応のためBuffalo(11.1)がNAT担当
+  # 11.0/24クライアントGW=ICX(11.2), インターネット=ICX→Buffalo→ISPルーター
+  - id: 2
+    name: UPLINK
+    untagged_ports: "ethe 1/1/47 to 1/1/48"
+    ip_address: "192.168.11.2 255.255.255.0"
+  - id: 10
+    name: LAN
+    untagged_ports: "ethe 1/1/1 to 1/1/46"
+    ip_address: "192.168.10.1 255.255.255.0"
+
+icx_vlan_default_route: "192.168.11.1"  # Buffalo (NAT) 経由でインターネットへ

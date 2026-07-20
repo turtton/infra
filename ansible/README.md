@@ -6,10 +6,10 @@ Proxmox VEノードの構成管理。
 
 | ロール | 概要 |
 |---|---|
-| `proxmox-base` | パッケージ管理、timezone (Asia/Tokyo)、DNS (Cloudflare)、NTP (chrony)、SSH hardening |
-| `proxmox-network` | `/etc/network/interfaces` のテンプレート管理 |
+| `proxmox_base` | パッケージ管理、timezone (Asia/Tokyo)、DNS (Cloudflare)、NTP (chrony)、SSH hardening |
+| `proxmox_network` | `/etc/network/interfaces` のテンプレート管理 |
 | `tailscale` | Tailscale VPNのインストール・接続 |
-| `monitoring-agent` | prometheus-pve-exporter (uv、API Token認証、systemd) |
+| `monitoring_agent` | prometheus-pve-exporter (uv、API Token認証、systemd) |
 
 ## Playbooks
 
@@ -47,7 +47,7 @@ ansible-playbook playbooks/site.yml --limit main
 ### 特定ロールのみ
 
 ```bash
-ansible-playbook playbooks/site.yml --tags proxmox-base
+ansible-playbook playbooks/site.yml --tags proxmox_base
 ```
 
 ## Inventory
@@ -65,7 +65,7 @@ inventory/
 
 ### Secret管理
 
-機密変数 (`pve_exporter_api_token_value`, `tailscale_auth_key`) は SOPS + Age で暗号化して管理する。
+機密変数 (`monitoring_agent_pve_exporter_api_token_value`, `tailscale_auth_key`) は SOPS + Age で暗号化して管理する。
 
 ```bash
 # 編集
@@ -77,7 +77,7 @@ sops --decrypt inventory/group_vars/proxmox/vault.sops.yml
 
 ## Role Details
 
-### proxmox-base
+### proxmox_base
 
 全ノード共通の基本設定。
 
@@ -87,7 +87,7 @@ sops --decrypt inventory/group_vars/proxmox/vault.sops.yml
 - NTP: chrony (`ntp.nict.jp`, `ntp.jst.mfeed.ad.jp`)
 - SSH: 鍵認証のみ、パスワード認証無効 → `/etc/ssh/sshd_config.d/hardening.conf`
 
-### proxmox-network
+### proxmox_network
 
 ノードごとのネットワーク設定。`host_vars` で物理NIC名・IPアドレスを定義。
 
@@ -103,7 +103,7 @@ Tailscale SaaS接続。
 - pre-auth keyで自動接続 (`no_log` で出力抑制)
 - 既にRunning状態ならスキップ (冪等性)
 
-### monitoring-agent
+### monitoring_agent
 
 prometheus-pve-exporterをuvでインストール。
 

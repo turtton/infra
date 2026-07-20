@@ -3,4 +3,4 @@
   hosts: proxmox
   serial: 1
   roles:
-    - proxmox-network
+    - proxmox_network

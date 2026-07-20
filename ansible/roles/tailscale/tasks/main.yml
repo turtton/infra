@@ -5,10 +5,26 @@
       - tailscale_auth_key | length > 0
     fail_msg: "tailscale_auth_key must be set (use sops)"
 
-- name: Install Tailscale via official install script
-  ansible.builtin.shell:
-    cmd: curl -fsSL https://tailscale.com/install.sh | sh
-    creates: /usr/bin/tailscale
+- name: Add Tailscale apt signing key
+  ansible.builtin.get_url:
+    url: https://pkgs.tailscale.com/stable/debian/{{ ansible_facts['distribution_release'] }}.noarmor.gpg
+    dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+    mode: "0644"
+
+- name: Add Tailscale apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg]
+      https://pkgs.tailscale.com/stable/debian
+      {{ ansible_facts['distribution_release'] }} main
+    filename: tailscale
+    state: present
+
+- name: Install Tailscale
+  ansible.builtin.apt:
+    name: tailscale
+    state: present
+    update_cache: true
 
 - name: Enable and start tailscaled
   ansible.builtin.systemd:

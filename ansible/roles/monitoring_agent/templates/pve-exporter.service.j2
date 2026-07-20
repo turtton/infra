@@ -1,0 +1,20 @@
+[Unit]
+Description=Proxmox VE Exporter (bigtcze/pve-exporter)
+After=network.target
+
+[Service]
+Type=simple
+User={{ monitoring_agent_pve_exporter_user }}
+Group={{ monitoring_agent_pve_exporter_group }}
+ExecStart={{ monitoring_agent_pve_exporter_bin }} -config {{ monitoring_agent_pve_exporter_config_dir }}/pve-exporter.yml
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadOnlyPaths={{ monitoring_agent_pve_exporter_config_dir }}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,5 @@
 ---
-- name: Restart tailscaled
+- name: Restart ssh
   ansible.builtin.systemd:
-    name: tailscaled
+    name: ssh.service
     state: restarted

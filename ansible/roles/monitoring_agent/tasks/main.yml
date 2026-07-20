@@ -1,0 +1,83 @@
+---
+- name: Validate API token is set
+  ansible.builtin.assert:
+    that:
+      - monitoring_agent_pve_exporter_api_token_value | length > 0
+    fail_msg: "monitoring_agent_pve_exporter_api_token_value must be set (use sops)"
+
+- name: Create pve-exporter system group
+  ansible.builtin.group:
+    name: "{{ monitoring_agent_pve_exporter_group }}"
+    system: true
+    state: present
+
+- name: Create pve-exporter system user
+  ansible.builtin.user:
+    name: "{{ monitoring_agent_pve_exporter_user }}"
+    group: "{{ monitoring_agent_pve_exporter_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ monitoring_agent_pve_exporter_config_dir }}"
+    create_home: false
+
+- name: Check if old prometheus-pve-exporter binary exists
+  ansible.builtin.stat:
+    path: /usr/local/bin/pve_exporter
+  register: monitoring_agent_old_pve_exporter
+
+- name: Stop old pve-exporter if running (migration from prometheus-pve-exporter)
+  ansible.builtin.systemd:
+    name: pve-exporter
+    state: stopped
+  when: monitoring_agent_old_pve_exporter.stat.exists
+
+- name: Remove old prometheus-pve-exporter binary
+  ansible.builtin.file:
+    path: /usr/local/bin/pve_exporter
+    state: absent
+  when: monitoring_agent_old_pve_exporter.stat.exists
+
+- name: Download pve-exporter binary
+  ansible.builtin.get_url:
+    url: "https://github.com/bigtcze/pve-exporter/releases/download/v{{ monitoring_agent_pve_exporter_version }}/pve-exporter-linux-amd64"
+    dest: "{{ monitoring_agent_pve_exporter_bin }}"
+    checksum: "sha256:{{ monitoring_agent_pve_exporter_checksum }}"
+    mode: "0755"
+    owner: root
+    group: root
+  notify: Restart pve-exporter
+
+- name: Create config directory
+  ansible.builtin.file:
+    path: "{{ monitoring_agent_pve_exporter_config_dir }}"
+    state: directory
+    owner: "{{ monitoring_agent_pve_exporter_user }}"
+    group: "{{ monitoring_agent_pve_exporter_group }}"
+    mode: "0750"
+
+- name: Deploy pve-exporter config
+  ansible.builtin.template:
+    src: pve-exporter.yml.j2
+    dest: "{{ monitoring_agent_pve_exporter_config_dir }}/pve-exporter.yml"
+    owner: "{{ monitoring_agent_pve_exporter_user }}"
+    group: "{{ monitoring_agent_pve_exporter_group }}"
+    mode: "0600"
+  no_log: true
+  notify: Restart pve-exporter
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: pve-exporter.service.j2
+    dest: /etc/systemd/system/pve-exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart pve-exporter
+
+- name: Enable and start pve-exporter
+  ansible.builtin.systemd:
+    name: pve-exporter
+    enabled: true
+    state: started

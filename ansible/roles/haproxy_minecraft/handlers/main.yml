@@ -1,0 +1,9 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart haproxy-minecraft
+  ansible.builtin.systemd:
+    name: haproxy-minecraft
+    state: restarted

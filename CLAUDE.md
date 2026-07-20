@@ -95,9 +95,9 @@ docs/        → Proxmoxの事前設定手順など運用ドキュメント
 - `ansible.cfg`: inventory=`inventory/hosts.yml`、接続ユーザーは`root`、privilege escalation無効
 - ホスト固有変数: `inventory/host_vars/{main,data}/network.yml`
 - 暗号化変数: `inventory/group_vars/proxmox/vault.sops.yml` (SOPS + Age)
-- ロール: `proxmox-base`(パッケージ・NTP・SSH), `proxmox-network`(ブリッジ設定), `tailscale`, `monitoring-agent`(prometheus-pve-exporter)
+- ロール: `proxmox_base`(パッケージ・NTP・SSH), `proxmox_network`(ブリッジ設定), `tailscale`, `monitoring_agent`(prometheus-pve-exporter)
 - スイッチ管理: `switches`グループ (`community.network.icx` + `network_cli` + `paramiko`)
-  - ロール: `icx-base`(ホスト名・NTP・DNS), `icx-vlan`(VLAN定義・ポートアサイン・L3ルーティング), `icx-dhcp`(DHCPサーバー)
+  - ロール: `icx_base`(ホスト名・NTP・DNS), `icx_vlan`(VLAN定義・ポートアサイン・L3ルーティング), `icx_dhcp`(DHCPサーバー)
   - 暗号化変数: `inventory/group_vars/switches/vault.sops.yml` (SOPS + Age)
   - Playbook: `playbooks/switch.yml` (手動実行のみ — CIではスイッチへの接続不可)
   - SSH接続: ICX7250はレガシーSSHアルゴリズム(diffie-hellman-group14-sha1, hmac-sha1, ssh-rsa)のみ対応。paramikoを使用

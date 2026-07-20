@@ -7,5 +7,4 @@
   vars:
     ansible_user: debian
   roles:
-    - bootstrap-vps
-
+    - bootstrap_vps
