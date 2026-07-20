@@ -1,5 +1,5 @@
 # Managed by Ansible
-{% for server in proxmox_ntp_servers %}
+{% for server in proxmox_base_ntp_servers %}
 server {{ server }} iburst
 {% endfor %}
 

@@ -1,14 +1,14 @@
 ---
-icx_hostname: icx7250
+icx_base_hostname: icx7250
 
-icx_ntp_servers:
+icx_base_ntp_servers:
   - 133.243.238.164   # ntp.nict.jp
   - 210.173.160.27    # ntp.jst.mfeed.ad.jp
 
-icx_dns_servers:
+icx_base_dns_servers:
   - 1.1.1.1
   - 1.0.0.1
 
-icx_timezone: "gmt GMT+09"
+icx_base_timezone: "gmt GMT+09"
 
-icx_logging_buffered: 1000
+icx_base_logging_buffered: 1000

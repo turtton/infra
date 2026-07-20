@@ -1,15 +1,15 @@
 ---
 # Timezone
-proxmox_timezone: Asia/Tokyo
+proxmox_base_timezone: Asia/Tokyo
 
 # DNS
-proxmox_dns_nameservers:
+proxmox_base_dns_nameservers:
   - 1.1.1.1
   - 1.0.0.1
-proxmox_dns_search_domain: ""
+proxmox_base_dns_search_domain: ""
 
 # NTP (chrony)
-proxmox_ntp_servers:
+proxmox_base_ntp_servers:
   - ntp.nict.jp
   - ntp.jst.mfeed.ad.jp
 
@@ -26,5 +26,5 @@ proxmox_base_packages:
   - chrony
 
 # SSH
-proxmox_ssh_password_auth: false
-proxmox_ssh_permit_root_login: prohibit-password
+proxmox_base_ssh_password_auth: false
+proxmox_base_ssh_permit_root_login: prohibit-password

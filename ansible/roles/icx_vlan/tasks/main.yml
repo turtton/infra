@@ -5,7 +5,7 @@
       - "router-interface ve {{ item.id }}"
     parents:
       - "vlan {{ item.id }} name {{ item.name }} by port"
-  loop: "{{ icx_vlans }}"
+  loop: "{{ icx_vlan_vlans }}"
   loop_control:
     label: "VLAN {{ item.id }} ({{ item.name }})"
 
@@ -15,7 +15,7 @@
       - "untagged {{ item.untagged_ports }}"
     parents:
       - "vlan {{ item.id }} name {{ item.name }} by port"
-  loop: "{{ icx_vlans | selectattr('untagged_ports', 'defined') | list }}"
+  loop: "{{ icx_vlan_vlans | selectattr('untagged_ports', 'defined') | list }}"
   loop_control:
     label: "VLAN {{ item.id }} untagged ports"
   when: item.untagged_ports | default('') | length > 0
@@ -26,17 +26,17 @@
       - "ip address {{ item.ip_address }}"
     parents:
       - "interface ve {{ item.id }}"
-  loop: "{{ icx_vlans | selectattr('ip_address', 'defined') | list }}"
+  loop: "{{ icx_vlan_vlans | selectattr('ip_address', 'defined') | list }}"
   loop_control:
     label: "VE {{ item.id }}"
   when: item.ip_address | default('') | length > 0
-  register: ve_ip_result
+  register: icx_vlan_ve_ip_result
   failed_when:
-    - ve_ip_result is failed
-    - "'duplicate ip address' not in (ve_ip_result.msg | default(''))"
+    - icx_vlan_ve_ip_result is failed
+    - "'duplicate ip address' not in (icx_vlan_ve_ip_result.msg | default(''))"
 
 - name: Configure default route
   community.network.icx_config:
     lines:
-      - "ip route 0.0.0.0/0 {{ icx_default_route }}"
-  when: icx_default_route | default('') | length > 0
+      - "ip route 0.0.0.0/0 {{ icx_vlan_default_route }}"
+  when: icx_vlan_default_route | default('') | length > 0

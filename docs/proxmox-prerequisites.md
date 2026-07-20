@@ -102,8 +102,8 @@ pveum user token add monitoring@pve monitoring --privsep 1
 **出力されるトークン値を控えておくこと。** 再表示はできない。
 
 > **Note:** トークン ID は `ansible/roles/monitoring_agent/defaults/main.yml` の
-> `pve_exporter_api_user: "monitoring@pve!monitoring"` と一致している必要がある。
-> 異なる ID を使う場合は defaults もしくは group_vars で `pve_exporter_api_user` を
+> `monitoring_agent_pve_exporter_api_user: "monitoring@pve!monitoring"` と一致している必要がある。
+> 異なる ID を使う場合は defaults もしくは group_vars で `monitoring_agent_pve_exporter_api_user` を
 > `<user>@<realm>!<tokenid>` 形式で上書きすること。
 
 ### 3.4 トークンへのACL付与（privsep=1 で必須）
@@ -135,7 +135,7 @@ mkdir -p inventory/group_vars/proxmox
 
 # vault.sops.yml ファイルを作成
 cat > inventory/group_vars/proxmox/vault.sops.yml <<EOF
-pve_exporter_api_token_value: "<控えたトークン値>"
+monitoring_agent_pve_exporter_api_token_value: "<控えたトークン値>"
 EOF
 
 # SOPSで暗号化
@@ -189,7 +189,7 @@ ACL 再付与を飛ばすと exporter は HTTP 200 + 空 body を返す silent f
    ```bash
    cd ansible/
    sops inventory/group_vars/proxmox/vault.sops.yml
-   # pve_exporter_api_token_value を新しいトークン値に書き換えて保存
+   # monitoring_agent_pve_exporter_api_token_value を新しいトークン値に書き換えて保存
    ```
 
 4. **Ansible 適用**（PR から `/ansible-apply` でも可、ローカルでも可）
@@ -220,7 +220,7 @@ bigtcze/pve-exporter は upstream PVE API が 401 を返しても自身は HTTP 
 silent failure 設計のため、`up{}` だけでは検知できない。次のいずれかが原因のことが多い。
 
 1. **トークン ID 不一致**
-   - `ansible/roles/monitoring_agent/defaults/main.yml` の `pve_exporter_api_user` と
+   - `ansible/roles/monitoring_agent/defaults/main.yml` の `monitoring_agent_pve_exporter_api_user` と
      PVE 側の実在トークンが一致していない。
    - 確認: `pveum user token list monitoring@pve`
 2. **token 側 ACL 欠落（privsep=1）**
@@ -233,7 +233,7 @@ silent failure 設計のため、`up{}` だけでは検知できない。次の�
    - 確認: `pveum acl list | grep 'user .*monitoring@pve'`
    - 修正: §3.2 のコマンドを再実行
 4. **SOPS のトークン値が古い**
-   - PVE 側で token を再発行したが Ansible 側の `pve_exporter_api_token_value` が
+   - PVE 側で token を再発行したが Ansible 側の `monitoring_agent_pve_exporter_api_token_value` が
      未更新。§5 のローテーション手順 3〜5 を実施。
 
 ### 切り分けに使える確認

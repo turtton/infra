@@ -11,7 +11,7 @@
 
 - name: Set timezone
   community.general.timezone:
-    name: "{{ proxmox_timezone }}"
+    name: "{{ proxmox_base_timezone }}"
   notify: Restart chrony
 
 - name: Configure DNS (resolv.conf)

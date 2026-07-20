@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User={{ pve_exporter_user }}
-Group={{ pve_exporter_group }}
-ExecStart={{ pve_exporter_bin }} -config {{ pve_exporter_config_dir }}/pve-exporter.yml
+User={{ monitoring_agent_pve_exporter_user }}
+Group={{ monitoring_agent_pve_exporter_group }}
+ExecStart={{ monitoring_agent_pve_exporter_bin }} -config {{ monitoring_agent_pve_exporter_config_dir }}/pve-exporter.yml
 Restart=on-failure
 RestartSec=5
 
@@ -14,7 +14,7 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
 PrivateTmp=true
-ReadOnlyPaths={{ pve_exporter_config_dir }}
+ReadOnlyPaths={{ monitoring_agent_pve_exporter_config_dir }}
 
 [Install]
 WantedBy=multi-user.target

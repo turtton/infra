@@ -65,7 +65,7 @@ inventory/
 
 ### Secret管理
 
-機密変数 (`pve_exporter_api_token_value`, `tailscale_auth_key`) は SOPS + Age で暗号化して管理する。
+機密変数 (`monitoring_agent_pve_exporter_api_token_value`, `tailscale_auth_key`) は SOPS + Age で暗号化して管理する。
 
 ```bash
 # 編集
