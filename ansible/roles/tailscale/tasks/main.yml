@@ -7,9 +7,7 @@
 
 - name: Add Tailscale apt signing key
   ansible.builtin.apt_key:
-    url: >-
-      https://pkgs.tailscale.com/stable/debian/
-      {{ ansible_facts['distribution_release'] }}.noarmor.gpg
+    url: https://pkgs.tailscale.com/stable/debian/{{ ansible_facts['distribution_release'] }}.noarmor.gpg
     keyring: /usr/share/keyrings/tailscale-archive-keyring.gpg
     state: present
 
