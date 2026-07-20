@@ -8,11 +8,17 @@
     state: present
     update_cache: true
 
+- name: Ensure Docker keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
 - name: Add Docker apt signing key
-  ansible.builtin.apt_key:
+  ansible.builtin.get_url:
     url: https://download.docker.com/linux/debian/gpg
-    keyring: /etc/apt/keyrings/docker.gpg
-    state: present
+    dest: /etc/apt/keyrings/docker.gpg
+    mode: "0644"
 
 - name: Add Docker apt repository
   ansible.builtin.apt_repository:
