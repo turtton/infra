@@ -26,6 +26,19 @@ spec:
   values:
     prometheus:
       prometheusSpec:
+        # worker-1/2/3 は 1vCPU/4GB の Longhornストレージ専用ノードのため配置禁止
+        # (2026-07-25 CPU飽和による Helm リリース不全のインシデント対応)
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: NotIn
+                      values:
+                        - worker-1
+                        - worker-2
+                        - worker-3
         enableOTLPReceiver: true
         otlp:
           promoteResourceAttributes:
@@ -74,6 +87,18 @@ spec:
                   pve_node: toliunit
 
     grafana:
+      # worker-1/2/3 (1vCPU Longhorn専用ノード) への配置禁止。prometheusSpec.affinity と同趣旨
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - worker-1
+                      - worker-2
+                      - worker-3
       admin:
         existingSecret: grafana-admin
         userKey: admin-user
@@ -116,6 +141,18 @@ spec:
 
     alertmanager:
       alertmanagerSpec:
+        # worker-1/2/3 (1vCPU Longhorn専用ノード) への配置禁止。prometheusSpec.affinity と同趣旨
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: NotIn
+                      values:
+                        - worker-1
+                        - worker-2
+                        - worker-3
         storage:
           volumeClaimTemplate:
             metadata:
@@ -139,5 +176,14 @@ spec:
       enabled: false
     kubeScheduler:
       enabled: false
+
+    # 1vCPU ノード (worker-1/2/3) では CPU スパイク時にデフォルト timeoutSeconds=1 の
+    # probe がタイムアウトし liveness kill ループに陥るため緩和する
+    prometheus-node-exporter:
+      livenessProbe:
+        timeoutSeconds: 5
+        failureThreshold: 5
+      readinessProbe:
+        timeoutSeconds: 5
 
     prometheusOperator: {}
