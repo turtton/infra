@@ -6,5 +6,26 @@
   ],
   "flux": {
     "managerFilePatterns": ["/clusters/.+\\.ya?ml$/"]
-  }
+  },
+  "packageRules": [
+    {
+      "description": "ネットワーク・ストレージ等の基盤コントローラはアプリと別PRにする (同時ロールアウト事故防止)",
+      "matchFileNames": ["clusters/main/infrastructure/**"],
+      "groupName": "infrastructure controllers"
+    },
+    {
+      "description": "Flux本体のコンポーネント更新は単独PRにする",
+      "matchFileNames": ["clusters/main/flux-system/**"],
+      "groupName": "flux components"
+    },
+    {
+      "description": "監視スタック (kube-prometheus-stack/loki/alloy) はまとめて1PRにする",
+      "matchFileNames": [
+        "clusters/main/apps/monitoring/**",
+        "clusters/main/apps/loki/**",
+        "clusters/main/apps/alloy/**"
+      ],
+      "groupName": "monitoring stack"
+    }
+  ]
 }
