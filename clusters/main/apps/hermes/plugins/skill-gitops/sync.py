@@ -6,7 +6,6 @@ Called from __init__.py's debounced flush with one or more dirty skill names.
 
 from __future__ import annotations
 
-import datetime
 import logging
 import os
 import shutil
@@ -56,23 +55,31 @@ def sync_changed_skills(
 # ── Internal ────────────────────────────────────────────────────────────────
 
 
+# Fixed branch name — force-pushed on every sync so only one PR exists at a time
+_SYNC_BRANCH = "hermes/skill-update"
+
+
 def _do_sync(
     skills: set[str],
     skills_dir: Path,
     infra_skills_dir: Path,
     infra_repo: Path,
 ) -> None:
-    """Core sync logic — one PR per batch call."""
+    """Core sync logic — one PR per batch call, reusing a fixed branch."""
     if not infra_repo.is_dir():
         logger.warning("skill-gitops: infra repo %s not found", infra_repo)
         return
+
+    branch = _SYNC_BRANCH
+    worktree_path = Path(tempfile.gettempdir()) / f"infra-{branch.replace('/', '-')}"
 
     # 1. Verify gh CLI
     if _run(["gh", "auth", "status"], check=False).returncode != 0:
         logger.warning("skill-gitops: gh not authenticated — skipping")
         return
 
-    # 2. Fetch latest main
+    # 2. Fetch latest main and prune stale remote refs
+    _run(["git", "fetch", "--prune", "origin"], cwd=infra_repo, check=False)
     if _run(["git", "fetch", "origin", "main"], cwd=infra_repo).returncode != 0:
         logger.warning("skill-gitops: git fetch origin main failed")
         return
@@ -83,17 +90,16 @@ def _do_sync(
         logger.info("skill-gitops: no actual content changes detected")
         return
 
-    # 4. Create branch + worktree
-    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    branch = f"hermes/skill-update-{timestamp}"
-    worktree_path = Path(tempfile.gettempdir()) / f"infra-{branch.replace('/', '-')}"
-
-    # ── Create branch from origin/main ────────────────────────────────
+    # 4. Create or reset local branch to origin/main
+    _run(["git", "branch", "-D", branch], cwd=infra_repo, check=False)
     if _run(["git", "branch", branch, "origin/main"], cwd=infra_repo).returncode != 0:
         logger.warning("skill-gitops: branch creation failed")
         return
 
-    # ── Worktree add ──────────────────────────────────────────────────
+    # 5. Remove stale worktree if present, then add fresh
+    _run(["git", "worktree", "remove", "--force", str(worktree_path)],
+         cwd=infra_repo, check=False)
+    _run(["git", "worktree", "prune"], cwd=infra_repo, check=False)
     try:
         r = _run(
             ["git", "worktree", "add", str(worktree_path), branch],
@@ -144,33 +150,42 @@ def _do_sync(
         _cleanup_worktree(infra_repo, branch, worktree_path)
         return
 
-    # 7. Push
-    if _run(["git", "push", "origin", branch], cwd=worktree_path).returncode != 0:
-        _cleanup_worktree(infra_repo, branch, worktree_path)
+    # 7. Force-push (overwrite existing remote branch if any)
+    push_ref = f"+{branch}"
+    if _run(["git", "push", "origin", push_ref], cwd=worktree_path).returncode != 0:
+        _cleanup_worktree(infra_repo, branch, worktree_path, delete_branch=False)
         return
 
-    # 8. Create PR
-    title = f"hermes: sync skill update — {skill_list}"
-    body = (
-        "## 変更内容\n"
-        "自動同期: skill_manage / curator によるスキル変更をinfra repoに反映\n\n"
-        "### 変更されたスキル\n" + "\n".join(summary_lines) + "\n"
-    )
-    _run(
-        [
-            "gh", "pr", "create",
-            "--repo", "turtton/infra",
-            "--title", title,
-            "--body", body,
-            "--base", "main",
-            "--head", branch,
-        ],
-        cwd=infra_repo,
-        check=False,  # PR creation failure is logged but doesn't block cleanup
-    )
+    # 8. Check for existing open PR against the same branch
+    existing_pr = _find_existing_pr(branch, infra_repo)
 
-    # 9. Cleanup worktree
-    _cleanup_worktree(infra_repo, branch, worktree_path)
+    if existing_pr:
+        # Update existing PR via force-push (PR body auto-updates)
+        logger.info("skill-gitops: updated existing PR #%s for branch %s", existing_pr, branch)
+    else:
+        # Create new PR
+        title = f"hermes: sync skill update — {skill_list}"
+        body = (
+            "## 変更内容\n"
+            "自動同期: skill_manage / curator によるスキル変更をinfra repoに反映\n\n"
+            "### 変更されたスキル\n" + "\n".join(summary_lines) + "\n"
+        )
+        _run(
+            [
+                "gh", "pr", "create",
+                "--repo", "turtton/infra",
+                "--title", title,
+                "--body", body,
+                "--base", "main",
+                "--head", branch,
+            ],
+            cwd=infra_repo,
+            check=False,
+        )
+        logger.info("skill-gitops: PR created for branch %s", branch)
+
+    # 9. Cleanup worktree (keep branch for force-push next time)
+    _cleanup_worktree(infra_repo, branch, worktree_path, delete_branch=False)
 
     logger.info("skill-gitops: PR created for branch %s", branch)
 
@@ -245,14 +260,37 @@ def _sync_skill_dir(src: Path, dst: Path) -> None:
             shutil.copy2(entry, s_dst)
 
 
-def _cleanup_worktree(repo: Path, branch: str, worktree_path: Path) -> None:
-    """Remove worktree, delete branch, and scrub the directory."""
+def _find_existing_pr(branch: str, repo: Path) -> str | None:
+    """Return the PR number for the first open PR with *branch* as head, or None."""
+    r = _run(
+        ["gh", "pr", "list",
+         "--repo", "turtton/infra",
+         "--head", branch,
+         "--state", "OPEN",
+         "--json", "number",
+         "-q", ".[0].number | @text"],
+        cwd=repo,
+        check=False,
+    )
+    if r.returncode == 0 and r.stdout.strip():
+        return r.stdout.strip()
+    return None
+
+
+def _cleanup_worktree(
+    repo: Path,
+    branch: str,
+    worktree_path: Path,
+    delete_branch: bool = True,
+) -> None:
+    """Remove worktree, optionally delete branch, and scrub the directory."""
     _run(
         ["git", "worktree", "remove", "--force", str(worktree_path)],
         cwd=repo,
         check=False,
     )
-    _run(["git", "branch", "-D", branch], cwd=repo, check=False)
+    if delete_branch:
+        _run(["git", "branch", "-D", branch], cwd=repo, check=False)
     try:
         shutil.rmtree(worktree_path, ignore_errors=True)
     except OSError:

@@ -1,5 +1,5 @@
 name: skill-gitops
-version: 1.0.0
+version: 1.1.0
 description: "Auto-sync modified skills back to infra GitOps repo as PRs. Handles both interactive skill_manage edits and curator background consolidation."
 hooks:
   - post_tool_call
