@@ -51,6 +51,8 @@ spec:
               value: "TRUE"
             - name: DIFFICULTY
               value: normal
+            - name: ALLOW_FLIGHT
+              value: "TRUE"
             - name: MOTD
               value: "%MODPACK_NAME%"
             - name: ICON
