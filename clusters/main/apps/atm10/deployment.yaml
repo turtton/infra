@@ -22,6 +22,28 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       terminationGracePeriodSeconds: 120
+      initContainers:
+        - name: cache-cleanup
+          image: alpine:latest
+          command:
+            - sh
+            - -c
+            - |-
+              echo "Checking for empty/corrupt cache files..."
+              find /data/.cache -type f -empty -name "*.json" -print -delete 2>/dev/null || true
+              echo "Cache cleanup done"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: data
+              mountPath: /data
       containers:
         - name: minecraft
           image: itzg/minecraft-server:latest
