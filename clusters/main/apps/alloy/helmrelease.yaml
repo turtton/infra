@@ -26,9 +26,25 @@ spec:
   values:
     controller:
       type: daemonset
+      # hostNetwork 必須: 各ノードの Talos が KmsgLogConfig / machine.logging.destinations から
+      # 127.0.0.1:12346 へカーネルログ・サービスログを TCP 送信するため、alloy が
+      # ノードのネットワーク名前空間で待ち受ける必要がある
+      hostNetwork: true
+      # hostNetwork 時はホストの DNS 設定が使われるため、クラスタ内名前解決
+      # (Kubernetes API / loki.monitoring.svc) のために明示的にクラスタDNSへ戻す
+      dnsPolicy: ClusterFirstWithHostNet
       tolerations:
         - operator: Exists
+    # Prometheus (kube-prometheus-stack) によるメトリクス収集
+    # loki.process stage.metrics のカスタムカウンタ (loki_process_custom_*) を
+    # PrometheusRule から参照するために必須
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: kube-prometheus-stack
     alloy:
+      # otelcol.receiver.tcplog が experimental のため
+      stabilityLevel: experimental
       timeoutSeconds: 3
       resources:
         requests:
@@ -85,5 +101,97 @@ spec:
           loki.write "local" {
             endpoint {
               url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+            }
+          }
+
+          // Talos カーネルログ / サービスログ受信
+          // (terraform の KmsgLogConfig + machine.logging.destinations が 127.0.0.1:12346 へ送信)
+          // 2026-07-28 の Longhorn 一斉 I/O エラーが3日間検知できなかった教訓から導入
+          otelcol.receiver.tcplog "talos" {
+            listen_address = "127.0.0.1:12346"
+
+            output {
+              logs = [otelcol.exporter.loki.talos.input]
+            }
+          }
+
+          otelcol.exporter.loki "talos" {
+            forward_to = [loki.process.talos.receiver]
+          }
+
+          loki.process "talos" {
+            forward_to = [loki.write.local.receiver]
+
+            // otelcol.exporter.loki は行を {"body":"<元のJSON文字列>"} にラップする。
+            // そのままでは stage.json がフィールドを抽出できないため2段で剥がす
+            stage.json {
+              expressions = { body = "body" }
+            }
+
+            // 元の Talos json_lines ペイロードをパース
+            // kmsg: {"clock":...,"facility":"kern","priority":"err","seq":...,"msg":"..."}
+            // service: {"msg":"...","talos-level":"info","talos-service":"machined"}
+            stage.json {
+              source = "body"
+              expressions = {
+                msg      = "msg",
+                priority = "priority",
+                facility = "facility",
+                service  = "\"talos-service\"",
+                level    = "\"talos-level\"",
+              }
+            }
+
+            // HOSTNAME は chart が spec.nodeName から注入 (hostNetwork でもノード名のまま)
+            // 注: chart は configMap.content を tpl 処理するため、alloy 実行時評価に
+            // 残すには {{ "{{" }} ... {{ "}}" }} の二重テンプレートが必要
+            stage.template {
+              source   = "node"
+              template = "{{ "{{" }} env \"HOSTNAME\" {{ "}}" }}"
+            }
+
+            stage.labels {
+              values = {
+                node     = "node",
+                priority = "priority",
+                facility = "facility",
+                service  = "service",
+              }
+            }
+
+            // Loki に保存する行を元の Talos JSON 形式に戻す
+            stage.output {
+              source = "body"
+            }
+
+            // FS/ブロックデバイス系エラーをカウンタ化
+            // (PrometheusRule TalosKernelFilesystemError が参照。
+            //   stage.regex は抽出のみで行をフィルタしないため selector の
+            //   ラインフィルタで絞り込む)
+            stage.match {
+              selector = "{priority=\"err\"} |~ \"EXT4-fs error|JBD2:|Buffer I/O error|blk_update_request|I/O error|critical target error\""
+
+              stage.metrics {
+                metric.counter {
+                  name        = "talos_kernel_fs_error_total"
+                  description = "kernel filesystem/block-device error lines"
+                  match_all   = true
+                  action      = "inc"
+                }
+              }
+            }
+
+            // 全カーネルエラー (err 以上) のカウンタ。調査・ダッシュボード用
+            stage.match {
+              selector = "{priority=~\"emerg|alert|crit|err\"}"
+
+              stage.metrics {
+                metric.counter {
+                  name        = "talos_kernel_error_total"
+                  description = "all kernel err-or-worse lines"
+                  match_all   = true
+                  action      = "inc"
+                }
+              }
             }
           }
