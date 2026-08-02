@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - alertmanager-config.yaml
   - flux-podmonitor.yaml
+  - kernel-rules.yaml
   - pve-rules.yaml

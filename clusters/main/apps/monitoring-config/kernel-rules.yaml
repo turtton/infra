@@ -1,0 +1,35 @@
+---
+# 2026-07-28 の cp-1 Longhorn ボリューム一斉 I/O エラーがカーネルログに
+# 出ていたにもかかわらず3日間検知できなかった教訓から、Talos カーネルログの
+# FS/ブロックデバイス系エラーを検知する。
+# 経路: KmsgLogConfig -> alloy (otelcol.receiver.tcplog) -> loki.process (stage.metrics)
+#       -> Prometheus (ServiceMonitor) -> このルール -> Alertmanager -> Discord
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: talos-kernel
+  namespace: monitoring
+  labels:
+    # kube-prometheus-stack の ruleSelector (release=kube-prometheus-stack) 適合のため必須
+    # (pve-rules.yaml のコメントも参照)
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: talos-kernel.rules
+      interval: 1m
+      rules:
+        - alert: TalosKernelFilesystemError
+          # loki_process_custom_ プレフィクスは alloy の loki.process stage.metrics が
+          # カスタムメトリクスに自動付与するもの
+          expr: increase(loki_process_custom_talos_kernel_fs_error_total[10m]) > 0
+          labels:
+            severity: critical
+          annotations:
+            summary: "kernel FS/block device error on {{ $labels.node }}"
+            description: |
+              {{ $labels.node }} のカーネルログでファイルシステム/ブロックデバイス系
+              エラー (EXT4-fs error / JBD2 / I/O error 等) を直近10分で {{ $value }} 行検知。
+              2026-07-28 の Longhorn 一斉 I/O エラーと同種の障害の可能性がある。
+              Loki で {node="{{ $labels.node }}", facility="kern"} を確認し、
+              当該ノードの dmesg と Longhorn ボリューム/レプリカの健全性を
+              即座に確認すること。Pod 再起動時のマウント不能 (fsck 失敗) に注意。
