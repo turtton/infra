@@ -4,9 +4,11 @@ metadata:
   name: monthly-backup
   namespace: longhorn-system
 spec:
-  cron: "0 0 1 * *"
+  # 毎月1日と15日の00:00に実行（月2回）
+  cron: "0 0 1,15 * *"
   task: backup
-  retain: 2
+  # 4世代保持 = 約2ヶ月分のリストアポイント
+  retain: 4
   concurrency: 1
   groups:
     - default
