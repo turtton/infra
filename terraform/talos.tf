@@ -39,6 +39,29 @@ locals {
       - TS_AUTHKEY=${var.tailscale_authkey}
     EOT
     ,
+    # カーネルログを各ノードのalloy（hostNetwork DaemonSet）へTCP転送
+    # 2026-07-28のLonghorn一斉I/Oエラーが3日間検知できなかった教訓から、
+    # FS/ブロックデバイス系カーネルエラーをLoki+Prometheus経由でアラート化する
+    <<-EOT
+    apiVersion: v1alpha1
+    kind: KmsgLogConfig
+    name: alloy
+    url: tcp://127.0.0.1:12346
+    EOT
+    ,
+    # Talosサービスログ（machined等）も同じalloyエンドポイントへ転送
+    yamlencode({
+      machine = {
+        logging = {
+          destinations = [
+            {
+              endpoint = "tcp://127.0.0.1:12346"
+              format   = "json_lines"
+            }
+          ]
+        }
+      }
+    }),
   ]
 }
 
