@@ -1,6 +1,6 @@
 model:
   provider: custom
-  default: deepseek-v4-pro
+  default: deepseek-v4-flash-0731
   base_url: https://crof.ai/v1
   api_key: ${OPENAI_API_KEY}
 personality:
