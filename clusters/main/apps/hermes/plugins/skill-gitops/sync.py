@@ -10,7 +10,6 @@ import logging
 import os
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -58,6 +57,12 @@ def sync_changed_skills(
 # Fixed branch name — force-pushed on every sync so only one PR exists at a time
 _SYNC_BRANCH = "hermes/skill-update"
 
+# Persistent worktree dedicated to the sync branch. The main checkout
+# (/opt/data/infra) stays on main at all times — self-improvement work is
+# isolated in this separate folder so the main repo is never left on a
+# dangling PR branch.
+_SYNC_WORKTREE = Path("/opt/data/infra-sync")
+
 
 def _do_sync(
     skills: set[str],
@@ -65,13 +70,18 @@ def _do_sync(
     infra_skills_dir: Path,
     infra_repo: Path,
 ) -> None:
-    """Core sync logic — one PR per batch call, reusing a fixed branch."""
+    """Core sync logic — one PR per batch call, reusing a fixed branch.
+
+    Uses a persistent worktree (``_SYNC_WORKTREE``) checked out on
+    ``_SYNC_BRANCH``. The main repo is only used for ``git fetch`` and
+    ``gh`` calls, never for branch creation, so it can stay on ``main``.
+    """
     if not infra_repo.is_dir():
         logger.warning("skill-gitops: infra repo %s not found", infra_repo)
         return
 
     branch = _SYNC_BRANCH
-    worktree_path = Path(tempfile.gettempdir()) / f"infra-{branch.replace('/', '-')}"
+    worktree_path = _SYNC_WORKTREE
 
     # 1. Verify gh CLI
     if _run(["gh", "auth", "status"], check=False).returncode != 0:
@@ -84,40 +94,25 @@ def _do_sync(
         logger.warning("skill-gitops: git fetch origin main failed")
         return
 
-    # 3. Find skills with actual changes
-    changed = _find_changed(skills, skills_dir, infra_skills_dir)
+    # 3. Ensure the persistent sync worktree exists and is reset to origin/main
+    if not _ensure_sync_worktree(infra_repo, worktree_path, branch):
+        logger.warning("skill-gitops: worktree setup failed — skipping")
+        return
+
+    # Comparison/copy target inside the worktree
+    wt_skills_dir = worktree_path / infra_skills_dir.relative_to(infra_repo)
+
+    # 4. Find skills with actual changes (local vs worktree content)
+    changed = _find_changed(skills, skills_dir, wt_skills_dir)
     if not changed:
         logger.info("skill-gitops: no actual content changes detected")
         return
 
-    # 4. Create or reset local branch to origin/main
-    _run(["git", "branch", "-D", branch], cwd=infra_repo, check=False)
-    if _run(["git", "branch", branch, "origin/main"], cwd=infra_repo).returncode != 0:
-        logger.warning("skill-gitops: branch creation failed")
-        return
-
-    # 5. Remove stale worktree if present, then add fresh
-    _run(["git", "worktree", "remove", "--force", str(worktree_path)],
-         cwd=infra_repo, check=False)
-    _run(["git", "worktree", "prune"], cwd=infra_repo, check=False)
-    try:
-        r = _run(
-            ["git", "worktree", "add", str(worktree_path), branch],
-            cwd=infra_repo,
-        )
-        if r.returncode != 0:
-            _run(["git", "branch", "-D", branch], cwd=infra_repo, check=False)
-            logger.warning("skill-gitops: worktree add failed")
-            return
-    except Exception:
-        _run(["git", "branch", "-D", branch], cwd=infra_repo, check=False)
-        raise
-
-    # 5. Copy changed skill files into worktree
+    # 5. Copy changed skill files into the worktree
     summary_lines: list[str] = []
     for name in changed:
         src = skills_dir / name
-        dst = worktree_path / infra_skills_dir.relative_to(infra_repo) / name
+        dst = wt_skills_dir / name
         if not src.is_dir():
             continue
         dst.mkdir(parents=True, exist_ok=True)
@@ -127,7 +122,6 @@ def _do_sync(
 
     if not summary_lines:
         logger.info("skill-gitops: nothing to copy after second check")
-        _cleanup_worktree(infra_repo, branch, worktree_path)
         return
 
     # 6. Commit
@@ -136,7 +130,7 @@ def _do_sync(
         cwd=worktree_path,
     ).returncode
     if rc != 0:
-        _cleanup_worktree(infra_repo, branch, worktree_path)
+        _reset_worktree(worktree_path)
         return
 
     skill_list = ", ".join(sorted(changed))
@@ -147,13 +141,13 @@ def _do_sync(
     ).returncode
     if rc != 0:
         # Nothing to commit (maybe content identical after copy?)
-        _cleanup_worktree(infra_repo, branch, worktree_path)
+        _reset_worktree(worktree_path)
         return
 
     # 7. Force-push (overwrite existing remote branch if any)
     push_ref = f"+{branch}"
     if _run(["git", "push", "origin", push_ref], cwd=worktree_path).returncode != 0:
-        _cleanup_worktree(infra_repo, branch, worktree_path, delete_branch=False)
+        logger.warning("skill-gitops: force-push failed — worktree left for inspection")
         return
 
     # 8. Check for existing open PR against the same branch
@@ -184,10 +178,35 @@ def _do_sync(
         )
         logger.info("skill-gitops: PR created for branch %s", branch)
 
-    # 9. Cleanup worktree (keep branch for force-push next time)
-    _cleanup_worktree(infra_repo, branch, worktree_path, delete_branch=False)
-
     logger.info("skill-gitops: PR created for branch %s", branch)
+
+
+def _ensure_sync_worktree(repo: Path, worktree_path: Path, branch: str) -> bool:
+    """Create the persistent sync worktree if missing, else reset it to origin/main."""
+    if (worktree_path / ".git").exists():
+        # Existing worktree — reset to latest main
+        _run(["git", "fetch", "origin", "main"], cwd=worktree_path, check=False)
+        _run(["git", "reset", "--hard", "origin/main"], cwd=worktree_path, check=False)
+        _run(["git", "clean", "-fd"], cwd=worktree_path, check=False)
+        return True
+    # Create fresh worktree (-B resets branch to origin/main if it exists)
+    r = _run(
+        ["git", "worktree", "add", "-B", branch, str(worktree_path), "origin/main"],
+        cwd=repo,
+        check=False,
+    )
+    if r.returncode != 0:
+        logger.warning(
+            "skill-gitops: worktree add failed: %s", r.stderr.strip() or r.stdout.strip()
+        )
+        return False
+    return True
+
+
+def _reset_worktree(worktree_path: Path) -> None:
+    """Reset the sync worktree back to origin/main after a failed sync."""
+    _run(["git", "reset", "--hard", "origin/main"], cwd=worktree_path, check=False)
+    _run(["git", "clean", "-fd"], cwd=worktree_path, check=False)
 
 
 def _find_changed(
@@ -283,7 +302,11 @@ def _cleanup_worktree(
     worktree_path: Path,
     delete_branch: bool = True,
 ) -> None:
-    """Remove worktree, optionally delete branch, and scrub the directory."""
+    """Remove worktree, optionally delete branch, and scrub the directory.
+
+    DEPRECATED in v1.2.0 — the sync worktree is now persistent. Kept only
+    as a manual helper; not called by the sync path.
+    """
     _run(
         ["git", "worktree", "remove", "--force", str(worktree_path)],
         cwd=repo,
