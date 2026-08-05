@@ -27,7 +27,7 @@ skills:
   external_dirs:
     - /opt/data/skills
 approvals:
-  mode: auto
+  mode: smart
 agent:
   reasoning_effort: max
 logging:

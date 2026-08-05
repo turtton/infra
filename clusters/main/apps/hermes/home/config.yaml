@@ -27,7 +27,7 @@ skills:
   external_dirs:
     - /opt/data/skills
 approvals:
-  mode: auto
+  mode: smart
 delegation:
   provider: custom
   model: glm-5.2
