@@ -389,18 +389,27 @@ def load_session_registry() -> Optional[SessionInfo]:
 
 
 def update_session_registry(
-    session_id: str,
+    session_id: str = "",
     platform: str = "",
     chat_id: str = "",
     thread_id: str = "",
     user_id: str = "",
 ) -> None:
-    """Convenience: create SessionInfo and save it."""
-    save_session_registry(SessionInfo(
-        session_id=session_id,
-        platform=platform,
-        chat_id=chat_id,
-        thread_id=thread_id,
-        user_id=user_id,
+    """Merge new session info into the registry.
+
+    Non-empty fields overwrite the existing entry; empty fields keep the
+    previously recorded value. This lets ``on_session_start`` (which only
+    knows session_id/platform) and ``pre_gateway_dispatch`` (which knows
+    the chat ids) fill different fields of the same entry without
+    clobbering each other.
+    """
+    existing = load_session_registry()
+    merged = SessionInfo(
+        session_id=session_id or (existing.session_id if existing else ""),
+        platform=platform or (existing.platform if existing else ""),
+        chat_id=chat_id or (existing.chat_id if existing else ""),
+        thread_id=thread_id or (existing.thread_id if existing else ""),
+        user_id=user_id or (existing.user_id if existing else ""),
         updated_at=time.time(),
-    ))
+    )
+    save_session_registry(merged)

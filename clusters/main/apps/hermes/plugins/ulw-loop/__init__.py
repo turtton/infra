@@ -4,16 +4,29 @@ Registers the ``/ulw-loop`` slash command and lifecycle hooks for
 the full explore→plan→execute→verify→review→fix workflow.
 
 Hooks (registered when available):
-  - pre_llm_call: Inject current phase guidance into system prompt
+  - pre_llm_call: Inject current phase guidance into the turn context
   - post_llm_call: Detect tokens, advance phase, update state
   - pre_verify: Quality Gate check before allowing completion
+  - on_session_start: Merge session_id into the chat registry
+  - pre_gateway_dispatch: Capture inbound chat info for auto-subscribe
+
+Hermes v0.20+ hook contract:
+  - Callbacks are invoked as ``cb(**kwargs)`` (keyword arguments only).
+  - ``pre_llm_call`` returns ``{"context": ...}`` which is appended to the
+    user message (system prompt stays byte-stable for prompt-cache reuse).
+  - ``pre_verify`` returns ``{"action": "continue", "message": ...}``.
 """
 
 import logging
 from typing import Any
 
 from . import ulw_loop
-from .ulw_loop import init_ulw_loop, handle_ulw_command
+from .ulw_loop import (
+    init_ulw_loop,
+    handle_ulw_command,
+    ulw_loop_cli_setup,
+    ulw_loop_cli_run,
+)
 from . import state as st
 from . import phases as ph
 from . import tokens as tk
@@ -53,6 +66,27 @@ def register(ctx):
         args_hint="<action> <goal-id> <params>",
     )
 
+    # CLI command — agent-mediated mid-conversation activation.
+    # `hermes ulw-loop <goal> --context ... --platform ... --chat-id ...`
+    # lets the agent start a ULW-loop from the terminal without needing
+    # to import plugin internals (plugin dirs use hyphens, so plain
+    # `from ulw_loop import ...` is not importable in subprocesses).
+    ctx.register_cli_command(
+        name="ulw-loop",
+        help=(
+            "Start a ULW-loop (Explore→Plan→Execute→Verify→Review→Fix) "
+            "for a goal, with optional conversation context and chat "
+            "auto-subscribe"
+        ),
+        description=(
+            "Programmatic entry point for mid-conversation ULW-loop activation. "
+            "Creates a Kanban task, embeds conversation context, and "
+            "auto-subscribes the originating chat when platform/chat-id are given."
+        ),
+        setup_fn=ulw_loop_cli_setup,
+        handler_fn=ulw_loop_cli_run,
+    )
+
     # Register lifecycle hooks
     _register_hooks(ctx)
 
@@ -84,6 +118,12 @@ def _register_hooks(ctx):
         hooks_registered += 1
     except (AttributeError, TypeError):
         logger.info("on_session_start hook not available in this Hermes version")
+
+    try:
+        ctx.register_hook("pre_gateway_dispatch", on_pre_gateway_dispatch)
+        hooks_registered += 1
+    except (AttributeError, TypeError):
+        logger.info("pre_gateway_dispatch hook not available in this Hermes version")
 
     logger.info("ULW-loop: registered %d hooks", hooks_registered)
 
@@ -118,15 +158,20 @@ def _clear_state(session_id: str) -> None:
 # Hooks
 # ---------------------------------------------------------------------------
 
-def on_pre_llm_call(agent, messages: list[dict], **kw) -> None:
-    """Inject current ULW-loop phase guidance into the system prompt.
+def on_pre_llm_call(**kw) -> dict | None:
+    """Inject current ULW-loop phase guidance into the turn context.
+
+    Hermes v0.20+ invokes hook callbacks with keyword arguments only
+    (``cb(**kwargs)``) and expects ``{"context": ...}`` as the return
+    shape; the context is appended to the turn's user message (the
+    system prompt stays byte-stable for prompt-cache reuse).
 
     Also handles auto-resume: if state file exists and is incomplete,
     inject a resume context block.
     """
-    session_id = getattr(agent, "session_id", None)
+    session_id = kw.get("session_id", "")
     if not session_id:
-        return
+        return None
 
     state_obj = _get_state(session_id)
     if not state_obj:
@@ -141,43 +186,37 @@ def on_pre_llm_call(agent, messages: list[dict], **kw) -> None:
                         "ULW-loop: 2-strike cap reached for %s, not resuming",
                         session_id,
                     )
-                    return
+                    return None
                 state_obj.resume_count += 1
                 _set_state(state_obj)
                 st.ledger_append(session_id, "resume", {
                     "phase": state_obj.phase,
                     "resume_count": state_obj.resume_count,
                 })
-                _inject_phase(messages, state_obj, resume=True)
-                return
-        return
+                return {"context": _build_phase_text(state_obj, resume=True)}
+        return None
 
-    # Normal phase injection
-    _inject_phase(messages, state_obj)
+    # Normal phase guidance injection
     st.save_resume(session_id, state_obj.phase, state_obj.iteration)
+    return {"context": _build_phase_text(state_obj)}
 
 
-def _inject_phase(messages: list[dict], state_obj: st.UlwState, resume: bool = False) -> None:
-    """Inject phase guidance into the system message."""
+def _build_phase_text(state_obj: st.UlwState, resume: bool = False) -> str:
+    """Build the phase guidance block to inject into the turn context."""
     phase_prompt = ph.build_phase_prompt(state_obj)
     if resume:
         phase_prompt += (
             f"\n\n🔄 **ULW-loop自動再開** (試行 {state_obj.resume_count}回目)\n"
             f"前回のセッションから再開しました。"
         )
-
-    # Find the system message and append guidance
-    for msg in messages:
-        if msg.get("role") == "system":
-            content = msg.get("content", "")
-            if isinstance(content, str):
-                if "===== ULW-LOOP PHASE:" not in content:
-                    msg["content"] = content + phase_prompt
-            break
+    return phase_prompt
 
 
-def on_post_llm_call(agent, response: str, **kw) -> None:
+def on_post_llm_call(**kw) -> None:
     """Process LLM response: detect tokens, advance phase, update state.
+
+    Hermes v0.20+ passes ``session_id`` and ``assistant_response`` as
+    keyword arguments.
 
     Handles:
       - Token detection and phase transition
@@ -185,19 +224,20 @@ def on_post_llm_call(agent, response: str, **kw) -> None:
       - Blocker classification on failures
       - No-progress detection (2-strike cap)
     """
-    session_id = getattr(agent, "session_id", None)
+    session_id = kw.get("session_id", "")
     if not session_id:
-        return
+        return None
 
     state_obj = _get_state(session_id)
     if not state_obj:
-        return
+        return None
 
     # Skip if completed
     if state_obj.phase == ph.PHASE_COMPLETE:
-        return
+        return None
 
     # Detect tokens
+    response = kw.get("assistant_response", "") or ""
     tokens_found = tk.detect_tokens(response)
     old_phase = state_obj.phase
 
@@ -241,13 +281,18 @@ def on_post_llm_call(agent, response: str, **kw) -> None:
         _set_state(state_obj)
 
 
-def on_pre_verify(agent, **kw) -> dict | None:
+def on_pre_verify(**kw) -> dict | None:
     """Quality Gate check before allowing the agent to stop.
+
+    Hermes v0.20+ invokes ``pre_verify`` hooks with keyword arguments
+    (session_id, platform, model, coding, attempt, final_response,
+    changed_paths). Returning ``{"action": "continue", "message": ...}``
+    keeps the agent going one more turn.
 
     Runs quality gates on the current state. If any gate fails,
     returns a ``continue`` directive to keep the agent going.
     """
-    session_id = getattr(agent, "session_id", None)
+    session_id = kw.get("session_id", "")
     if not session_id:
         return None
 
@@ -304,30 +349,62 @@ def _get_active_goal(state_obj: st.UlwState):
 def on_session_start(**kw) -> None:
     """Record session platform info when a new gateway session starts.
 
-    This hook captures the session_id, platform, chat_id, and thread_id
-    so that ``/ulw-loop`` and ``/ulw-from-context`` can auto-subscribe
-    the originating chat to newly created Kanban tasks.
+    Hermes v0.20+ only passes ``session_id`` / ``model`` / ``platform``
+    to this hook — chat/thread ids are NOT available here. They are
+    captured separately by ``pre_gateway_dispatch`` (which receives the
+    full inbound ``MessageEvent``). This hook merges the session id into
+    the registry without clobbering the chat info, so ``/ulw-loop`` and
+    ``/ulw-from-context`` can auto-subscribe the originating chat.
     """
     session_id = kw.get("session_id", "")
     platform = kw.get("platform", "")
-    chat_id = kw.get("chat_id", "") or kw.get("channel_id", "")
-    thread_id = kw.get("thread_id", "") or kw.get("thread", "")
-    user_id = kw.get("user_id", "")
-
     if not session_id:
         return
 
     st.update_session_registry(
         session_id=session_id,
-        platform=platform,
-        chat_id=str(chat_id) if chat_id else "",
-        thread_id=str(thread_id) if thread_id else "",
-        user_id=str(user_id) if user_id else "",
+        platform=platform or "",
     )
     logger.debug(
-        "Session registry updated: %s on %s (chat=%s, thread=%s)",
-        session_id, platform, chat_id, thread_id,
+        "Session registry updated: %s on %s",
+        session_id, platform,
     )
+
+
+def on_pre_gateway_dispatch(**kw) -> None:
+    """Capture inbound chat info for auto-subscribe.
+
+    Fired once per user-originated inbound message with the full
+    ``MessageEvent``; ``event.source`` carries platform, chat_id,
+    thread_id and user_id. Because this fires for the command message
+    itself, the registry reflects the exact chat the user invoked
+    ``/ulw-loop`` / ``/ulw-from-context`` from.
+    """
+    try:
+        event = kw.get("event")
+        if event is None:
+            return None
+        source = getattr(event, "source", None)
+        if source is None:
+            return None
+
+        platform = getattr(source, "platform", None)
+        platform = platform.value if platform is not None else ""
+        chat_id = str(getattr(source, "chat_id", "") or "")
+        if not platform or not chat_id:
+            return None
+
+        st.update_session_registry(
+            platform=platform,
+            chat_id=chat_id,
+            thread_id=str(getattr(source, "thread_id", "") or ""),
+            user_id=str(getattr(source, "user_id", "") or ""),
+        )
+    except Exception as exc:
+        logger.warning(
+            "ulw-loop: pre_gateway_dispatch registry update failed: %s", exc,
+        )
+    return None
 
 # ---------------------------------------------------------------------------
 # Steering command handler
@@ -368,12 +445,15 @@ def handle_from_context_command(raw_args: str) -> str | None:
     chat_id = session_info.chat_id if session_info else ""
     thread_id = session_info.thread_id if session_info else ""
 
-    # Build init_ulw_loop call with subscription params
-    sub_params = ""
-    if platform and chat_id:
-        sub_params = f', platform="{platform}", chat_id="{chat_id}"'
-        if thread_id:
-            sub_params += f', thread_id="{thread_id}"'
+    # Build the CLI invocation the agent should run (the plugin dir is
+    # hyphenated, so `from ulw_loop import init_ulw_loop` is not
+    # importable from execute_code — `hermes ulw-loop` is the reliable
+    # agent-facing entry point).
+    thread_opt = f" --thread-id {thread_id}" if thread_id else ""
+    cli_cmd = (
+        f"hermes ulw-loop \"{goal}\" --context <要約>"
+        + (f" --platform {platform} --chat-id {chat_id}{thread_opt}" if platform and chat_id else "")
+    )
 
     return (
         f"🔄 **ULW-loop起動準備**\n\n"
@@ -386,7 +466,7 @@ def handle_from_context_command(raw_args: str) -> str | None:
         ) +
         f"**エージェント（私）への指示:**\n"
         f"1. この会話の経緯・要件・決定事項を要約\n"
-        f"2. `init_ulw_loop(goal=\"{goal}\", context=<要約>{sub_params})` を実行\n"
+        f"2. ターミナルで ``{cli_cmd}`` を実行\n"
         f"3. 結果を報告"
     )
 
