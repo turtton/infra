@@ -7,9 +7,12 @@ orchestration.
 
 import json
 import logging
-import subprocess
 import shlex
+import shutil
+import subprocess
+import sys
 import time
+from pathlib import Path
 from typing import Optional
 
 from . import state as st
@@ -21,9 +24,29 @@ logger = logging.getLogger(__name__)
 ORCHESTRATOR_PROFILE = "orchestrator"
 
 
+def _hermes_cmd() -> list[str]:
+    """Resolve the ``hermes`` executable for subprocess invocation.
+
+    Prefers ``hermes`` on PATH (gateway runs have it via the s6 env),
+    then falls back to the venv ``bin/`` next to the running interpreter
+    so agent-mediated CLI invocations work from any shell (the Hermes
+    agent's terminal PATH does not include the venv bin dir).
+    """
+    exe = shutil.which("hermes")
+    if exe:
+        return [exe]
+    try:
+        candidate = Path(sys.executable).parent / "hermes"
+        if candidate.is_file():
+            return [str(candidate)]
+    except Exception:
+        pass
+    return ["hermes"]
+
+
 def _run_hermes_kanban(args: list[str]) -> dict:
     """Run ``hermes kanban <args>`` and return parsed JSON result."""
-    cmd = ["hermes", "kanban"] + args
+    cmd = _hermes_cmd() + ["kanban"] + args
     logger.debug("Running: %s", shlex.join(cmd))
     try:
         result = subprocess.run(
