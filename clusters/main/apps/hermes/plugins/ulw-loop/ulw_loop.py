@@ -21,7 +21,7 @@ from . import tokens as tk
 
 logger = logging.getLogger(__name__)
 
-ORCHESTRATOR_PROFILE = "orchestrator"
+PLANNER_PROFILE = "planner"
 
 
 def _hermes_cmd() -> list[str]:
@@ -91,7 +91,7 @@ def init_ulw_loop(
     gave_up, crashed, timed_out) — so blocked/status notifications arrive
     back in the Discord/Telegram/etc. thread where ULW-loop was triggered.
 
-    The orchestrator profile picks up the Kanban task via auto-decompose
+    The planner profile picks up the Kanban task via auto-decompose
     and receives the context in its system prompt.
 
     Args:
@@ -127,7 +127,7 @@ def init_ulw_loop(
         if context else ""
     ) + (
         "## Workflow\n"
-        "1. Orchestratorがこのゴールを子タスクに分解\n"
+        "1. Plannerがこのゴールを計画立案し子タスクに分解\n"
         "2. 各子タスクが並列/直列で実行 → レビュー → 修正\n"
         "3. 全子タスク完了後、Orchestratorが全体レビュー\n"
         "4. ゴール達成確認 → 完了\n\n"
@@ -158,7 +158,7 @@ def init_ulw_loop(
 
         task = _run_hermes_kanban([
             "create", goal,
-            "--assignee", ORCHESTRATOR_PROFILE,
+            "--assignee", PLANNER_PROFILE,
             "--body", kanban_body,
             "--priority", "2",
             "--json",
@@ -232,7 +232,7 @@ def init_ulw_loop(
             f"**目標:** {goal}\n"
             f"**KanbanタスクID:** `{task_id}`\n"
             f"**コンテキスト:** {'あり (' + str(len(context)) + '文字)' if context else 'なし'}\n"
-            f"**担当:** `{ORCHESTRATOR_PROFILE}` (triage → 自動分解)\n"
+            f"**担当:** `{PLANNER_PROFILE}` (triage → 自動分解)\n"
             + (
                 f"**通知:** ✅ このチャットに購読済み（blocked/completed等が自動通知されます）\n"
                 if subscribed else
@@ -271,7 +271,7 @@ def handle_ulw_command(raw_args: str) -> Optional[str]:
             "  `/ulw-loop 週次インシデントレポートを自動生成する`\n\n"
             "**どう動くか:**\n"
             "1. 目標をKanbanの`triage`に登録\n"
-            "2. `orchestrator`プロファイルが自動分解 → 子タスク生成\n"
+            "2. `planner`プロファイルが計画立案 → 子タスク生成\n"
             "3. 各子タスクを担当プロファイルが実行・レビュー・修正\n"
             "4. 全タスク完了後、orchestratorが全体ゴールを確認して完了\n\n"
             "**フェーズ:**\n"
@@ -297,7 +297,7 @@ def handle_ulw_command(raw_args: str) -> Optional[str]:
         f"{result['message']}\n\n"
         f"確認事項:\n"
         f"- `hermes kanban init` が実行済みか\n"
-        f"- `{ORCHESTRATOR_PROFILE}` プロファイルが存在するか (`hermes profile list`)\n"
+        f"- `{PLANNER_PROFILE}` プロファイルが存在するか (`hermes profile list`)\n"
         f"- ゲートウェイが起動しているか (`hermes gateway status`)"
     )
 
@@ -306,7 +306,7 @@ def _decompose_goal(goal_text: str) -> list[st.Goal]:
     """Heuristically decompose a goal into sub-goals with acceptance criteria.
 
     This is a simple heuristic that works for many software development goals.
-    The orchestrator profile can refine this via Kanban's auto_decompose.
+    The planner profile can refine this via Kanban's auto_decompose.
     """
     goal_lower = goal_text.lower()
 

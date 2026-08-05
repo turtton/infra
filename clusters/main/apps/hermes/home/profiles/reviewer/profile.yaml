@@ -1,0 +1,2 @@
+description: "コードレビュー・検証を担当するレビュアー。ULW-loopのverify/reviewフェーズを実行し、acceptance criteriaの充足と品質をチェックする。"
+description_auto: false

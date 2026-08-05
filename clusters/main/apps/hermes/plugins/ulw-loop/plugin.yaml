@@ -1,7 +1,7 @@
 name: ulw-loop
 label: ULW Loop
 kind: standalone
-version: 2.1.0
+version: 2.2.0
 description: >-
   ULW-loop (Explore → Plan → Execute → Verify → Review → Fix) for Hermes Agent.
   Full implementation with:
@@ -12,6 +12,7 @@ description: >-
   - Steering (add/split/revise goals mid-execution)
   - Auto-resume with 2-strike no-progress cap
   - Kanban integration for multi-agent orchestration
+  - Dedicated planner profile (kimi-k3, reasoning max) for goal decomposition
   
   Usage: /ulw-loop <goal description>
   Steering: /ulw-steer <action> <session-id> <params>

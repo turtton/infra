@@ -86,10 +86,13 @@ spec:
             - sh
             - -c
             - |
-              for profile in orchestrator executor reviewer; do
+              for profile in orchestrator executor reviewer planner; do
                 dir="/opt/data/profiles/$profile"
                 mkdir -p "$dir" && \
                 cp "/profile-seed/${profile}.yaml" "$dir/config.yaml" && \
+                if [ -f "/profile-seed/${profile}-profile.yaml" ]; then
+                  cp "/profile-seed/${profile}-profile.yaml" "$dir/profile.yaml"
+                fi && \
                 chmod -R 755 "$dir"
               done
           volumeMounts:

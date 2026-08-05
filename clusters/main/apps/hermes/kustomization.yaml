@@ -57,5 +57,10 @@ configMapGenerator:
   - name: hermes-profiles
     files:
       - orchestrator.yaml=home/profiles/orchestrator/config.yaml
+      - orchestrator-profile.yaml=home/profiles/orchestrator/profile.yaml
       - executor.yaml=home/profiles/executor/config.yaml
+      - executor-profile.yaml=home/profiles/executor/profile.yaml
       - reviewer.yaml=home/profiles/reviewer/config.yaml
+      - reviewer-profile.yaml=home/profiles/reviewer/profile.yaml
+      - planner.yaml=home/profiles/planner/config.yaml
+      - planner-profile.yaml=home/profiles/planner/profile.yaml
