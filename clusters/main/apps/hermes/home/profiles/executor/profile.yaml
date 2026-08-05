@@ -1,0 +1,2 @@
+description: "実装・実行を担当するエグゼキュータ。ULW-loopのexecuteフェーズでコード実装とテスト実行を行う。"
+description_auto: false

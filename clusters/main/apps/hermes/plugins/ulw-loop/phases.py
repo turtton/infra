@@ -1,12 +1,15 @@
-"""ULW-loop phase engine — 6-phase state machine.
+"""ULW-loop phase engine — 7-phase state machine.
 
-Phases mirror oh-my-openagent's ULW-loop model:
+Phases mirror oh-my-openagent's ULW-loop model with a plan-review gate:
 
-  explore → plan → execute → verify → review → fix ─→ complete
-                          ↑_____________________________|
-                                    (loop)
+  explore → plan → plan_review → execute → verify → review → fix ─→ complete
+                       ↑  ↓                           ↑_____________|
+                       └──┘ (plan revision loop)      (fix loop)
 
-Each phase transition is gated by token detection and/or quality gates.
+plan_review gates execution: the reviewer must approve the plan with
+<promise>DONE</promise> before execute starts; <request_fix> loops back
+to plan. Each phase transition is gated by token detection and/or
+quality gates.
 """
 
 import logging
@@ -25,19 +28,21 @@ logger = logging.getLogger(__name__)
 
 PHASE_EXPLORE = "explore"
 PHASE_PLAN = "plan"
+PHASE_PLAN_REVIEW = "plan_review"
 PHASE_EXECUTE = "execute"
 PHASE_VERIFY = "verify"
 PHASE_REVIEW = "review"
 PHASE_FIX = "fix"
 PHASE_COMPLETE = "complete"
 
-PHASE_CYCLE = [PHASE_EXPLORE, PHASE_PLAN, PHASE_EXECUTE,
-               PHASE_VERIFY, PHASE_REVIEW, PHASE_FIX]
+PHASE_CYCLE = [PHASE_EXPLORE, PHASE_PLAN, PHASE_PLAN_REVIEW,
+               PHASE_EXECUTE, PHASE_VERIFY, PHASE_REVIEW, PHASE_FIX]
 
 # Human-readable phase labels for system prompt injection
 PHASE_LABELS = {
     PHASE_EXPLORE: "探索 (Explore)",
     PHASE_PLAN: "計画 (Plan)",
+    PHASE_PLAN_REVIEW: "計画レビュー (Plan Review)",
     PHASE_EXECUTE: "実行 (Execute)",
     PHASE_VERIFY: "検証 (Verify)",
     PHASE_REVIEW: "レビュー (Review)",
@@ -55,7 +60,14 @@ PHASE_DESCRIPTIONS = {
     PHASE_PLAN: (
         "ゴールを分解し、acceptance criteria を定義します。"
         "各ゴールに happy path / edge case / regression の3つの成功基準を設定します。"
+        "完了したら `<request_review>` を出力して計画レビューを依頼してください。"
         "出力: ゴール一覧 (goals.json)"
+    ),
+    PHASE_PLAN_REVIEW: (
+        "Plannerが立てた計画（ゴール分解・acceptance criteria）をレビューします。"
+        "計画が妥当で実行可能なら `<promise>DONE</promise>` を出力して承認し、"
+        "不十分なら `<request_fix>` を出力して具体的な修正を指示してください。"
+        "出力: 承認 (<promise>DONE</promise>) or 修正指示 (<request_fix>)"
     ),
     PHASE_EXECUTE: (
         "現在のゴールを実装します。"
@@ -98,6 +110,35 @@ def next_phase(current: str, response_text: str, state_obj: st.UlwState) -> str:
         The next phase string.
     """
     tokens_found = tk.detect_tokens(response_text)
+
+    # --- PLAN → PLAN_REVIEW: planner hands off the plan for review ---
+    if current == PHASE_PLAN and tk.TOKEN_REQUEST_REVIEW in tokens_found:
+        st.ledger_append(state_obj.session_id, "phase:transition", {
+            "from": current,
+            "to": PHASE_PLAN_REVIEW,
+            "reason": "Planner requested plan review",
+        })
+        return PHASE_PLAN_REVIEW
+
+    # --- PLAN_REVIEW gate: reviewer approves plan or requests plan fixes ---
+    if current == PHASE_PLAN_REVIEW:
+        if tk.TOKEN_DONE in tokens_found:
+            st.ledger_append(state_obj.session_id, "phase:transition", {
+                "from": current,
+                "to": PHASE_EXECUTE,
+                "reason": "Reviewer approved the plan",
+            })
+            return PHASE_EXECUTE
+        if tk.TOKEN_REQUEST_FIX in tokens_found:
+            state_obj.iteration += 1  # Count plan revision iterations
+            st.ledger_append(state_obj.session_id, "phase:transition", {
+                "from": current,
+                "to": PHASE_PLAN,
+                "reason": "Reviewer requested plan fixes",
+            })
+            return PHASE_PLAN
+        # Gate: no approval token → stay in plan_review until reviewer decides
+        return current
 
     # --- TERMINAL: promise DONE in review phase = complete ---
     if current == PHASE_REVIEW and tk.TOKEN_DONE in tokens_found:

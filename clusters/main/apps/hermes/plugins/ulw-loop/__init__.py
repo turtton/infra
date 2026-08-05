@@ -433,7 +433,7 @@ def handle_from_context_command(raw_args: str) -> str | None:
             "**どう動くか:**\n"
             "1. これまでの会話を要約\n"
             "2. 要約をコンテキストとしてULW-loopを起動\n"
-            "3. Orchestratorプロファイルがコンテキスト込みでタスクを実行\n"
+            "3. Plannerプロファイルがコンテキスト込みで計画立案・実行\n"
             "4. **自動でこのチャットに通知購読**（blocked/completedが届く）\n\n"
             "**エージェントへの指示:**\n"
             "上記1-3を実行し、結果を報告してください。"
