@@ -7,9 +7,9 @@ orchestration.
 
 import json
 import logging
+import shlex
 import shutil
 import subprocess
-import shlex
 import sys
 import time
 from pathlib import Path
