@@ -445,12 +445,15 @@ def handle_from_context_command(raw_args: str) -> str | None:
     chat_id = session_info.chat_id if session_info else ""
     thread_id = session_info.thread_id if session_info else ""
 
-    # Build init_ulw_loop call with subscription params
-    sub_params = ""
-    if platform and chat_id:
-        sub_params = f', platform="{platform}", chat_id="{chat_id}"'
-        if thread_id:
-            sub_params += f', thread_id="{thread_id}"'
+    # Build the CLI invocation the agent should run (the plugin dir is
+    # hyphenated, so `from ulw_loop import init_ulw_loop` is not
+    # importable from execute_code — `hermes ulw-loop` is the reliable
+    # agent-facing entry point).
+    thread_opt = f" --thread-id {thread_id}" if thread_id else ""
+    cli_cmd = (
+        f"hermes ulw-loop \"{goal}\" --context <要約>"
+        + (f" --platform {platform} --chat-id {chat_id}{thread_opt}" if platform and chat_id else "")
+    )
 
     return (
         f"🔄 **ULW-loop起動準備**\n\n"
@@ -463,7 +466,7 @@ def handle_from_context_command(raw_args: str) -> str | None:
         ) +
         f"**エージェント（私）への指示:**\n"
         f"1. この会話の経緯・要件・決定事項を要約\n"
-        f"2. `init_ulw_loop(goal=\"{goal}\", context=<要約>{sub_params})` を実行\n"
+        f"2. ターミナルで ``{cli_cmd}`` を実行\n"
         f"3. 結果を報告"
     )
 
