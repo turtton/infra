@@ -297,14 +297,20 @@ def _sync_skill_dir(src: Path, dst: Path) -> None:
 
 
 def _find_existing_pr(branch: str, repo: Path) -> str | None:
-    """Return the PR number for the first open PR with *branch* as head, or None."""
+    """Return the PR number for the first open PR with *branch* as head, or None.
+
+    Note: ``jq ".[0].number | @text"`` on an empty array yields the string
+    ``"null"`` (not empty), so we must use ``// empty`` to get a blank output
+    — otherwise a missing PR would be mistaken for an existing one and new
+    PR creation would be skipped.
+    """
     r = _run(
         ["gh", "pr", "list",
          "--repo", "turtton/infra",
          "--head", branch,
          "--state", "OPEN",
          "--json", "number",
-         "-q", ".[0].number | @text"],
+         "-q", ".[0].number // empty"],
         cwd=repo,
         check=False,
     )
