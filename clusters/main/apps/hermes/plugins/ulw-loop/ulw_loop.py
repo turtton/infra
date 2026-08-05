@@ -382,3 +382,48 @@ def _decompose_goal(goal_text: str) -> list[st.Goal]:
         ))
 
     return goals
+
+
+# ---------------------------------------------------------------------------
+# CLI command — agent-mediated activation
+# ---------------------------------------------------------------------------
+# The plugin directory is `ulw-loop` (hyphenated), so `from ulw_loop import
+# init_ulw_loop` is NOT importable from a plain subprocess (e.g. execute_code).
+# Registering a `hermes ulw-loop` CLI subcommand gives the agent a reliable
+# terminal entry point for mid-conversation ULW-loop activation.
+
+def ulw_loop_cli_setup(sp) -> None:
+    """Argparse setup for ``hermes ulw-loop <goal>``."""
+    sp.add_argument(
+        "goal",
+        help="Brief goal description (used as Kanban task title)",
+    )
+    sp.add_argument(
+        "--context", default="",
+        help="Conversation context / discussion history embedded into the task",
+    )
+    sp.add_argument(
+        "--platform", default="",
+        help="Messaging platform (e.g. discord) for auto-subscribe",
+    )
+    sp.add_argument(
+        "--chat-id", default="",
+        help="Platform chat/channel ID to subscribe",
+    )
+    sp.add_argument(
+        "--thread-id", default="",
+        help="Optional platform thread/topic ID to subscribe",
+    )
+
+
+def ulw_loop_cli_run(args) -> int:
+    """Handler for ``hermes ulw-loop`` — delegates to ``init_ulw_loop``."""
+    result = init_ulw_loop(
+        args.goal,
+        context=args.context,
+        platform=args.platform,
+        chat_id=args.chat_id,
+        thread_id=args.thread_id,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result.get("success") else 1
