@@ -1,12 +1,13 @@
 name: ulw-loop
 label: ULW Loop
 kind: standalone
-version: 2.2.0
+version: 2.3.0
 description: >-
-  ULW-loop (Explore → Plan → Execute → Verify → Review → Fix) for Hermes Agent.
+  ULW-loop (Explore → Plan → Plan-Review → Execute → Verify → Review → Fix) for Hermes Agent.
   Full implementation with:
   - Durable state management (goals.json + ledger.jsonl)
   - Token-based phase transitions (<promise>DONE</promise> protocol)
+  - Plan review gate: reviewer must approve the plan before execution starts
   - Quality Gate checks (criteria coverage + adversarial coverage)
   - Blocker classification and 3-strike escalation
   - Steering (add/split/revise goals mid-execution)
