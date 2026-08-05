@@ -127,3 +127,5 @@ clusters/main/apps/hermes/
 
 - `gh` CLIは起動時に`gh auth login`で認証済み（Pod起動時のみ有効）
 - PR作成は `gh pr create` を使用（GH_TOKEN/GITHUB_TOKEN環境変数は使用不可）
+
+<!-- skill-gitops v1.2.1 E2E test marker -- remove me -->
