@@ -32,7 +32,8 @@ def sync_changed_skills(
     Acquires *lock_file* to prevent concurrent syncs.  Safe to call from a
     background thread — all I/O is local or via subprocess.
 
-    Returns: "done", "locked" (lock held by another sync), or "failed".
+    Returns: "done", "locked" (lock held by another sync). Exceptions from
+    ``_do_sync`` propagate to the caller (``__init__`` catches and logs them).
     """
     # ── Lock ────────────────────────────────────────────────────────────
     try:
@@ -178,17 +179,32 @@ def _do_sync(
         )
         logger.info("skill-gitops: PR created for branch %s", branch)
 
-    logger.info("skill-gitops: PR created for branch %s", branch)
-
 
 def _ensure_sync_worktree(repo: Path, worktree_path: Path, branch: str) -> bool:
-    """Create the persistent sync worktree if missing, else reset it to origin/main."""
+    """Create the persistent sync worktree if missing, else reset it to origin/main.
+
+    If the worktree exists but is on the wrong branch, it is removed and
+    recreated so we never reset an unrelated branch to origin/main.
+    """
     if (worktree_path / ".git").exists():
-        # Existing worktree — reset to latest main
-        _run(["git", "fetch", "origin", "main"], cwd=worktree_path, check=False)
-        _run(["git", "reset", "--hard", "origin/main"], cwd=worktree_path, check=False)
-        _run(["git", "clean", "-fd"], cwd=worktree_path, check=False)
-        return True
+        current_branch = _run(
+            ["git", "branch", "--show-current"], cwd=worktree_path, check=False
+        ).stdout.strip()
+        if current_branch != branch:
+            logger.warning(
+                "skill-gitops: worktree on unexpected branch '%s', recreating",
+                current_branch,
+            )
+            _run(["git", "worktree", "remove", "--force", str(worktree_path)],
+                 cwd=repo, check=False)
+            _run(["git", "worktree", "prune"], cwd=repo, check=False)
+            # Fall through to recreate below
+        else:
+            # Existing worktree on the right branch — reset to latest main
+            _run(["git", "fetch", "origin", "main"], cwd=worktree_path, check=False)
+            _run(["git", "reset", "--hard", "origin/main"], cwd=worktree_path, check=False)
+            _run(["git", "clean", "-fd"], cwd=worktree_path, check=False)
+            return True
     # Create fresh worktree (-B resets branch to origin/main if it exists)
     r = _run(
         ["git", "worktree", "add", "-B", branch, str(worktree_path), "origin/main"],
@@ -205,6 +221,7 @@ def _ensure_sync_worktree(repo: Path, worktree_path: Path, branch: str) -> bool:
 
 def _reset_worktree(worktree_path: Path) -> None:
     """Reset the sync worktree back to origin/main after a failed sync."""
+    _run(["git", "fetch", "origin", "main"], cwd=worktree_path, check=False)
     _run(["git", "reset", "--hard", "origin/main"], cwd=worktree_path, check=False)
     _run(["git", "clean", "-fd"], cwd=worktree_path, check=False)
 
@@ -294,31 +311,6 @@ def _find_existing_pr(branch: str, repo: Path) -> str | None:
     if r.returncode == 0 and r.stdout.strip():
         return r.stdout.strip()
     return None
-
-
-def _cleanup_worktree(
-    repo: Path,
-    branch: str,
-    worktree_path: Path,
-    delete_branch: bool = True,
-) -> None:
-    """Remove worktree, optionally delete branch, and scrub the directory.
-
-    DEPRECATED in v1.2.0 — the sync worktree is now persistent. Kept only
-    as a manual helper; not called by the sync path.
-    """
-    _run(
-        ["git", "worktree", "remove", "--force", str(worktree_path)],
-        cwd=repo,
-        check=False,
-    )
-    if delete_branch:
-        _run(["git", "branch", "-D", branch], cwd=repo, check=False)
-    try:
-        shutil.rmtree(worktree_path, ignore_errors=True)
-    except OSError:
-        pass
-    _run(["git", "worktree", "prune"], cwd=repo, check=False)
 
 
 # ── Shell helper ────────────────────────────────────────────────────────────
