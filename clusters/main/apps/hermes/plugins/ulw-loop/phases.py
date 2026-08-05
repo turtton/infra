@@ -1,12 +1,15 @@
-"""ULW-loop phase engine — 6-phase state machine.
+"""ULW-loop phase engine — 7-phase state machine.
 
-Phases mirror oh-my-openagent's ULW-loop model:
+Phases mirror oh-my-openagent's ULW-loop model with a plan-review gate:
 
-  explore → plan → execute → verify → review → fix ─→ complete
-                          ↑_____________________________|
-                                    (loop)
+  explore → plan → plan_review → execute → verify → review → fix ─→ complete
+                       ↑  ↓                           ↑_____________|
+                       └──┘ (plan revision loop)      (fix loop)
 
-Each phase transition is gated by token detection and/or quality gates.
+plan_review gates execution: the reviewer must approve the plan with
+<promise>DONE</promise> before execute starts; <request_fix> loops back
+to plan. Each phase transition is gated by token detection and/or
+quality gates.
 """
 
 import logging
