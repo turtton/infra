@@ -71,9 +71,7 @@ spec:
             - -c
             - |
               mkdir -p /opt/data/plugins/fluxer && \
-              cp /plugin-seed/plugin.yaml /opt/data/plugins/fluxer/plugin.yaml && \
-              cp /plugin-seed/adapter.py /opt/data/plugins/fluxer/adapter.py && \
-              cp /plugin-seed/__init__.py /opt/data/plugins/fluxer/__init__.py && \
+              cp /plugin-seed/* /opt/data/plugins/fluxer/ && \
               chmod -R 755 /opt/data/plugins/fluxer
           volumeMounts:
             - name: plugin-seed
