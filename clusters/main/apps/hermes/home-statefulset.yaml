@@ -84,6 +84,16 @@ spec:
               mountPath: /profile-seed
             - name: data
               mountPath: /opt/data
+        - name: init-fix-plugin-owner
+          # plugins管理がinfraから外れ、hermesユーザーが install --force で
+          # 再作成できるようにPVC上の所有権を修正する（旧init-pluginがroot所有で残したdir対策）
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /opt/data/plugins && \
+              chown -R hermes:hermes /opt/data/plugins
         - name: install-tools
           image: alpine:latest
           command:
