@@ -64,22 +64,6 @@ spec:
               mountPath: /skill-seed
             - name: data
               mountPath: /opt/data
-        - name: init-plugin
-          image: busybox:latest
-          command:
-            - sh
-            - -c
-            - |
-              mkdir -p /opt/data/plugins/fluxer && \
-              cp /plugin-seed/plugin.yaml /opt/data/plugins/fluxer/plugin.yaml && \
-              cp /plugin-seed/adapter.py /opt/data/plugins/fluxer/adapter.py && \
-              cp /plugin-seed/__init__.py /opt/data/plugins/fluxer/__init__.py && \
-              chmod -R 755 /opt/data/plugins/fluxer
-          volumeMounts:
-            - name: plugin-seed
-              mountPath: /plugin-seed
-            - name: data
-              mountPath: /opt/data
         - name: init-profiles
           image: busybox:latest
           command:
@@ -100,34 +84,17 @@ spec:
               mountPath: /profile-seed
             - name: data
               mountPath: /opt/data
-        - name: init-plugin-ulw-loop
+        - name: init-fix-plugin-owner
+          # plugins管理がinfraから外れ、hermesユーザーが install --force で
+          # 再作成できるようにPVC上の所有権を修正する（旧init-pluginがroot所有で残したdir対策）
           image: busybox:latest
           command:
             - sh
-            - -e
             - -c
             - |
-              mkdir -p /opt/data/plugins/ulw-loop && \
-              cp /ulw-loop-plugin-seed/* /opt/data/plugins/ulw-loop/ && \
-              chmod -R 755 /opt/data/plugins/ulw-loop
+              mkdir -p /opt/data/plugins && \
+              chown -R hermes:hermes /opt/data/plugins
           volumeMounts:
-            - name: ulw-loop-plugin-seed
-              mountPath: /ulw-loop-plugin-seed
-            - name: data
-              mountPath: /opt/data
-        - name: init-plugin-skill-gitops
-          image: busybox:latest
-          command:
-            - sh
-            - -e
-            - -c
-            - |
-              mkdir -p /opt/data/plugins/skill-gitops && \
-              cp /skill-gitops-plugin-seed/* /opt/data/plugins/skill-gitops/ && \
-              chmod -R 755 /opt/data/plugins/skill-gitops
-          volumeMounts:
-            - name: skill-gitops-plugin-seed
-              mountPath: /skill-gitops-plugin-seed
             - name: data
               mountPath: /opt/data
         - name: install-tools
@@ -288,15 +255,6 @@ spec:
                   items:
                     - key: SKILL.md
                       path: config-ops/SKILL.md
-        - name: plugin-seed
-          configMap:
-            name: hermes-fluxer-plugin
-        - name: ulw-loop-plugin-seed
-          configMap:
-            name: hermes-ulw-loop-plugin
-        - name: skill-gitops-plugin-seed
-          configMap:
-            name: hermes-skill-gitops-plugin
         - name: profile-seed
           configMap:
             name: hermes-profiles
