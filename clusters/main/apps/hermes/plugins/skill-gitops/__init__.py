@@ -17,9 +17,11 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # ── Config ──────────────────────────────────────────────────────────────────
-HERMES_HOME = Path(os.environ.get("HERMES_HOME", "/opt/data"))
+# Environment-driven config so the plugin installs on any Hermes instance.
+# All vars fall back to turtton's original deployment paths.
+HERMES_HOME = Path(os.environ.get("HERMES_HOME") or Path.home() / ".hermes")
 SKILLS_DIR = HERMES_HOME / "skills"
-INFRA_REPO = Path("/opt/data/infra")
+INFRA_REPO = Path(os.environ.get("SKILL_GITOPS_INFRA_REPO", "/opt/data/infra"))
 INFRA_SKILLS_DIR = INFRA_REPO / "clusters" / "main" / "apps" / "hermes" / "skills"
 LOCK_FILE = Path("/tmp/skill-gitops.lock")
 DEBOUNCE_SECONDS = 30  # seconds to wait for more changes before creating PR

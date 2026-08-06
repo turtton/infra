@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 GIT_NAME = "github-actions[bot]"
 GIT_EMAIL = "github-actions[bot]@users.noreply.github.com"
 
+# Target repository for the sync PRs (overridable per deployment).
+GH_REPO = os.environ.get("SKILL_GITOPS_GH_REPO", "turtton/infra")
+
 
 def sync_changed_skills(
     *,
@@ -58,11 +61,10 @@ def sync_changed_skills(
 # Fixed branch name — force-pushed on every sync so only one PR exists at a time
 _SYNC_BRANCH = "hermes/skill-update"
 
-# Persistent worktree dedicated to the sync branch. The main checkout
-# (/opt/data/infra) stays on main at all times — self-improvement work is
-# isolated in this separate folder so the main repo is never left on a
-# dangling PR branch.
-_SYNC_WORKTREE = Path("/opt/data/infra-sync")
+# Persistent worktree dedicated to the sync branch. The main checkout stays
+# on main at all times — self-improvement work is isolated in this separate
+# folder so the main repo is never left on a dangling PR branch.
+_SYNC_WORKTREE = Path(os.environ.get("SKILL_GITOPS_WORKTREE", "/opt/data/infra-sync"))
 
 
 def _do_sync(
@@ -168,7 +170,7 @@ def _do_sync(
         _run(
             [
                 "gh", "pr", "create",
-                "--repo", "turtton/infra",
+                "--repo", GH_REPO,
                 "--title", title,
                 "--body", body,
                 "--base", "main",
@@ -306,7 +308,7 @@ def _find_existing_pr(branch: str, repo: Path) -> str | None:
     """
     r = _run(
         ["gh", "pr", "list",
-         "--repo", "turtton/infra",
+         "--repo", GH_REPO,
          "--head", branch,
          "--state", "OPEN",
          "--json", "number",

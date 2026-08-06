@@ -13,8 +13,7 @@ description: >-
   - Steering (add/split/revise goals mid-execution)
   - Auto-resume with 2-strike no-progress cap
   - Kanban integration for multi-agent orchestration
-  - Dedicated planner profile (kimi-k3, reasoning max) for goal decomposition
-  
+
   Usage: /ulw-loop <goal description>
   Steering: /ulw-steer <action> <session-id> <params>
   Agent CLI: hermes ulw-loop <goal> --context <summary> --platform discord

@@ -35,25 +35,25 @@ configMapGenerator:
       - SKILL.md=skills/github-ops/SKILL.md
   - name: hermes-fluxer-plugin
     files:
-      - plugin.yaml=plugins/fluxer/plugin.yaml
-      - adapter.py=plugins/fluxer/adapter.py
-      - __init__.py=plugins/fluxer/__init__.py
+      - plugins/fluxer/__init__.py
+      - plugins/fluxer/adapter.py
+      - plugins/fluxer/plugin.yaml
   - name: hermes-ulw-loop-plugin
     files:
-      - plugin.yaml=plugins/ulw-loop/plugin.yaml
-      - __init__.py=plugins/ulw-loop/__init__.py
-      - ulw_loop.py=plugins/ulw-loop/ulw_loop.py
-      - state.py=plugins/ulw-loop/state.py
-      - phases.py=plugins/ulw-loop/phases.py
-      - tokens.py=plugins/ulw-loop/tokens.py
-      - quality_gate.py=plugins/ulw-loop/quality_gate.py
-      - blocker.py=plugins/ulw-loop/blocker.py
-      - steering.py=plugins/ulw-loop/steering.py
+      - plugins/ulw-loop/__init__.py
+      - plugins/ulw-loop/blocker.py
+      - plugins/ulw-loop/phases.py
+      - plugins/ulw-loop/plugin.yaml
+      - plugins/ulw-loop/quality_gate.py
+      - plugins/ulw-loop/state.py
+      - plugins/ulw-loop/steering.py
+      - plugins/ulw-loop/tokens.py
+      - plugins/ulw-loop/ulw_loop.py
   - name: hermes-skill-gitops-plugin
     files:
-      - plugin.yaml=plugins/skill-gitops/plugin.yaml
-      - __init__.py=plugins/skill-gitops/__init__.py
-      - sync.py=plugins/skill-gitops/sync.py
+      - plugins/skill-gitops/__init__.py
+      - plugins/skill-gitops/plugin.yaml
+      - plugins/skill-gitops/sync.py
   - name: hermes-profiles
     files:
       - orchestrator.yaml=home/profiles/orchestrator/config.yaml
@@ -64,3 +64,4 @@ configMapGenerator:
       - reviewer-profile.yaml=home/profiles/reviewer/profile.yaml
       - planner.yaml=home/profiles/planner/config.yaml
       - planner-profile.yaml=home/profiles/planner/profile.yaml
+
