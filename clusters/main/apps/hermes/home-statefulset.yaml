@@ -288,6 +288,16 @@ spec:
                   items:
                     - key: SKILL.md
                       path: config-ops/SKILL.md
+              - configMap:
+                  name: hermes-github-ops-skill
+                  items:
+                    - key: SKILL.md
+                      path: github-ops/SKILL.md
+              - configMap:
+                  name: hermes-plugin-ops-skill
+                  items:
+                    - key: SKILL.md
+                      path: plugin-ops/SKILL.md
         - name: plugin-seed
           configMap:
             name: hermes-fluxer-plugin

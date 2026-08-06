@@ -33,6 +33,9 @@ configMapGenerator:
   - name: hermes-github-ops-skill
     files:
       - SKILL.md=skills/github-ops/SKILL.md
+  - name: hermes-plugin-ops-skill
+    files:
+      - SKILL.md=skills/plugin-ops/SKILL.md
   - name: hermes-fluxer-plugin
     files:
       - plugin.yaml=plugins/fluxer/plugin.yaml
