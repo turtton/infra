@@ -94,6 +94,9 @@ spec:
             - |
               mkdir -p /opt/data/plugins && \
               chown -R hermes:hermes /opt/data/plugins
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
         - name: install-tools
           image: alpine:latest
           command:
