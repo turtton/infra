@@ -44,9 +44,9 @@ git checkout -b hermes/config-update-$(date +%Y%m%d-%H%M%S)
 # - home インスタンス: clusters/main/apps/hermes/home-*.yaml
 # - lepi インスタンス: clusters/main/apps/hermes/lepi-*.yaml
 # - Hermes config: clusters/main/apps/hermes/home/config.yaml, lepi/config.yaml
-# - Hermes plugins: clusters/main/apps/hermes/plugins/*/
 # - Hermes skills: clusters/main/apps/hermes/skills/*/SKILL.md
 # - ConfigMap source: clusters/main/apps/hermes/kustomization.yaml
+# - ※ Hermes plugins は infra 管理対象外（turtton/hermes-plugins リポジトリで管理。plugin-ops スキル参照）
 
 # コミット＆プッシュ
 git add .
@@ -114,6 +114,7 @@ clusters/main/apps/hermes/
 
 ## 注意事項
 
+- **ローカルcheckoutはstaleになり得る**: `/opt/data/infra` のローカルmainブランチはskill-gitopsがfetchするだけでresetされないため、origin/mainより古いことがある（実例: PR #105時点のまま数PR分遅れ）。**infraの現状判断・diff比較は必ず `git fetch origin main` 後に `origin/main` 基準で行うこと**。`/opt/data/infra` の作業ツリーのファイルと直接比較すると誤った「ドリフト」結論になる
 - **Flux管理**: GitOpsの定義がPod再起動時に適用される。Pod内の設定変更は一時的
 - **Skills永続化**: SkillsディレクトリはPVC上にあり、Pod再起動後も維持される（init containerでConfigMapから初期シード）
 - **SOPS暗号化ファイル**: `*.sops.yaml` は直接編集不可。シークレット変更が必要な場合はオーナーに報告
