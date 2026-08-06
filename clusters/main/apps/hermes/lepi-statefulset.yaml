@@ -145,7 +145,7 @@ spec:
                   name: hermes-lepi-secrets
                   key: DISCORD_BOT_TOKEN
             - name: DISCORD_ALLOWED_USERS
-              value: "275915497353117697,299106923741970432,280320003159490561"
+              value: "275915497353117697,665153234259673090,697435622981238814,247702806255894528"
             - name: DISCORD_REQUIRE_MENTION
               value: "true"
             - name: HERMES_DASHBOARD
@@ -235,4 +235,3 @@ spec:
         resources:
           requests:
             storage: 5Gi
-
