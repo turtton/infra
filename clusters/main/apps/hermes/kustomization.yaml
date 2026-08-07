@@ -33,9 +33,10 @@ configMapGenerator:
   - name: hermes-github-ops-skill
     files:
       - SKILL.md=skills/github-ops/SKILL.md
+  # home/lepi 両StatefulSetで共有するGitHub App認証スクリプト
   - name: hermes-gh-app-script
     files:
-      - gh-app-token-refresh.py=home/gh-app-token-refresh.py
+      - gh-app-token-refresh.py=gh-app-token-refresh.py
   - name: hermes-profiles
     files:
       - orchestrator.yaml=home/profiles/orchestrator/config.yaml
