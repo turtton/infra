@@ -92,8 +92,9 @@ spec:
             - sh
             - -c
             - |
+              # busyboxにはhermesユーザーが存在しないため数値UID/GIDで指定する
               mkdir -p /opt/data/plugins && \
-              chown -R hermes:hermes /opt/data/plugins
+              chown -R 10000:10000 /opt/data/plugins
           volumeMounts:
             - name: data
               mountPath: /opt/data
