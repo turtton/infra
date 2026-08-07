@@ -282,6 +282,9 @@ spec:
         - name: profile-seed
           configMap:
             name: hermes-profiles
+        - name: gh-app-script-seed
+          configMap:
+            name: hermes-gh-app-script
         - name: run
           emptyDir:
             medium: Memory
