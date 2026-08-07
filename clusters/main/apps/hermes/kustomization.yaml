@@ -33,6 +33,9 @@ configMapGenerator:
   - name: hermes-github-ops-skill
     files:
       - SKILL.md=skills/github-ops/SKILL.md
+  - name: hermes-gh-app-script
+    files:
+      - gh-app-token-refresh.py=home/gh-app-token-refresh.py
   - name: hermes-profiles
     files:
       - orchestrator.yaml=home/profiles/orchestrator/config.yaml
