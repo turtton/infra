@@ -52,7 +52,7 @@ tags: [hermes, plugins, distribution, auto-update]
 
 ## Pitfalls
 
-- **root所有ディレクトリ**: 旧infra initコンテナ（root実行）が作った `/opt/data/plugins/*` がroot所有だと、`--force` のrmtreeが `PermissionError` で失敗する。infra側の `init-fix-plugin-owner`（chown to hermes）が恒久修正済み。手元で直す場合は `mv` で退避→再install（退避dirは後で削除）
+- **root所有ディレクトリ**: 旧infra initコンテナ（root実行）が作った `/opt/data/plugins/*` がroot所有だと、`--force` のrmtreeが `PermissionError` で失敗する。infra側の `init-fix-plugin-owner` が恒久修正済み（`chown -R 10000:10000` — **busyboxは`hermes`ユーザー名を解決できないため数値UID/GID指定必須**）。手元で直す場合は `mv` で退避→再install（退避dirは後で削除）
 - **requires_env**: 環境変数が未設定だとinstall時にプロンプトが出る。非対話環境ではEOFErrorで安全にスキップされる（あとで .env に設定）
 - **platformプラグイン（fluxer）**: 再install後、gateway restartまで旧コードがメモリ上で動き続ける。挙動変更の反映には `hermes gateway restart`（またはPod再起動）が必要な場合あり
 - **hermes-pluginsの変更は直接push**: config-ops（PR必須・CI必須・subagentレビュー）とはポリシーが異なる。混同しないこと
