@@ -21,7 +21,7 @@ spec:
       serviceAccountName: hermes-lepi
       # Secret volumeのファイルは defaultMode: 0440 (owner r only) でマウントされるが、
       # fsGroup: 10000 (hermes ユーザーの GID) によりグループ読み取り可能になる。
-      # これにより su hermes 経由でも /mnt/secrets/GITHUB_TOKEN を読める。
+      # これにより su hermes 経由でも /mnt/secrets/GITHUB_APP_* を読める。
       # ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#configure-volume-permission-and-ownership-change-policy-for-pods
       securityContext:
         fsGroup: 10000
@@ -64,6 +64,21 @@ spec:
               mountPath: /skill-seed
             - name: data
               mountPath: /opt/data
+        - name: init-gh-app-script
+          image: busybox:latest
+          command:
+            - sh
+            - -e
+            - -c
+            - |
+              mkdir -p /opt/data/scripts && \
+              cp /gh-app-script-seed/gh-app-token-refresh.py /opt/data/scripts/gh-app-token-refresh.py && \
+              chmod 755 /opt/data/scripts/gh-app-token-refresh.py
+          volumeMounts:
+            - name: gh-app-script-seed
+              mountPath: /gh-app-script-seed
+            - name: data
+              mountPath: /opt/data
         - name: install-tools
           image: alpine:latest
           command:
@@ -98,9 +113,17 @@ spec:
               export GH_CONFIG_DIR=/run/gh-config
               mkdir -p "$GH_CONFIG_DIR"
               chown hermes:hermes "$GH_CONFIG_DIR"
+              # GitHub App installation tokenでgh CLIを初期認証する。
+              # installation tokenは1時間で失効するため、以降はcronのno_agentジョブ
+              # (gh-app-token-refresh) が同じスクリプトで45分おきに更新する。
               if ! su hermes -c 'GH_CONFIG_DIR=/run/gh-config /opt/data/bin/gh auth status' >/dev/null 2>&1; then
-                su hermes -c 'GH_CONFIG_DIR=/run/gh-config /opt/data/bin/gh auth login --with-token < /mnt/secrets/GITHUB_TOKEN'
+                su hermes -c '/opt/hermes/.venv/bin/python /opt/data/scripts/gh-app-token-refresh.py' || { echo "FATAL: gh auth failed"; exit 1; }
                 su hermes -c 'GH_CONFIG_DIR=/run/gh-config /opt/data/bin/gh auth status' >/dev/null 2>&1 || { echo "FATAL: gh auth failed"; exit 1; }
+              fi
+              # トークン定期更新のcronジョブを冪等に登録する（jobs.jsonはPVC上に永続化される）
+              if ! grep -q '"gh-app-token-refresh"' /opt/data/cron/jobs.json 2>/dev/null; then
+                su hermes -c 'HOME=/opt/data HERMES_HOME=/opt/data /opt/hermes/.venv/bin/hermes cron create "every 45m" --no-agent --script gh-app-token-refresh.py --deliver discord --name gh-app-token-refresh' \
+                  || echo "WARN: gh-app-token-refresh cron job registration failed"
               fi
               # Ensure /opt/data/bin is in PATH for terminal login shells.
               # bash -l sources /etc/profile which overrides the K8s-set PATH,
@@ -214,6 +237,9 @@ spec:
                   items:
                     - key: SKILL.md
                       path: github-ops/SKILL.md
+        - name: gh-app-script-seed
+          configMap:
+            name: hermes-gh-app-script
         - name: run
           emptyDir:
             medium: Memory
