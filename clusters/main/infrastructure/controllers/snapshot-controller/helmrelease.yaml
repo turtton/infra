@@ -1,0 +1,32 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: snapshot-controller
+  namespace: snapshot-system
+spec:
+  interval: 30m0s
+  chart:
+    spec:
+      chart: snapshot-controller
+      version: "5.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: piraeus
+        namespace: flux-system
+      interval: 12h0m0s
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    installCRDs: true
+    controller:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
