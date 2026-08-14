@@ -218,6 +218,11 @@ spec:
               value: "https://chat.turtton.net"
             - name: FLUXER_ALLOW_ALL_USERS
               value: "true"
+            - name: EXA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-home-secrets
+                  key: EXA_API_KEY
             - name: HERMES_DASHBOARD
               value: "1"
             - name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME
