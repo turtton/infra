@@ -6,6 +6,8 @@ metadata:
   namespace: longhorn-system
 spec:
   interval: 30m0s
+  # engine image 展開を伴うロールアウトはデフォルトの 5m を超えがちなため
+  timeout: 15m
   chart:
     spec:
       chart: longhorn
@@ -22,7 +24,8 @@ spec:
   upgrade:
     crds: CreateReplace
     remediation:
-      retries: 3
+      # Longhorn はダウングレード不能のため自動ロールバックを無効化
+      retries: 0
   values:
     defaultSettings:
       defaultReplicaCount: 2
