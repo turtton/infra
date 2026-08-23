@@ -6,3 +6,4 @@ resources:
   - helmrelease.yaml
   - r2-credentials.sops.yaml
   - recurring-job.yaml
+  - networkpolicy-prometheus.yaml
