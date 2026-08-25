@@ -37,6 +37,9 @@ agent:
   reasoning_effort: max
 logging:
   level: info
+display:
+  tool_progress: verbose
+  tool_preview_length: 0
 toolsets:
   - discord
 platform_toolsets:
