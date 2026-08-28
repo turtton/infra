@@ -131,7 +131,7 @@ Talos VMは初回起動時にTailscaleが未設定のため、LAN IP経由でし
 
 ### 自動ローテーション
 
-`.github/workflows/terraform-rotate.yml` が毎週月曜 09:00 (JST) に実行され、キーの期限管理は原則自動。期限超過から最大1週間以内に新キーが発行・適用され、失敗時はGitHub Issueが作成される。
+`.github/workflows/terraform-rotate.yml` が毎週金曜 19:00 (JST) に実行され、キーの期限管理は原則自動。期限超過から最大1週間以内に新キーが発行・適用され、失敗時はGitHub Issueが作成される。
 
 ### 手動でのローテーション (ワークフロー不調時)
 

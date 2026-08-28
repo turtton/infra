@@ -2,8 +2,8 @@ name: OpenTofu Rotate Tailscale Key
 
 on:
   schedule:
-    # 毎週月曜 09:00 JST (00:00 UTC)
-    - cron: "0 0 * * 1"
+    # 毎週金曜 19:00 JST (10:00 UTC)
+    - cron: "0 10 * * 5"
   workflow_dispatch:
 
 concurrency:

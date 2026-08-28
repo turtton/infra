@@ -60,7 +60,7 @@ apply成功後、暗号化されたstateファイルを自動的にgit commit & 
 
 #### terraform-rotate.yml (Tailscale auth key ローテーション)
 
-毎週月曜 09:00 (JST) に schedule 実行（手動実行も可能）。
+毎週金曜 19:00 (JST) に schedule 実行（手動実行も可能）。
 
 Talosノード用のTailscale auth key (`tailscale_tailnet_key` + `time_rotating`, 30日) の期限管理を自動化する:
 
