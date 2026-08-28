@@ -151,8 +151,9 @@ ping 192.168.10.110
 export PROXMOX_VE_ENDPOINT="https://<proxmox-ip>:8006"
 export PROXMOX_VE_API_TOKEN="terraform@pve!tofu=<token-value>"
 export TF_VAR_state_encryption_passphrase="<16文字以上のパスフレーズ>"
-export TF_VAR_tailscale_authkey="tskey-auth-..."
 ```
+
+Talosノード用auth keyは Terraform の `tailscale_tailnet_key` リソースが自動発行するため、手動での発行・設定は不要。
 
 ### GitHub Actions
 
@@ -163,7 +164,6 @@ export TF_VAR_tailscale_authkey="tskey-auth-..."
 | `PROXMOX_VE_ENDPOINT` | `https://<tailscale-ip>:8006` |
 | `PROXMOX_VE_API_TOKEN` | `terraform@pve!tofu=<token-value>` |
 | `TOFU_STATE_PASSPHRASE` | State暗号化パスフレーズ（32文字以上推奨） |
-| `TAILSCALE_AUTHKEY` | Talosノード用reusable authkey |
 
 ---
 

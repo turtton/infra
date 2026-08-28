@@ -42,7 +42,6 @@
             rbw_get() { command -v rbw >/dev/null 2>&1 && rbw get "$1" 2>/dev/null; }
             rbw_get_username() { command -v rbw >/dev/null 2>&1 && rbw get -f username "$1" 2>/dev/null; }
             val="$(rbw_get infra-tohu-state-passphrase)"             && export TF_VAR_state_encryption_passphrase="$val"
-            val="$(rbw_get terraform-tailscale-auth-key)"            && export TF_VAR_tailscale_authkey="$val"
             val="$(rbw_get terraform-cloudflare-api-token)"          && export TF_VAR_cloudflare_api_token="$val"
             val="$(rbw_get_username terraform-acl-tailscale-oauth)"  && export TF_VAR_tailscale_oauth_client_id="$val"
             val="$(rbw_get terraform-acl-tailscale-oauth)"           && export TF_VAR_tailscale_oauth_client_secret="$val"
