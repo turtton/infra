@@ -9,12 +9,6 @@ variable "state_encryption_passphrase" {
   }
 }
 
-variable "tailscale_authkey" {
-  description = "Tailscale auth key for Talos nodes (reusable, tagged)"
-  type        = string
-  sensitive   = true
-}
-
 variable "tailscale_oauth_client_id" {
   description = "Tailscale OAuth client ID for ACL management"
   type        = string

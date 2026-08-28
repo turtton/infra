@@ -30,13 +30,12 @@ locals {
         }
       }
     }),
-    # Tailscale ExtensionServiceConfig（configuration依存を満たすために必須）
     <<-EOT
     apiVersion: v1alpha1
     kind: ExtensionServiceConfig
     name: tailscale
     environment:
-      - TS_AUTHKEY=${var.tailscale_authkey}
+      - TS_AUTHKEY=${tailscale_tailnet_key.nodes.key}
     EOT
     ,
     # カーネルログを各ノードのalloy（hostNetwork DaemonSet）へTCP転送
@@ -183,7 +182,7 @@ resource "talos_machine_configuration_apply" "controlplane" {
   machine_configuration_input = data.talos_machine_configuration.controlplane[each.key].machine_configuration
   node                        = each.value.ip
 
-  depends_on = [proxmox_virtual_environment_vm.talos_node]
+  depends_on = [proxmox_virtual_environment_vm.talos_node, tailscale_tailnet_key.nodes]
 }
 
 resource "talos_machine_configuration_apply" "worker" {
@@ -193,7 +192,7 @@ resource "talos_machine_configuration_apply" "worker" {
   machine_configuration_input = data.talos_machine_configuration.worker[each.key].machine_configuration
   node                        = each.value.ip
 
-  depends_on = [proxmox_virtual_environment_vm.talos_node]
+  depends_on = [proxmox_virtual_environment_vm.talos_node, tailscale_tailnet_key.nodes]
 }
 
 # 最初のCPでブートストラップ

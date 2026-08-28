@@ -2,6 +2,23 @@ locals {
   proxmox_tailscale_devices = ["main", "data", "toliunit"]
 }
 
+resource "time_rotating" "tailscale_authkey" {
+  rotation_days = 30
+}
+
+resource "tailscale_tailnet_key" "nodes" {
+  reusable      = true
+  ephemeral     = false
+  preauthorized = true
+  tags          = ["tag:infra-talos-cluster"]
+
+  lifecycle {
+    replace_triggered_by = [
+      time_rotating.tailscale_authkey
+    ]
+  }
+}
+
 data "tailscale_device" "proxmox" {
   for_each = toset(local.proxmox_tailscale_devices)
   hostname = each.value

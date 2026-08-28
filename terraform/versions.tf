@@ -18,6 +18,10 @@ terraform {
       source  = "tailscale/tailscale"
       version = "~> 0.29"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.13"
+    }
   }
 
   encryption {
