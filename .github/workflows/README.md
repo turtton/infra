@@ -58,6 +58,21 @@ GitHub Actions UIから手動で実行。mainブランチのterraform構成をap
 
 apply成功後、暗号化されたstateファイルを自動的にgit commit & pushする。
 
+#### terraform-rotate.yml (Tailscale auth key ローテーション)
+
+毎週月曜 09:00 (JST) に schedule 実行（手動実行も可能）。
+
+Talosノード用のTailscale auth key (`tailscale_tailnet_key` + `time_rotating`, 30日) の期限管理を自動化する:
+
+1. キー系リソースのみ apply (期限超過時のみ新キー発行、それ以外はno-op)
+2. `talos_machine_configuration_apply` に差分があるか検出 (`tofu plan -detailed-exitcode`)
+3. 差分がある週だけフル apply で全ノードへ新キーを適用し、stateをcommit & push
+4. 失敗時はGitHub Issueを自動作成し、成功時に自動close
+
+2段階に分ける理由: Talos provider は plan 時に値が未知のキーを machine config に含めると
+`inconsistent final plan` エラーになるため、キー発行とノード適用を別 apply に分ける必要がある
+(詳細は terraform/README.md 参照)。
+
 ### Flux CD
 
 #### flux-check.yml (Validate)
@@ -77,13 +92,17 @@ FluxはGitマージ時に自動reconcileするため、applyワークフロー�
 |---|---|---|
 | `TAILSCALE_OAUTH_CLIENT_ID` | Tailscale OAuth Client ID | Ansible / OpenTofu共通 |
 | `TAILSCALE_OAUTH_SECRET` | Tailscale OAuth Client Secret | Ansible / OpenTofu共通 |
+| `TAILSCALE_ACL_OAUTH_CLIENT_ID` | Tailscale ACL管理用OAuth Client ID (terraform provider用) | OpenTofu |
+| `TAILSCALE_ACL_OAUTH_SECRET` | Tailscale ACL管理用OAuth Client Secret (terraform provider用) | OpenTofu |
+| `TAILSCALE_TAILNET` | Tailnet名 | OpenTofu |
 | `SSH_PRIVATE_KEY` | Proxmoxノード接続用SSH秘密鍵 (ed25519) | Ansible / OpenTofu共通 |
 | `ANSIBLE_VAULT_PASSWORD` | ansible-vaultの復号パスワード | Ansible |
 | `PROXMOX_VE_ENDPOINT` | Proxmox APIエンドポイント | OpenTofu |
 | `PROXMOX_VE_API_TOKEN` | OpenTofu用APIトークン | OpenTofu |
 | `TOFU_STATE_PASSPHRASE` | State暗号化パスフレーズ | OpenTofu |
-| `TAILSCALE_AUTHKEY` | Talosノード用reusable authkey | OpenTofu |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare APIトークン (Tunnel/Access/DNS管理) | OpenTofu |
+
+注: `tailscale_tailnet_key` リソースがキーを発行するため、ACL管理用OAuth Clientには **Auth keys (write)** スコープが必要。
 
 ## Tailscale Setup
 

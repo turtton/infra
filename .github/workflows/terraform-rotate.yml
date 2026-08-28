@@ -1,0 +1,178 @@
+name: OpenTofu Rotate Tailscale Key
+
+on:
+  schedule:
+    # 毎週月曜 09:00 JST (00:00 UTC)
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    env:
+      PROXMOX_VE_ENDPOINT: ${{ secrets.PROXMOX_VE_ENDPOINT }}
+      PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+      TF_VAR_state_encryption_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_tailscale_oauth_client_id: ${{ secrets.TAILSCALE_ACL_OAUTH_CLIENT_ID }}
+      TF_VAR_tailscale_oauth_client_secret: ${{ secrets.TAILSCALE_ACL_OAUTH_SECRET }}
+      TF_VAR_tailscale_tailnet: ${{ secrets.TAILSCALE_TAILNET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v2
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "main,192.168.11.100 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkCTXlzg8cpMVYdAEU22ZPFJfImi+sGrriOV6WL9V7P" >> ~/.ssh/known_hosts
+          echo "data,192.168.11.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID6rwVVKY/hjjO8ACNkvd1F3HjBX6xfpIv7be/Bvqxbn" >> ~/.ssh/known_hosts
+
+      - name: OpenTofu Init
+        working-directory: terraform
+        run: tofu init
+
+      # Step 1: キー系リソースのみ apply。
+      # 期限切れ(rotation_days=30超過)時のみ新キー発行され、それ以外はno-op。
+      # ここでstateにキー値を確定させることで、Step 2のplan時に
+      # machine_configuration_hashが既知になり Talos provider の
+      # "inconsistent final plan" 問題を回避する。
+      - name: Rotate key resources
+        working-directory: terraform
+        run: |
+          tofu apply -auto-approve -no-color \
+            -target=time_rotating.tailscale_authkey \
+            -target=tailscale_tailnet_key.nodes
+
+      # ノードconfigに差分があるか検出 (0=差分なし, 1=エラー, 2=差分あり)
+      - name: Check node config diff
+        id: plan
+        working-directory: terraform
+        run: |
+          set +e
+          tofu plan -detailed-exitcode -no-color \
+            -target=talos_machine_configuration_apply.controlplane \
+            -target=talos_machine_configuration_apply.worker 2>&1 | tee /tmp/tofu-rotate-plan.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          if [ "$EXIT_CODE" -eq 1 ]; then
+            echo "::error::tofu plan failed (exit code 1)"
+            exit 1
+          fi
+
+      - name: Apply node configs
+        if: steps.plan.outputs.exit_code == '2'
+        working-directory: terraform
+        run: tofu apply -auto-approve -no-color
+
+      # Step 1でstateが変わっている可能性があるため、失敗時も必ずコミットする
+      - name: Commit encrypted state
+        if: always()
+        working-directory: terraform
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add terraform.tfstate
+          if git diff --cached --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "Update encrypted terraform state"
+            git pull --rebase
+            git push
+          fi
+
+      - name: Write job summary
+        if: always()
+        run: |
+          {
+            echo "## Tailscale auth key ローテーション"
+            echo ""
+            echo "- Step 1 (キーリソース apply): 実行済み"
+            if [ "${{ steps.plan.outputs.exit_code }}" = "2" ]; then
+              echo "- Step 2 (ノード config 適用): 実行済み"
+            else
+              echo "- Step 2 (ノード config 適用): スキップ (差分なし)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Close failure issue on success
+        if: success()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const marker = '<!-- tofu-rotate-failure -->';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            const existing = issues.find(i => i.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `✅ 解決されました: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'closed'
+              });
+            }
+
+      - name: Notify failure
+        if: failure()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const marker = '<!-- tofu-rotate-failure -->';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            const existing = issues.find(i => i.body.includes(marker));
+            const body = `${marker}\n### ⚠️ Tailscale auth key ローテーション失敗\n\n実行: ${runUrl}\n\nキーが期限切れのままだと、ノード再起動時に ext-tailscale が再起動ループし Talos OOM controller が cilium 等を kill する（既知の障害モード）。\n\n対処: terraform/README.md「Tailscale auth key ローテーション」の手動2段階applyを実行するか、次回の週次実行を待つ。`;
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `再失敗 (${new Date().toISOString()}): ${runUrl}`
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Tailscale auth key ローテーション失敗',
+                body: body
+              });
+            }
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
