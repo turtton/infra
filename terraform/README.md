@@ -45,7 +45,7 @@ terraform/
 - **カーネルモジュール**: `iscsi_tcp`, `dm_thin_pool` (Longhorn用)
 - **DNS**: ゲートウェイ + 1.1.1.1 + 8.8.8.8 (静的IPのため明示指定)
 - **kubelet nodeIP**: `192.168.10.0/24` に制限 (Tailscale IP使用防止)
-- **Tailscale**: `ExtensionServiceConfig` でauthkeyを注入
+- **Tailscale**: `ExtensionServiceConfig` でauthkeyを注入（30日ごとの`time_rotating`でローテーション。詳細は下記）
 
 ### Control Plane
 
@@ -65,7 +65,9 @@ terraform/
 export PROXMOX_VE_ENDPOINT="https://<proxmox-ip>:8006"
 export PROXMOX_VE_API_TOKEN="terraform@pve!tofu=<token>"
 export TF_VAR_state_encryption_passphrase="<passphrase>"
-export TF_VAR_tailscale_authkey="tskey-auth-..."
+export TF_VAR_tailscale_oauth_client_id="<oauth-client-id>"
+export TF_VAR_tailscale_oauth_client_secret="<oauth-secret>"
+export TF_VAR_tailscale_tailnet="<tailnet>"
 
 # 実行
 tofu init
@@ -122,3 +124,23 @@ Talos VMは初回起動時にTailscaleが未設定のため、LAN IP経由でし
 ## Known Issues
 
 - `SwapVolumeConfig` を `system_disk` に対して使用するとブート失敗する ([siderolabs/talos#12234](https://github.com/siderolabs/talos/issues/12234))。ディスクswapの代わりにZswapConfig(メモリ圧縮キャッシュ)を使用している。
+
+## Tailscale auth key ローテーション
+
+ノード用auth keyは `tailscale_tailnet_key` リソースで Terraform 管理している。`time_rotating` (30日) が期限を迎えると、次の apply でキーが置き換えられる。
+
+### ローテーション手順 (2段階 apply が必須)
+
+Talos provider は、plan 時に値が確定していない(unknown)入力に対して `machine_configuration_hash` を正しく計画できない問題がある。新規キー発行とノードへの適用を同じ apply で行うと `Provider produced inconsistent final plan` エラーになるため、必ず2段階で行うこと。
+
+```bash
+# 1. キー系リソースのみ先に apply (新キーを state に確定させ、plan 時の既知値にする)
+tofu apply -target=time_rotating.tailscale_authkey -target=tailscale_tailnet_key.nodes
+
+# 2. 通常 apply (plan 時にキー値が既知のため machine config の hash が一致する)
+tofu apply
+```
+
+CI の `/tf-apply` (full apply のみ) ではローテーションできない。定期ローテーションを自動化する場合は、CI 側でも上記2コマンドを順に実行する workflow が必要。現時点では手動での2段階 apply が前提。
+
+ノードへの反映は `apply` 時にmachine configが再計算され、Talos がextension serviceを再起動する。ワークロードの再起動は短期的だが、apply を実行するタイミングに注意。ローテーション後は Tailscale 管理画面で旧キーが失効済み(または手動で失効)であることを確認すること。
