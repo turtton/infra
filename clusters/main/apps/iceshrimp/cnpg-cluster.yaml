@@ -4,14 +4,14 @@ metadata:
   name: iceshrimp-db
   namespace: iceshrimp
 spec:
-  instances: 1
+  instances: 2
   bootstrap:
     initdb:
       database: ffdb
       owner: firefish
   storage:
     size: 120Gi
-    storageClass: longhorn
+    storageClass: longhorn-single
   monitoring:
     enablePodMonitor: false
   postgresql:

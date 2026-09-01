@@ -7,3 +7,4 @@ resources:
   - r2-credentials.sops.yaml
   - recurring-job.yaml
   - networkpolicy-prometheus.yaml
+  - storageclass-single.yaml
