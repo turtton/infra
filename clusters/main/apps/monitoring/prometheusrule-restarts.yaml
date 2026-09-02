@@ -1,0 +1,36 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: container-restart-watch
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: container-restarts
+      rules:
+        - alert: CiliumAgentFrequentRestarts
+          expr: increase(kube_pod_container_status_restarts_total{namespace="kube-system", container="cilium-agent"}[1h]) > 3
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cilium-agent が頻繁に再起動 ({{ $labels.pod }} on {{ $labels.node }})"
+            description: "cilium-agent が1時間に3回超再起動。healthz ハングによる liveness kill (exit 137) の可能性。OOM ではない。原因調査と Cilium バージョン/probe 設定の見直しを検討すること。"
+        - alert: HermesHomeUnexpectedRestart
+          expr: increase(kube_pod_container_status_restarts_total{namespace="hermes", pod=~"hermes-home-.*"}[30m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "hermes-home が再起動した ({{ $labels.pod }})"
+            description: "hermes-home が再起動。exit 137 の場合は次回 reason が OOMKilled かを確認し resource limits を見直すこと。"
+        - alert: HermesHomeOOMKilled
+          expr: kube_pod_container_status_last_terminated_reason{namespace="hermes", pod=~"hermes-home-.*", reason="OOMKilled"} == 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "hermes-home が OOMKilled された ({{ $labels.pod }})"
+            description: "hermes-home がメモリ不足で kill された。resource limits の引き上げが必要。"

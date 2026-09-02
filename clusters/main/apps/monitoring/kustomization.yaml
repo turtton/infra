@@ -6,6 +6,7 @@ resources:
   - grafana-admin.sops.yaml
   - alertmanager-discord-webhook.sops.yaml
   - helmrelease.yaml
+  - prometheusrule-restarts.yaml
 configMapGenerator:
   - name: grafana-dashboard-pve
     namespace: monitoring
