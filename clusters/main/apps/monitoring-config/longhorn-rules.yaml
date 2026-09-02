@@ -1,0 +1,62 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: longhorn
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: longhorn.rules
+      interval: 1m
+      rules:
+        - alert: LonghornVolumeDegraded
+          expr: longhorn_volume_robustness{state="degraded"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Longhorn volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in {{ $labels.pvc_namespace }}) is degraded"
+            description: |
+              Volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in namespace {{ $labels.pvc_namespace }}) has been degraded for 5 minutes.
+              This means replicas are missing or unhealthy. Check longhorn-system pods and replica status.
+        - alert: LonghornVolumeFaulted
+          expr: longhorn_volume_robustness{state="faulted"} == 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Longhorn volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in {{ $labels.pvc_namespace }}) is faulted"
+            description: |
+              Volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in namespace {{ $labels.pvc_namespace }}) is FAULTED.
+              All replicas may be unavailable. Immediate action required.
+        - alert: LonghornVolumeUnknown
+          expr: longhorn_volume_robustness{state="unknown"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Longhorn volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in {{ $labels.pvc_namespace }}) state unknown"
+            description: |
+              Volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in namespace {{ $labels.pvc_namespace }}) state is unknown.
+              The volume controller may be unreachable.
+        - alert: LonghornVolumeDetached
+          expr: longhorn_volume_state{state="detached"} == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Longhorn volume {{ $labels.volume }} detached for 10+ minutes"
+            description: |
+              Volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in namespace {{ $labels.pvc_namespace }}) has been detached for 10+ minutes.
+              Pods using this PVC may be stuck.
+        - alert: LonghornManagerDown
+          expr: up{job="longhorn-backend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Longhorn manager ({{ $labels.instance }}) is not scraping metrics"
+            description: |
+              Longhorn manager instance {{ $labels.instance }} (pod {{ $labels.pod }}) has been down for 2 minutes.
+              Storage management plane is degraded.

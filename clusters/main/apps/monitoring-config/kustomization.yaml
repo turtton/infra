@@ -5,3 +5,4 @@ resources:
   - flux-podmonitor.yaml
   - kernel-rules.yaml
   - pve-rules.yaml
+  - longhorn-rules.yaml
