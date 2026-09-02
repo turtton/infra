@@ -326,10 +326,14 @@ kubectl -n longhorn-system edit volume <vol>                       # spec.number
 | volume が faulted | `kubectl -n longhorn-system describe volume <name>` で replica の failedAt/ownerID を確認。VM 復帰で自動復帰が正常系 |
 | DB 復帰しない | pod log で起動エラー確認。hibernate 解除漏れ・timeline 分岐（promote 履歴）の有無を確認 |
 | Flux 復帰しない | Git SHA と `lastAppliedRevision` の一致確認 → `flux reconcile kustomization <name> --wait` |
+| longhorn-manager が CrashLoopBackOff（復帰直後） | `kubectl logs <pod> -n longhorn-system --previous` の末尾に `settings.longhorn.io "default-replica-count": the object has been modified` の fatal があれば起動時 race。`kubectl delete pod <pod> -n longhorn-system` で削除すれば次回起動で回避される（今回 toliworker-1/-3 で発生、両方とも通常削除のみで復旧） |
+| アプリ Pod が `ContainerCreating` のまま「FailedAttachVolume: node X is not ready」 | k8sノードは Ready でも Longhorn 側 attach 情報が stale の場合がある。対象 volume の `VolumeAttachment` を `kubectl delete volumeattachment <name>` で削除すると CSI が再 attach する（今回 woodpecker で発生、force 不要） |
+| HelmRelease が `UpgradeFailed`（DaemonSet timeout）で固まったまま | `status.observedGeneration == metadata.generation` かつ `updatedNumberScheduled == desired` を確認後に `flux reconcile helmrelease <name> -n <ns> --force`。remediation retries 上限到達時は force が必須 |
+| helm リリースが `failed` 履歴のみで進まない | まず DS/STS 側を収束させてから `helm history` で deployed 版へ `helm rollback` |
 
 ## 残課題（今回のスコープ外だが要検討）
 
 1. **toliunit 単一ホストへのレプリカ集中の恒久的解消** — 0.2 のボリュームはメンテナンス以前に既に単一障害点状態。Proxmox ホスト単位の zone ラベル整備 + Longhorn zone anti-affinity の実効化が必要
 2. worker-2/cp-1/mainworker-1 の Longhorn scheduling off の意図確認と容量計画
-3. iceshrimp-db-0815 の replicas=1 是正
+3. ~~iceshrimp-db-0815 の replicas=1 是正~~ → 解消済み（2026-09-02: ユーザー方針「CNPG 側冗長化のみ」に基づき pvc-2ac592a4 も replicas=1 へ変更。CNPG 2インスタンスが WAL 冗長を担う）
 4. CNPG バックアップ未設定クラスタ（fluxer/iceshrimp/nextcloud）への ObjectStorage バックアップ整備
