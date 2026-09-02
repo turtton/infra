@@ -6,3 +6,4 @@ resources:
   - kernel-rules.yaml
   - pve-rules.yaml
   - longhorn-rules.yaml
+  - restart-rules.yaml
