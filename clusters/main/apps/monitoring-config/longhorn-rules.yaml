@@ -41,15 +41,21 @@ spec:
               Volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in namespace {{ $labels.pvc_namespace }}) state is unknown.
               The volume controller may be unreachable.
         - alert: LonghornVolumeDetached
-          expr: longhorn_volume_state{state="detached"} == 1
+          expr: |
+            longhorn_volume_state{state="detached"} == 1
+            and on(pvc, pvc_namespace)
+            label_replace(
+              label_replace(kube_pod_spec_volumes_persistentvolumeclaims_info, "pvc", "$1", "persistentvolumeclaim", "(.*)"),
+              "pvc_namespace", "$1", "namespace", "(.*)"
+            )
           for: 10m
           labels:
             severity: warning
           annotations:
-            summary: "Longhorn volume {{ $labels.volume }} detached for 10+ minutes"
+            summary: "Longhorn volume {{ $labels.volume }} in use but detached for 10+ minutes"
             description: |
-              Volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in namespace {{ $labels.pvc_namespace }}) has been detached for 10+ minutes.
-              Pods using this PVC may be stuck.
+              Volume {{ $labels.volume }} (pvc {{ $labels.pvc }} in namespace {{ $labels.pvc_namespace }}) is referenced by a
+              running pod but has been detached for 10+ minutes. The pod's I/O is likely stuck; inspect CSI attach and the volume.
         - alert: LonghornManagerDown
           expr: up{job="longhorn-backend"} == 0
           for: 2m

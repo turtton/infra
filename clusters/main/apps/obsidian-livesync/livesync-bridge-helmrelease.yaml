@@ -23,6 +23,7 @@ spec:
         kind: HelmRepository
         name: livesync-bridge
   values:
+    replicaCount: 1
     vaultName: private
     nodeSelector:
       kubernetes.io/hostname: cp-1

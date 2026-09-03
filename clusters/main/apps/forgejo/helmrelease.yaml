@@ -23,6 +23,7 @@ spec:
     remediation:
       retries: 3
   values:
+    replicaCount: 1
     gitea:
       admin:
         existingSecret: forgejo-admin
