@@ -110,30 +110,13 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 60
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - mainworker-1
-            # mainworker-1 が使えない場合のフォールバック
-            - weight: 50
-              preference:
-                matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - toliworker-1
-                      - toliworker-2
-                      - toliworker-3
+      # longhorn-gameserver は strict-local のため mainworker-1 へのピン留めが必須
+      nodeSelector:
+        kubernetes.io/hostname: mainworker-1
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: atm10-data
+            claimName: atm10-data-v2
         - name: downloads
           persistentVolumeClaim:
-            claimName: atm10-downloads
+            claimName: atm10-downloads-v2
