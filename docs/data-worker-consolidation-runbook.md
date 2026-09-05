@@ -13,7 +13,7 @@
 | worker-3 | 1 | 4GB | 350GB | **削除** |
 
 - data-pve（LVM-Thin、総容量 852GB）の thin 割当は 800GB → 800GB で増減なし
-- Longhorn レプリカ配置先は最終的に **worker-1/2 + toliworker-1/2/3 の5ノード**に限定する（cp-1 / mainworker-1 は除外。mainworker-1 は atm10 等のゲームサーバー優先のため）
+- Longhorn レプリカ配置先は最終的に **worker-1/2 + toliworker-1/2/3 の5ノード**に限定する（cp-1 は除外。mainworker-1 は 2026-09-06 より **node/disk タグ `gameserver` 付きのゲームサーバー専用ノード**として再参加。`longhorn-gameserver` StorageClass（strict-local）のボリュームのみ配置され、一般ワークロードのレプリカは流入しない。詳細は lepinoid-buildserver-migration-runbook.md）
 
 ## 背景知識（なぜこの順序か）
 
