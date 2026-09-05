@@ -4,7 +4,7 @@ haproxy_minecraft_servers:
   - domain: atm10.turtton.net
     backend: atm10:25565
   - domain: build.lepinoid.net
-    backend: testserver:49966
+    backend: build-server:25565
   - domain: devserver.lepinoid.net
     backend: lepinoid-dev:25565
 haproxy_minecraft_image: haproxy:3.2-alpine
