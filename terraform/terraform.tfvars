@@ -82,9 +82,9 @@ workers = {
     host_node    = "main"
     vm_id        = 1016
     ip           = "192.168.10.126"
-    cpu          = 4
-    ram          = 20480 # 20GB
-    disk_size    = 120
-    datastore_id = "toshibassd"
+    cpu          = 8
+    ram          = 32768 # 32GB
+    disk_size    = 800
+    datastore_id = "crucialssd"
   }
 }
