@@ -183,6 +183,9 @@ resource "talos_machine_configuration_apply" "controlplane" {
   node                        = each.value.ip
 
   depends_on = [proxmox_virtual_environment_vm.talos_node, tailscale_tailnet_key.nodes]
+
+  # VM 再作成・変更時に machine config を再適用する
+  replace_triggered_by = [proxmox_virtual_environment_vm.talos_node[each.key]]
 }
 
 resource "talos_machine_configuration_apply" "worker" {
@@ -193,6 +196,9 @@ resource "talos_machine_configuration_apply" "worker" {
   node                        = each.value.ip
 
   depends_on = [proxmox_virtual_environment_vm.talos_node, tailscale_tailnet_key.nodes]
+
+  # VM 再作成・変更時に machine config を再適用する
+  replace_triggered_by = [proxmox_virtual_environment_vm.talos_node[each.key]]
 }
 
 # 最初のCPでブートストラップ
