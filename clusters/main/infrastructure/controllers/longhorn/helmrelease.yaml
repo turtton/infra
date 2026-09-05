@@ -29,6 +29,9 @@ spec:
   values:
     defaultSettings:
       defaultReplicaCount: 2
+      # gameserver タグ誤配置防止: nodeSelector/diskSelector 付き SC はタグ一致ノード以外に置かせない
+      allowEmptyNodeSelectorVolume: false
+      allowEmptyDiskSelectorVolume: false
       defaultDataPath: /var/lib/longhorn
       guaranteedInstanceManagerCPU: 5
       storageReservedPercentageForDefaultDisk: 20

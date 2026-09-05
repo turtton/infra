@@ -8,3 +8,5 @@ resources:
   - recurring-job.yaml
   - networkpolicy-prometheus.yaml
   - storageclass-single.yaml
+  - storageclass-gameserver.yaml
+  - recurring-job-gameserver.yaml

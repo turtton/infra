@@ -1,0 +1,16 @@
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: daily-backup-gameserver
+  namespace: longhorn-system
+spec:
+  # 毎日 03:00 に実行。ゲームサーバーボリューム(gameserver グループ)が対象
+  cron: "0 3 * * *"
+  task: backup
+  # 7世代保持 = 1週間分のリストアポイント
+  retain: 7
+  concurrency: 1
+  groups:
+    - gameserver
+  labels:
+    schedule: daily
