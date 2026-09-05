@@ -3,6 +3,8 @@
 Proxmox main ノードの LXC `testserver`（CT 102）で稼働している Lepinoid 建築サーバー（PaperMC 1.21.1）を Kubernetes（Talos クラスタ）へ移行する。あわせて mainworker-1 を増設 1TB SSD へ移設・増強し、旧 SSD（toshibassd）の空きを cp-1 に還元、atm10 もローカル IO 化する。
 
 > 本書は Oracle レビュー（2026-09-06、3 ラウンド）を経て **APPROVED** 済み。
+>
+> **実行ステータス（2026-09-06 07:40 JST 更新）**: Phase 0〜5 は全て完了（PR #131〜#138、Lepinoid/infra PR #2, #3）。build.lepinoid.net は k8s 上の build-server（mainworker-1 ローカル IO、Paper 1.21.1、CoreProtect→mysql:8.4 `coreprotect` DB）へ切替済みで外部経路の疎通検証済み。残タスクは testserver（CT 102）の廃止のみ — 数日様子見後に vzdump 外部保存 → `pct destroy 102` を実施する。実行中に判明した実機挙動の差異（bpg の datastore 移動は in-place、podman exec は不安定でクライアントコンテナ経由に変更、apt repo 401/署名問題の解消）は本書の手順を修正せず実行記録として残す。
 
 ## 背景・現状整理
 
