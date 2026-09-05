@@ -1,0 +1,22 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-gameserver
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "30"
+  fromBackup: ""
+  fsType: "ext4"
+  # ゲームサーバー専用ノード(mainworker-1)で完全ローカル IO を強制する。
+  # 利用側は nodeSelector で対象ノードに Pod をピン留めすること。
+  dataLocality: "strict-local"
+  nodeSelector: "gameserver"
+  diskSelector: "gameserver"
+  unmapMarkSnapChainRemoved: "ignored"
+  disableRevisionCounter: "true"
+  dataEngine: "v1"
+  backupTargetName: "default"
