@@ -28,7 +28,7 @@ spec:
       tenant_name: lepinoid
       quota_requests_cpu: "4"
       quota_requests_memory: 16Gi
-      quota_limits_cpu: "10"
+      quota_limits_cpu: "14"
       quota_limits_memory: 24Gi
       quota_pvc: "20"
 ---
