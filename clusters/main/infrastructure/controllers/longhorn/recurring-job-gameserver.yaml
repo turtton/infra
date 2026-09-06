@@ -1,13 +1,36 @@
+# 週次バックアップ: backup target (R2) への外部保存。ボリューム消失・ノード障害時の復旧用。
+# 身内用ゲームサーバーのため日次の R2 アップロードはコストに見合わず、
+# 週次バックアップ + 日次ローカルスナップショットの組み合わせでバランスを取る。
 apiVersion: longhorn.io/v1beta2
 kind: RecurringJob
 metadata:
-  name: daily-backup-gameserver
+  name: weekly-backup-gameserver
   namespace: longhorn-system
 spec:
-  # 毎日 03:00 に実行。ゲームサーバーボリューム(gameserver グループ)が対象
-  cron: "0 3 * * *"
+  # 毎週日曜 03:00 に実行。ゲームサーバーボリューム(gameserver グループ)が対象
+  cron: "0 3 * * 0"
   task: backup
-  # 7世代保持 = 1週間分のリストアポイント
+  # 4世代保持 = 約1ヶ月分のリストアポイント
+  retain: 4
+  concurrency: 1
+  groups:
+    - gameserver
+  labels:
+    schedule: weekly
+---
+# 日次スナップショット: 同一ボリューム内の短期ロールバックポイント。
+# modpack 更新失敗など直近の巻き戻しに使う。ボリューム自体の消失時は
+# 週次バックアップからのリストアが必要 (replica 1 のため snapshot では復旧不可)。
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: daily-snapshot-gameserver
+  namespace: longhorn-system
+spec:
+  # 毎日 04:00 に実行 (週次バックアップと時間をずらす)
+  cron: "0 4 * * *"
+  task: snapshot
+  # 7世代保持 = 週次バックアップ間の任意時点へのロールバックをカバー
   retain: 7
   concurrency: 1
   groups:
