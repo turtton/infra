@@ -62,7 +62,7 @@ main (192.168.10.100) / data (192.168.10.40) の Proxmox VE を 8 から 9 へ i
 - **増設であり移転ではない: 旧SSDは取り外さず残置**（ユーザー確定）
 - **root の btrfs replace は行わない**（ユーザー確定 2026-09-05）
 - **SSD物理装着にはホストの電源OFFが必要** → 装着タイミングで main 上の全ゲスト（cp-1, mainworker-1, CT 102）が停止する。**SSD到着後、アップグレードと同日にまとめて実施する（ユーザー確定 09-05）** → §2.1 のクラスタ停止手順を冒頭に繰り上げ、装着→起動→アップグレードを一連で行う
-- CT 102 はデータ移管後に廃止予定。廃止作業は本アップグレード完了後に別途実施
+- CT 102 はデータ移管後に廃止予定。廃止作業は本アップグレード完了後に別途実施 → **2026-09-06 廃止済み**（k8s 移行完了・vzdump 外部保存のうえ `pct destroy 102 --purge` 実施。詳細は `docs/lepinoid-buildserver-migration-runbook.md`）
 
 参考: 現行レイアウト（/dev/sdb, 111.8G、変更しない）= sdb1 BIOS boot(1007K) / sdb2 EFI(512M, UUID 1862-C942) / sdb3 btrfs root(111.3G)。他ディスク: sda = TOSHIBA 256G SSD（toshibassd LVM: cp-1の32G・mainworker-1の120Gがここ）
 
@@ -238,7 +238,7 @@ pvecm status        # クラスタ復帰確認
   - `concurrent-replica-rebuild-per-node-limit` は現状 **1** のまま。HDD-backed ノードがあるこのクラスタでは恒久的に低め（1〜2）を推奨
   - 次回の全停止→起動は **段階起動** にする（CP → Cilium安定 → ストレージノード1台ずつ → 一般ワークロード）。VMのonboot一斉起動が今回の嵐の引き金
   - Talos 1.12.2+ に OOM controller の修正あり。librarian調査では直接の修正確認は取れなかったが、Talos 1.12.3 への更新を検討（terraform側でイメージバージョン管理）
-  - CT 102 の `lxc.cgroup.devices.allow` は deprecated 警告あり（将来 hard error 化予定。廃止予定のため実害なし）
+  - CT 102 の `lxc.cgroup.devices.allow` は deprecated 警告あり（将来 hard error 化予定。廃止予定のため実害なし → 2026-09-06 廃止済み）
   - この環境のローカル `/tmp` は揮発する（etcdスナップショット喪失の事案あり）。**バックアップはワークスペース `.opencode/backups/` へ保存すること**（同ディレクトリは global gitignore で除外済み）
 
 ## 実行ログ: data (2026-09-05) ✅ 完了
@@ -257,4 +257,4 @@ pvecm status        # クラスタ復帰確認
 - `nextcloud-restore-20260801`（toliworker-3接続）がdegraded — worker-1上レプリカの再構築中。自動回復見込み
 - pve8to9 残WARN: intel-microcode未導入（任意対応）、chrony（再起動で解消）
 - **`TerraformRole` 修正済み**（2026-09-05）: `VM.Monitor` を削除し `VM.GuestAgent.Audit` を追加（`Sys.Audit` は既存）。クラスタ全体に伝播確認済み。**注意: main（PVE8）は `VM.GuestAgent.Audit` を未認識で警告を出す**ため、main をPVE9化するまで terraform@pve は main 上VMのゲストエージェント参照権限を持たない。tofu plan の挙動はユーザー側で確認予定
-- data にはvzdumpバックアップ設定が無いことが判明 → **ユーザー判断で vzdump 導入はしない**（VMはTerraform再作成可能＆データはLonghorn R2でカバー。CT 102 `testserver` も廃止予定のため対象外）
+- data にはvzdumpバックアップ設定が無いことが判明 → **ユーザー判断で vzdump 導入はしない**（VMはTerraform再作成可能＆データはLonghorn R2でカバー。CT 102 `testserver` も廃止予定のため対象外 → 2026-09-06 廃止済み）
