@@ -18,3 +18,27 @@ roleRef:
   kind: ClusterRole
   name: admin
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ${tenant_name}-deployer-rbac-bind
+  namespace: ${tenant_name}
+rules:
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [roles]
+    verbs: [bind]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${tenant_name}-deployer-rbac-bind
+  namespace: ${tenant_name}
+subjects:
+  - kind: ServiceAccount
+    name: ${tenant_name}-deployer
+    namespace: flux-system
+roleRef:
+  kind: Role
+  name: ${tenant_name}-deployer-rbac-bind
+  apiGroup: rbac.authorization.k8s.io
