@@ -260,7 +260,15 @@ rsync -aHAX --numeric-ids --info=progress2 \
 
 ## 後続タスク（本 Runbook のスコープ外）
 
-- **LepinoidTools 自動デプロイ基盤**: LepinoidTools リポジトリの CI で jar を OCI イメージ化（`ghcr.io/lepinoid/lepinoid-tools:x.y.z`）し、initContainer で PVC の plugins/ へ配置する仕組み。Multiverse との互換バージョンを jar メタデータに持たせ起動時チェックする案も検討
 - **無料プラグインの `PLUGINS` 宣言移行**: 起動確認後、immutable URL/checksum 付きで 1 個ずつ管理対象へ移す
 - **time-supporter-bot / health-check-bot の k8s 化**: 要否を別途判断
 - **CP 冗長化時の Longhorn 参加再検討**: `controlplane-expansion-runbook.md` 実行時に判断
+
+## 完了済みタスク
+
+- **LepinoidTools 自動デプロイ基盤**: 2026-09 に **Lepinoid/LepinoidTools#197** と **Lepinoid/infra#4** のペア issue で構築・導入済み。次の構成が本番稼働:
+  - LepinoidTools CI で jar を OCI イメージ化（`ghcr.io/lepinoid/lepinoid-tools:<version>` と `ghcr.io/lepinoid/lepinoid-tools-gate:<version>`、digest pin）。Multiverse との互換は `compatibility.json` で CI/updater 二重チェック
+  - LepinoidTools が `lepinoid-tools-update` を dispatch → Lepinoid/infra の `update-lepinoid-tools.yml` が ConfigMap `plugin-versions` (desired.json) を GitOps で更新
+  - 定期 CronJob (`plugin-updater`) が `desired != current` と **2 ソース一致でのプレイヤー数 0** を検出したら、maintenance gate（`lepinoid-tools-gate`）で入場閉鎖 → ワールドチェックポイント → staging + journal + rename の原子トランザクションで PVC 上の jar を置換 → rollout restart
+  - 混在ペアの起動防止は startup recovery initContainer（外部通信なし・永続状態のみ検査）が担い、Minecraft コンテナのみの CrashLoop 中も管理 sidecar 経由で backup 復旧を実行可能
+  - 管理イメージ (`updater/Dockerfile`) を GHCR で digest pin、Flux 巻き戻しのない dispatch 直列化（`cancel-in-progress: false`）、GC、rescue 手順、`build-server/README.md` の運用ドキュメントまで整備済み
