@@ -3,6 +3,31 @@ resource "talos_machine_secrets" "this" {
 }
 
 locals {
+  small_workers = toset(["worker-1", "worker-2"])
+
+  # Talos は systemReserved/evictionHard の map を置換するため既定値 (worker 既定: cpu 50m/mem 384Mi/pid 100/ephemeral 256Mi) を全て明示する。2026-09-05 の kubepods cgroup 圧迫 OOM 対策。
+  small_worker_kubelet_patch = yamlencode({
+    machine = {
+      kubelet = {
+        extraConfig = {
+          systemReserved = {
+            cpu                 = "50m"
+            memory              = "512Mi"
+            pid                 = "100"
+            "ephemeral-storage" = "256Mi"
+          }
+          evictionHard = {
+            "memory.available"   = "300Mi"
+            "nodefs.available"   = "10%"
+            "nodefs.inodesFree"  = "5%"
+            "imagefs.available"  = "15%"
+            "imagefs.inodesFree" = "5%"
+          }
+        }
+      }
+    }
+  })
+
   # 共通config patches
   common_patches = [
     # Longhorn用カーネルモジュール自動ロード
@@ -151,6 +176,7 @@ data "talos_machine_configuration" "worker" {
       }
     }),
     ],
+    contains(local.small_workers, each.key) ? [local.small_worker_kubelet_patch] : [],
     # extra_disks がある worker (toliworker-*) のみ：sdb を /var/lib/longhorn にマウントし Longhornデータを専用SSDへ
     # 前提: vms.tf で root=scsi0、extra_disks は scsi1 から付けるため現行構成では Talos 上で /dev/sdb が追加SSDになる
     # 制約: 今は extra_disks の1本目だけを Longhorn に割り当てる。2本以上を扱う場合はこの patch を一般化すること

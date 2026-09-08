@@ -55,6 +55,7 @@ terraform/
 ### Worker
 
 - `ZswapConfig`: メモリの20%を圧縮スワップキャッシュとして使用
+- **small worker (worker-1/2) kubelet**: `systemReserved` のメモリを `512Mi`、`evictionHard.memory.available` を `300Mi` に設定。kubelet/containerd 自体は kubepods cgroup 外のため、`evictionHard` が Linux の OOM killer より先に Pod を退避させる実際の保護になる。
 
 ## Usage
 
