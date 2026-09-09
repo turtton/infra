@@ -45,17 +45,27 @@ spec:
     alloy:
       # otelcol.receiver.tcplog が experimental のため
       stabilityLevel: experimental
-      timeoutSeconds: 3
+      timeoutSeconds: 10
       resources:
         requests:
           cpu: 50m
           memory: 64Mi
         limits:
           memory: 256Mi
+      # node-local化: cp-1の alloy-zq9jx で client-go throttling が 10-26分遅延となり
+      # readiness probe が context deadline exceeded (29886回) となっていたため対策。
+      # discovery.kubernetes はデフォルトで全クラスタを list/watch するため、
+      # ノード毎に自ノードの Pod だけ tail するよう selectors を追加。
+      # refs: https://grafana.com/docs/alloy/latest/reference/components/discovery/discovery.kubernetes/#limit-to-only-pods-on-the-same-node
       configMap:
         content: |
           discovery.kubernetes "pods" {
             role = "pod"
+
+            selectors {
+              role  = "pod"
+              field = "spec.nodeName=" + coalesce(sys.env("HOSTNAME"), constants.hostname)
+            }
           }
 
           discovery.relabel "pods" {
