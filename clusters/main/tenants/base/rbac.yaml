@@ -6,6 +6,29 @@ metadata:
   namespace: flux-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ${tenant_name}-cilium-policy
+rules:
+  - apiGroups: ["cilium.io"]
+    resources: ["ciliumnetworkpolicies", "ciliumclusterwidenetworkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${tenant_name}-cilium-policy
+  namespace: ${tenant_name}
+subjects:
+  - kind: ServiceAccount
+    name: ${tenant_name}-deployer
+    namespace: flux-system
+roleRef:
+  kind: ClusterRole
+  name: ${tenant_name}-cilium-policy
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: ${tenant_name}-admin
