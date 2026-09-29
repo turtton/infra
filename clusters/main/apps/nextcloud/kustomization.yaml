@@ -10,3 +10,9 @@ resources:
   - ingress.yaml
   - valkey-secrets.sops.yaml
   - nextcloud-secrets.sops.yaml
+  - weekly-backup.yaml
+configMapGenerator:
+  - name: nextcloud-weekly-backup-script
+    namespace: nextcloud
+    files:
+      - weekly-backup.py
