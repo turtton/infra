@@ -119,6 +119,9 @@ spec:
         datasources:
           timeout: 60
       grafana.ini:
+        plugins:
+          # Bundled plugins are on the read-only container filesystem.
+          preinstall_auto_update: false
         server:
           root_url: https://grafana.turtton.net
         auth.proxy:

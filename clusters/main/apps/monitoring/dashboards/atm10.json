@@ -586,12 +586,12 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "max by (persistentvolumeclaim) (kubelet_volume_stats_used_bytes{namespace=\"atm10\", persistentvolumeclaim=~\"atm10-(data|downloads)\"})",
+          "expr": "max by (persistentvolumeclaim) (kubelet_volume_stats_used_bytes{namespace=\"atm10\", persistentvolumeclaim=~\"atm10-(data|downloads)-v2\"})",
           "legendFormat": "{{persistentvolumeclaim}} used",
           "refId": "A"
         },
         {
-          "expr": "max by (persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{namespace=\"atm10\", persistentvolumeclaim=~\"atm10-(data|downloads)\"})",
+          "expr": "max by (persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{namespace=\"atm10\", persistentvolumeclaim=~\"atm10-(data|downloads)-v2\"})",
           "legendFormat": "{{persistentvolumeclaim}} capacity",
           "refId": "B"
         }
@@ -616,7 +616,7 @@
       "type": "gauge",
       "targets": [
         {
-          "expr": "100 * max by (persistentvolumeclaim) (kubelet_volume_stats_used_bytes{namespace=\"atm10\", persistentvolumeclaim=~\"atm10-(data|downloads)\"}) / clamp_min(max by (persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{namespace=\"atm10\", persistentvolumeclaim=~\"atm10-(data|downloads)\"}), 1)",
+          "expr": "100 * max by (persistentvolumeclaim) (kubelet_volume_stats_used_bytes{namespace=\"atm10\", persistentvolumeclaim=~\"atm10-(data|downloads)-v2\"}) / clamp_min(max by (persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{namespace=\"atm10\", persistentvolumeclaim=~\"atm10-(data|downloads)-v2\"}), 1)",
           "legendFormat": "{{persistentvolumeclaim}}",
           "refId": "A"
         }
