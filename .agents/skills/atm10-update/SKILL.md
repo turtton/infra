@@ -7,17 +7,20 @@ description: 'ATM10（all-the-mods-10）Minecraftサーバーのmodpack更新手
 
 このリポジトリの `clusters/main/apps/atm10/` で管理される ATM10 Minecraft サーバー（Kubernetes + itzg/minecraft-server AUTO_CURSEFORGE + Longhorn PV）のmodpack更新を安全に行うための手順。
 
-前提：Deploymentは `TYPE: AUTO_CURSEFORGE` + `CF_SLUG: all-the-mods-10` でバージョン未固定運用（`CF_FILE_ID` や `CF_FILENAME_MATCHER` は未設定。再起動時にCurseForge上で選択対象となる新しいmodpackファイルがあれば自動更新される）。世界データは `atm10-data` PVC (Longhorn)。イメージは `itzg/minecraft-server:latest` + `imagePullPolicy: Always` なので、rolloutでmodpackとコンテナイメージが同時に更新される点に注意。
+前提：Deploymentは `TYPE: AUTO_CURSEFORGE` + `CF_SLUG: all-the-mods-10` でバージョン未固定運用（`CF_FILE_ID` や `CF_FILENAME_MATCHER` は未設定。再起動時にCurseForge上で選択対象となる新しいmodpackファイルがあれば自動更新される）。世界データは `atm10-data-v2`、手動MODは `atm10-downloads-v2` PVC（Longhorn、`longhorn-gameserver`）を使用する。対象PVCは固定名を前提にせず、Deploymentのvolume設定から取得する。イメージは `itzg/minecraft-server:latest` + `imagePullPolicy: Always` なので、rolloutでmodpackとコンテナイメージが同時に更新される点に注意。
 
 ---
+
+以下のコマンド例はbash/zshで実行し、各段階の結果を確認してから次へ進む。停止・snapshot・復帰の例をまとめて無確認で実行しない。
 
 ## 1. 更新前チェック
 
 ### 1. 手動DL必要MODの有無を外部確認
 
-新バージョンのchangelogを確認し、追加MODに配布ブロックがないか調べる。
+CurseForgeの公開ファイルと新バージョンのchangelogを確認し、更新先バージョン・ファイルID・NeoForgeの期待値を記録する。追加MODに配布ブロックがないか調べる。公開検索で判断できない場合はCurseForge APIの `allowModDistribution` も確認し、更新後の不足MOD確認を省略しない。APIキーをログや出力に表示しない。更新前の正常なmodpack名・ファイルIDもログとCurseForgeの公開ファイルで確認して記録する（ログにファイルIDがなければ現在のバージョンに対応する公開ファイルで補完する）。このIDはロールバック時の固定に使う。
 
 ```text
+- 公開ファイル: https://www.curseforge.com/minecraft/modpacks/all-the-mods-10/files
 - GitHub changelog: https://github.com/AllTheMods/ATM-10/blob/main/CHANGELOG.md
 - 該当バージョン差分: changelogs/CHANGELOG-ATM10-X.Y-X.Y+1.md
 ```
@@ -28,23 +31,33 @@ description: 'ATM10（all-the-mods-10）Minecraftサーバーのmodpack更新手
 kubectl get pods -n atm10 -o wide
 kubectl get pvc -n atm10
 
-# 以降の手順で使う変数
-DATA_VOLUME=$(kubectl get pvc atm10-data -n atm10 -o jsonpath='{.spec.volumeName}')
+# 以降の手順で使う変数（現行値は atm10-data-v2 / atm10-downloads-v2）
+DATA_PVC=$(kubectl get deployment atm10 -n atm10 \
+  -o jsonpath='{.spec.template.spec.volumes[?(@.name=="data")].persistentVolumeClaim.claimName}')
+DOWNLOADS_PVC=$(kubectl get deployment atm10 -n atm10 \
+  -o jsonpath='{.spec.template.spec.volumes[?(@.name=="downloads")].persistentVolumeClaim.claimName}')
+test -n "$DATA_PVC" && test -n "$DOWNLOADS_PVC"
+DATA_VOLUME=$(kubectl get pvc "$DATA_PVC" -n atm10 -o jsonpath='{.spec.volumeName}')
 test -n "$DATA_VOLUME"
 echo "DATA_VOLUME=$DATA_VOLUME"
 
 # ボリュームの健全性
 kubectl get volume.longhorn.io "$DATA_VOLUME" -n longhorn-system -o jsonpath='{.status.robustness}{"\n"}'  # healthy であること
 
+OLDPOD=$(kubectl get pod -n atm10 -l app=atm10 -o jsonpath='{.items[0].metadata.name}')
+test -n "$OLDPOD"
+# 停止前に接続中プレイヤーを確認
+kubectl exec -n atm10 "$OLDPOD" -c minecraft -- rcon-cli list
+
 # 現行のコンテナイメージを記録（障害時の切り分け用）
 kubectl get pod -n atm10 -l app=atm10 \
   -o jsonpath='{.items[0].status.containerStatuses[?(@.name=="minecraft")].imageID}{"\n"}'
 
 # 更新先バージョン（後続手順で使用）
-TARGET_VERSION="8.1"   # ← 実際の更新先に合わせる
+TARGET_VERSION="8.2"   # 例。毎回、公開ファイルで確認した実際の更新先に合わせる
 ```
 
-Pod動作中、`atm10-data` と `atm10-downloads` の両PVCがBound、volume が `healthy` なこと。
+PodがReady、`$DATA_PVC` と `$DOWNLOADS_PVC` の両PVCがBound、data volumeが `healthy` なこと。停止前に接続中プレイヤーも確認する。
 
 ---
 
@@ -54,7 +67,7 @@ Longhorn backup はbackup targetへの外部保存（ボリューム消失時の
 
 ### 1. 定期バックアップの確認（必須）
 
-RecurringJobは毎月1日・15日実行（`clusters/main/infrastructure/controllers/longhorn/recurring-job.yaml`）。15日→翌月1日は17日空く月があるため、判定上限は**18日**とする（GNU date 前提）。
+現行PVCは `gameserver` グループを指定し、`recurring-job-gameserver.yaml` の週次外部バックアップ（金曜03:00 UTC＝12:00 JST、4世代）と日次ローカルスナップショット（04:00 UTC＝13:00 JST、7世代）が対象。volumeの `recurring-job-group.longhorn.io/gameserver: enabled` と実クラスタのRecurringJobも確認する。`default` グループの月2回バックアップも併用される場合があるが、鮮度判定は週次運用を基準に**8日（7日間隔＋1日猶予）**とする（GNU date 前提）。
 
 ```bash
 LAST=$(kubectl get volume.longhorn.io "$DATA_VOLUME" -n longhorn-system \
@@ -65,16 +78,16 @@ if [ -z "$LAST" ]; then
   exit 1
 fi
 
-MAX_BACKUP_AGE_DAYS=18
+MAX_BACKUP_AGE_DAYS=8
 AGE=$(( $(date +%s) - $(date -d "$LAST" +%s) ))
-if [ "$AGE" -gt $((MAX_BACKUP_AGE_DAYS*24*60*60)) ]; then
-  echo "ERROR: Last backup is older than ${MAX_BACKUP_AGE_DAYS} days: $LAST" >&2
+if [ "$AGE" -lt 0 ] || [ "$AGE" -gt $((MAX_BACKUP_AGE_DAYS*24*60*60)) ]; then
+  echo "ERROR: Last backup timestamp is invalid or older than ${MAX_BACKUP_AGE_DAYS} days: $LAST" >&2
   exit 1
 fi
 echo "Backup OK: $LAST"
 ```
 
-backup target上の実バックアップも念のため確認する（`Backup` CRの `status.state: Completed` を見る）。
+backup target上の実バックアップも確認する。volumeの `status.lastBackup` に対応する `Backup` CRが `status.state: Completed` で、作成時刻も上記の鮮度条件を満たすこと。日次snapshotを外部backupの代わりにしない。
 
 ```bash
 # ラベルキーはLonghornバージョンで異なる（1.12系は backup-volume）。両方試す
@@ -85,11 +98,27 @@ kubectl get backup.longhorn.io -n longhorn-system \
   | tail -3
 # ヒットしない場合: -l "longhorn.io/backup-volume=$DATA_VOLUME"
 # 最新Backupの STATE が Completed であることを確認する
+LAST_BACKUP=$(kubectl get volume.longhorn.io "$DATA_VOLUME" -n longhorn-system \
+  -o jsonpath='{.status.lastBackup}')
+test -n "$LAST_BACKUP"
+kubectl get backup.longhorn.io "$LAST_BACKUP" -n longhorn-system \
+  -o jsonpath='{.status.state}{"\n"}{.status.backupCreatedAt}{"\n"}'
 ```
 
 ### 2. 正常停止 → 更新直前スナップショット（推奨）
 
 **警告**: 稼働中スナップショットはクラッシュ整合性のみ。復旧を目的とするなら正常停止後に取る。
+
+Flux CLIがない場合は、以下の同等操作を使う。以降の `flux suspend` / `flux resume` もそれぞれ置き換えられる。
+
+```bash
+# suspend
+kubectl patch kustomization apps -n flux-system --type=merge -p '{"spec":{"suspend":true}}'
+# resume
+kubectl patch kustomization apps -n flux-system --type=merge -p '{"spec":{"suspend":false}}'
+# 状態確認（flux get の代替）
+kubectl get kustomization apps -n flux-system
+```
 
 ATM10 DeploymentはFlux管理。`kubectl scale` や `kubectl set env` はreconcileで元に戻るが、`flux suspend` 中は干渉しない。停止時間を最小にするため、失敗・中断時もATM10を止めたままにする明確な理由がなければ必ず `flux resume` で戻すこと。
 
@@ -98,8 +127,26 @@ OLDPOD=$(kubectl get pod -n atm10 -l app=atm10 -o jsonpath='{.items[0].metadata.
 
 # 停止（apps Kustomizationは他アプリも含むのでsuspendは最短で）
 flux suspend kustomization apps -n flux-system
-kubectl scale deployment/atm10 -n atm10 --replicas=0
-kubectl wait --for=delete "pod/$OLDPOD" -n atm10 --timeout=300s
+# Pod削除後も正常停止を確認できるよう、停止前にログ追跡を開始する
+SHUTDOWN_LOG=$(mktemp /tmp/atm10-shutdown.XXXXXX.log)
+kubectl logs -f -n atm10 "$OLDPOD" -c minecraft --since=1m > "$SHUTDOWN_LOG" 2>&1 &
+SHUTDOWN_LOG_PID=$!
+if ! kubectl scale deployment/atm10 -n atm10 --replicas=0; then
+  kill "$SHUTDOWN_LOG_PID" 2>/dev/null || true
+  flux resume kustomization apps -n flux-system
+  exit 1
+fi
+if ! kubectl wait --for=delete "pod/$OLDPOD" -n atm10 --timeout=300s; then
+  kill "$SHUTDOWN_LOG_PID" 2>/dev/null || true
+  cat "$SHUTDOWN_LOG"
+  kubectl describe pod "$OLDPOD" -n atm10
+  # 旧Podの状態を調査。正常停止・デタッチ未確認のままsnapshotや更新に進まない。
+  exit 1
+fi
+wait "$SHUTDOWN_LOG_PID" || true
+cat "$SHUTDOWN_LOG"
+# Saving worlds / All dimensions are saved / mc-server-runnerのDone等で正常終了を確認。
+# Pod削除だけでは正常停止の証明にならない。
 # 注: terminationGracePeriodSeconds=120 超で強制終了された場合はアプリケーション整合性のある停止とは扱わない。
 #     直前ログとイベントを確認し、必要なら更新を中止する。
 
@@ -171,7 +218,7 @@ if [ -z "$NEWPOD" ]; then
 fi
 echo "POD=$NEWPOD"
 
-# Ready待ちを先に（手動MOD不足で止まる場合はタイムアウトで抜けて次の診断へ）
+# Ready待ちを先に（タイムアウトは成功ではない。手動MOD不足等の診断へ進む）
 kubectl wait --for=condition=Ready "pod/$NEWPOD" -n atm10 --timeout=1200s || true
 
 # ログ確認（リアルタイム追跡したい場合は別ターミナルで kubectl logs -f を使う）
@@ -185,10 +232,10 @@ kubectl logs -n atm10 "$NEWPOD" --tail=200
 ### 1. バージョン確定（必ず期待値と照合）
 
 ```bash
-kubectl logs -n atm10 "$NEWPOD" | grep -E "Requested CurseForge modpack|neoForgeVersion" | head -5
+kubectl logs -n atm10 "$NEWPOD" | grep -E "Processing modpack|Requested CurseForge modpack|neoForgeVersion" | head -5
 ```
 
-- `All the Mods 10-<TARGET_VERSION>` と完全一致すること（`is already installed` の文字だけでは成功判定しない）
+- 新規更新時の `Processing modpack 'All the Mods 10-X.Y' ... @ projectID:fileID`、または既存インストール時の `Requested CurseForge modpack ... is already installed` から、modpack名が `All the Mods 10-<TARGET_VERSION>` と完全一致することを確認する。ファイルIDが出力される場合は事前確認した値とも照合する（`is already installed` の文字だけでは成功判定しない）
 - NeoForgeバージョンがchangelogの期待値と一致
 
 ### 2. 手動DL必須MODの有無
@@ -212,7 +259,7 @@ kubectl describe pod -n atm10 "$NEWPOD"
 配布制限MODは `/downloads/mods/` に配置する。通常は `/data/mods/` に直接配置しない（modpack更新時に削除される）。
 
 - PodがRunning維持の場合のみ `kubectl cp <jar> atm10/$NEWPOD:/downloads/mods/` で簡易コピー可
-- CrashLoopBackOffで不安定な場合は `docs/atm10-manual-mods.md` の「Deployment一時停止→uploader Pod→復帰」手順を使用
+- CrashLoopBackOffで不安定な場合は `docs/atm10-manual-mods.md` の「Deployment一時停止→uploader Pod→復帰」手順を使用。手順書には旧PVC名 `atm10-data` / `atm10-downloads` が残っているため、uploaderのclaimNameは `$DATA_PVC` / `$DOWNLOADS_PVC` に置き換える。`longhorn-gameserver` はstrict-localなので、uploaderもDeploymentと同じノード（現行 `mainworker-1`）へ配置する。停止・復帰にはこのスキルのFlux suspend/resumeを利用できる
 - 例外：Prometheus Exporter等のmanifest外追加MODは `docs/atm10-manual-mods.md` に従い、必要時のみ `/data/mods/` にもコピー
 
 ### 4. 起動完了の確認（3条件）
@@ -223,6 +270,7 @@ kubectl describe pod -n atm10 "$NEWPOD"
 
 ```bash
 kubectl logs -n atm10 "$NEWPOD" | grep -E 'Dedicated server took .* seconds to load|Done \(.*\)! For help'
+kubectl exec -n atm10 "$NEWPOD" -c minecraft -- rcon-cli list
 ```
 
 ### 5. Simple Backups設定の再確認（必須）
@@ -246,6 +294,8 @@ kubectl exec -n atm10 "$NEWPOD" -- grep -E '^[[:space:]]*enabled[[:space:]]*=' \
 kubectl rollout restart deployment/atm10 -n atm10   # Fluxがresume済みであること
 ```
 
+修正で再起動した場合は新しいPodを取得し直し、バージョン・Ready・起動完了ログ・Simple Backups設定を再確認する。
+
 ---
 
 ## トラブルシューティング
@@ -256,12 +306,13 @@ kubectl rollout restart deployment/atm10 -n atm10   # Fluxがresume済みであ�
 | 手動DL MODが繰り返し要求される | `MODS_NEED_DOWNLOAD.txt` のファイル名と `/downloads/mods/` の実ファイルを照合（別バージョンjar・名前変更・破損・権限を疑う） |
 | PodがTerminatingのまま | `kubectl describe pod`、配置ノード、Kubernetesの `VolumeAttachment`、Longhorn volumeの state を確認し、旧ノードでプロセスとボリューム利用が止まったことを確認できるまで強制削除しない（ノード停止等で確実な場合のみ最終手段として強制削除） |
 | イメージ更新で問題発生 | 手順1-2で記録した古い imageID と比較し、modpack問題かコンテナイメージ問題かを切り分ける |
-| 更新後に起動しない（ロールバック） | 1) `flux suspend kustomization apps -n flux-system` → scale 0 → Pod削除・volume Detached確認 2) Longhorn UIで対象snapshotを Revert（detached状態で実行） 3) volume が `healthy` を確認 4) `flux resume` で起動 5) ログとワールド確認。**snapshotはボリューム内のため、ボリューム自体の消失時はLonghorn backupからのリストアが必要** |
+| 更新後に起動しない（ロールバック） | 1) `flux suspend kustomization apps -n flux-system` → scale 0 → Pod削除・volume Detached確認 2) Longhorn UIで対象snapshotを Revert（detached状態で実行） 3) volume が `healthy` を確認 4) 復帰前にGit側の `CF_FILE_ID` を更新前の正常ファイルIDへ固定し、必要ならコンテナイメージも記録した正常digestへ固定する。PRで反映し、FluxのGitRepositoryがその変更を含むrevisionを取得済みであることを確認してから `flux resume` 5) 正常版の選択・Ready・起動ログとワールドを確認。**未固定のままresumeすると失敗した最新版を再選択するため、snapshotだけでロールバック完了とはしない。snapshotはボリューム内のため、ボリューム自体の消失時はLonghorn backupからのリストアが必要** |
 
 ## 参照ファイル
 
 - マニフェスト: `clusters/main/apps/atm10/deployment.yaml`
-- PVC: `clusters/main/apps/atm10/pvc.yaml`(atm10-data) / `downloads-pvc.yaml`(atm10-downloads)
+- PVC: `clusters/main/apps/atm10/pvc-v2.yaml`（atm10-data-v2 / atm10-downloads-v2）
 - 手動MOD運用・uploader Pod手順・Simple Backups: `docs/atm10-manual-mods.md`
-- 定期バックアップ設定: `clusters/main/infrastructure/controllers/longhorn/recurring-job.yaml`
+- ゲームサーバー用週次バックアップ・日次スナップショット: `clusters/main/infrastructure/controllers/longhorn/recurring-job-gameserver.yaml`
+- defaultグループ用月2回バックアップ: `clusters/main/infrastructure/controllers/longhorn/recurring-job.yaml`
 - 外部公開: `atm10.turtton.net`（HAProxy via VPS）
