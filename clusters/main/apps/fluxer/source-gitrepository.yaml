@@ -5,6 +5,9 @@ metadata:
   name: fluxer-upstream
   namespace: fluxer
 spec:
+  # Legacy charts are vendored in infra and served by the flux-system source.
+  # Suspend this source to avoid cloning the large upstream Git history.
+  suspend: true
   interval: 1h
   url: https://github.com/fluxerapp/fluxer
   ref:
