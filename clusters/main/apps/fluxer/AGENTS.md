@@ -25,16 +25,20 @@ Cloudflare Tunnel → Caddy:80 → app-proxy:8080 (SPA)
 
 ## Source Charts
 
-- Upstream: `https://github.com/fluxerapp/fluxer` (branch: main)
-- GitRepository `fluxer-upstream` が `deploy/helm/` のみを fetch
-- 各 HelmRelease は `chart: ./deploy/helm/<service>` を参照
+- Upstream: `https://github.com/fluxerapp/fluxer`。必要な chart 原本を `charts/fluxer/current/` に固定管理し、取得 commit と file hash は `UPSTREAM.json` に記録
+- 各 HelmRelease は既存 GitRepository `flux-system` (namespace: `flux-system`) から `./charts/fluxer/current/<chart>` を参照
+- 9件の既存 release 名を維持し、各 chart の不要 workload は `null` で無効化
+- GitRepository `fluxer-upstream` は suspend。commit 指定で巨大な全 Git 履歴を clone するため再開しない
+- `charts/fluxer/legacy/` は rollback 用。手順は `docs/fluxer-chart-migration.md`
+- `upgrade.chartNameChangeStrategy: InPlaceUpdate` と旧 selector を維持すること。Pod の `helm.sh/chart` label 固定パッチは無関係な infra commit による再起動を防ぐため必須
+- 検証: `uv run --with pyyaml==6.0.3 python tests/scripts/fluxer-chart-test.py`
 - Image registry: `ghcr.io/fluxerapp`
 
 ## Key Configuration Gotchas
 
 ### API (helmrelease-api.yaml)
 - **wrapper script 必須**: アプリ内 `Config.nats.coreUrl` が env var を無視するため、
-  `command` で Typescript ラッパー (`fluxer-api-wrapper.ts`) を差し込み、import前に
+  postRenderer の `command` patch で Typescript ラッパー (`fluxer-api-wrapper.ts`) を差し込み、import前に
   `Config.nats.coreUrl` を上書きしている。変更する場合はこのラッパーも修正すること。
 - `FLUXER_POSTGRES_SSLMODE=require` (CNPG が TLS を要求するため)
 - `FLUXER_INTERNAL_API_ENDPOINT` / `FLUXER_INTERNAL_GATEWAY_ENDPOINT` などが必要

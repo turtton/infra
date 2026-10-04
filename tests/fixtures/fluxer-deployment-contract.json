@@ -1,0 +1,679 @@
+{
+  "fluxer-admin": {
+    "resources": [
+      "Deployment/admin",
+      "PodDisruptionBudget/admin-pdb",
+      "Service/admin"
+    ],
+    "workloads": {
+      "Deployment/admin": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-admin",
+            "app.kubernetes.io/name": "admin"
+          }
+        },
+        "images": {
+          "admin": "sha256:5f06e15eb5a81db506b081852553d29ba45976c98be909dea5ef24be8545b3ab"
+        },
+        "repositories": {
+          "admin": "ghcr.io/fluxerapp/fluxer-admin"
+        }
+      }
+    },
+    "selectors": {
+      "PodDisruptionBudget/admin-pdb": {
+        "matchLabels": {
+          "app.kubernetes.io/instance": "fluxer-admin",
+          "app.kubernetes.io/name": "admin"
+        }
+      },
+      "Service/admin": {
+        "app.kubernetes.io/instance": "fluxer-admin",
+        "app.kubernetes.io/name": "admin"
+      }
+    },
+    "spec_digests": {
+      "PodDisruptionBudget/admin-pdb": "63ecd38e23bc7effb20b1e117062392c328e1efbcc3a870006bdc0ae4f6efa86",
+      "Service/admin": "ab2d0371f009a765f626e40f453688191e32e2dd5e74e4178af3114261bcf2d7",
+      "Deployment/admin": "cfbf690d6bb174ad1440e6d1e66dd110fb3ea0151d5d9f6f3135f43c87ebbc2f"
+    },
+    "namespaces": {
+      "PodDisruptionBudget/admin-pdb": "fluxer",
+      "Service/admin": "fluxer",
+      "Deployment/admin": "fluxer"
+    }
+  },
+  "fluxer-api": {
+    "resources": [
+      "Deployment/api",
+      "PodDisruptionBudget/api-pdb",
+      "Service/api"
+    ],
+    "workloads": {
+      "Deployment/api": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-api",
+            "app.kubernetes.io/name": "api"
+          }
+        },
+        "images": {
+          "api": "sha256:9f6125bb99e0a1e77bf837b2d4afc7bc975d982afa185189928dee5061c82ad7"
+        },
+        "repositories": {
+          "api": "ghcr.io/fluxerapp/fluxer-api"
+        }
+      }
+    },
+    "selectors": {
+      "PodDisruptionBudget/api-pdb": {
+        "matchLabels": {
+          "app.kubernetes.io/instance": "fluxer-api",
+          "app.kubernetes.io/name": "api"
+        }
+      },
+      "Service/api": {
+        "app.kubernetes.io/instance": "fluxer-api",
+        "app.kubernetes.io/name": "api"
+      }
+    },
+    "spec_digests": {
+      "PodDisruptionBudget/api-pdb": "df12f8913ffb88dd92818a229ddfa80dd5233db15dd1433d145fdd519a68e0df",
+      "Service/api": "0790db40957c9485671a65f8b6c3ca0d1bd47c92629ad3ff355b59605c977d65",
+      "Deployment/api": "2d7ed3ada35d898cb697a71df3cee21db85a6be5fd7edd664884c1cce6613d36"
+    },
+    "namespaces": {
+      "PodDisruptionBudget/api-pdb": "fluxer",
+      "Service/api": "fluxer",
+      "Deployment/api": "fluxer"
+    }
+  },
+  "fluxer-app-proxy": {
+    "resources": [
+      "Deployment/app-proxy",
+      "PodDisruptionBudget/app-proxy-pdb",
+      "Service/app-proxy"
+    ],
+    "workloads": {
+      "Deployment/app-proxy": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-app-proxy",
+            "app.kubernetes.io/name": "app-proxy"
+          }
+        },
+        "images": {
+          "app-proxy": "sha256:5ad657fead85e317a1e2542f0a6a89236d02389deef426bab7f0b2b9384cef2d"
+        },
+        "repositories": {
+          "app-proxy": "ghcr.io/fluxerapp/fluxer-app-proxy-self-hosted"
+        }
+      }
+    },
+    "selectors": {
+      "PodDisruptionBudget/app-proxy-pdb": {
+        "matchLabels": {
+          "app.kubernetes.io/instance": "fluxer-app-proxy",
+          "app.kubernetes.io/name": "app-proxy"
+        }
+      },
+      "Service/app-proxy": {
+        "app.kubernetes.io/instance": "fluxer-app-proxy",
+        "app.kubernetes.io/name": "app-proxy"
+      }
+    },
+    "spec_digests": {
+      "PodDisruptionBudget/app-proxy-pdb": "eb860107fa3cab56db57ea4a8041925d932b1ef775d570bf4eade9abd90fb665",
+      "Service/app-proxy": "34d2abebbb806927364c2adca73ebe0e8c8c63dc836ae32e69dba6526ab9d2f4",
+      "Deployment/app-proxy": "9128cce33296f1df60d20bedbed8fe86a0e222c708ae003d0238024061a4029a"
+    },
+    "namespaces": {
+      "PodDisruptionBudget/app-proxy-pdb": "fluxer",
+      "Service/app-proxy": "fluxer",
+      "Deployment/app-proxy": "fluxer"
+    }
+  },
+  "fluxer-gateway": {
+    "resources": [
+      "Deployment/gateway",
+      "NetworkPolicy/gateway",
+      "Service/fluxer-gateway-headless",
+      "Service/gateway",
+      "StatefulSet/gateway-calls",
+      "StatefulSet/gateway-guilds",
+      "StatefulSet/gateway-presence",
+      "StatefulSet/gateway-push",
+      "StatefulSet/gateway-sessions"
+    ],
+    "workloads": {
+      "Deployment/gateway": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-gateway",
+            "app.kubernetes.io/name": "gateway"
+          }
+        },
+        "images": {
+          "gateway": "sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946"
+        },
+        "repositories": {
+          "gateway": "ghcr.io/fluxerapp/fluxer-gateway"
+        }
+      },
+      "StatefulSet/gateway-sessions": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-gateway",
+            "app.kubernetes.io/name": "gateway-sessions"
+          }
+        },
+        "images": {
+          "gateway": "sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946"
+        },
+        "immutable": {
+          "serviceName": "fluxer-gateway-headless",
+          "podManagementPolicy": null,
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "gateway": "ghcr.io/fluxerapp/fluxer-gateway"
+        }
+      },
+      "StatefulSet/gateway-presence": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-gateway",
+            "app.kubernetes.io/name": "gateway-presence"
+          }
+        },
+        "images": {
+          "gateway": "sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d"
+        },
+        "immutable": {
+          "serviceName": "fluxer-gateway-headless",
+          "podManagementPolicy": null,
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "gateway": "ghcr.io/fluxerapp/fluxer-gateway"
+        }
+      },
+      "StatefulSet/gateway-guilds": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-gateway",
+            "app.kubernetes.io/name": "gateway-guilds"
+          }
+        },
+        "images": {
+          "gateway": "sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d"
+        },
+        "immutable": {
+          "serviceName": "fluxer-gateway-headless",
+          "podManagementPolicy": null,
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "gateway": "ghcr.io/fluxerapp/fluxer-gateway"
+        }
+      },
+      "StatefulSet/gateway-calls": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-gateway",
+            "app.kubernetes.io/name": "gateway-calls"
+          }
+        },
+        "images": {
+          "gateway": "sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946"
+        },
+        "immutable": {
+          "serviceName": "fluxer-gateway-headless",
+          "podManagementPolicy": null,
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "gateway": "ghcr.io/fluxerapp/fluxer-gateway"
+        }
+      },
+      "StatefulSet/gateway-push": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-gateway",
+            "app.kubernetes.io/name": "gateway-push"
+          }
+        },
+        "images": {
+          "gateway": "sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d"
+        },
+        "immutable": {
+          "serviceName": "fluxer-gateway-headless",
+          "podManagementPolicy": null,
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "gateway": "ghcr.io/fluxerapp/fluxer-gateway"
+        }
+      }
+    },
+    "selectors": {
+      "Service/gateway": {
+        "app.kubernetes.io/instance": "fluxer-gateway",
+        "app.kubernetes.io/name": "gateway"
+      },
+      "Service/fluxer-gateway-headless": {
+        "app.kubernetes.io/instance": "fluxer-gateway",
+        "app.kubernetes.io/part-of": "fluxer"
+      }
+    },
+    "spec_digests": {
+      "NetworkPolicy/gateway": "ac17a0a2a4314bccb6926ce3e77ae85b6aa2accec0121c98af240fa9d998d7f6",
+      "Service/gateway": "b31835d0674c7c0313cd30f882b32ce1c61f3037efc369b88e0fe07bf57ae16b",
+      "Service/fluxer-gateway-headless": "0fcd5d1049d28e8698f0b4d067f87f3c54ded82c9188e3488d7a1ea1f7f0304c",
+      "Deployment/gateway": "e2113ed4b798c1d7e864c8fcf129ea3c26d1c8e869027ee6aa6bcb59d62fcdc5",
+      "StatefulSet/gateway-sessions": "a61e2ff2b97242de527ac670002d0d189e241014a81f3bde4072ff1aef234998",
+      "StatefulSet/gateway-presence": "846594c2836a3c921f255596417959775c21dfcbfd3cabbef6596258b3456e40",
+      "StatefulSet/gateway-guilds": "9266a113cda6b3ec8c5d75463b92d0103ac8180959d6636b22cd340a9021253d",
+      "StatefulSet/gateway-calls": "272444e66ba8b05c4353aecc95e876b76605d9df86f57c84e920ac13d8184bfb",
+      "StatefulSet/gateway-push": "044fe61cb0aa0d904d4ebdb6f793773fee195365aed68434a9bd45823db6b1fa"
+    },
+    "namespaces": {
+      "NetworkPolicy/gateway": "fluxer",
+      "Service/gateway": "fluxer",
+      "Service/fluxer-gateway-headless": "fluxer",
+      "Deployment/gateway": "fluxer",
+      "StatefulSet/gateway-sessions": "fluxer",
+      "StatefulSet/gateway-presence": "fluxer",
+      "StatefulSet/gateway-guilds": "fluxer",
+      "StatefulSet/gateway-calls": "fluxer",
+      "StatefulSet/gateway-push": "fluxer"
+    }
+  },
+  "fluxer-media-proxy": {
+    "resources": [
+      "Deployment/media-proxy",
+      "Deployment/static-proxy",
+      "PodDisruptionBudget/media-proxy-pdb",
+      "PodDisruptionBudget/static-proxy-pdb",
+      "Service/media-proxy",
+      "Service/static-proxy"
+    ],
+    "workloads": {
+      "Deployment/media-proxy": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-media-proxy",
+            "app.kubernetes.io/name": "media-proxy"
+          }
+        },
+        "images": {
+          "media-proxy": "sha256:d95f4ba34d5e1b366965feaddec16d34662a5612f80fd57aba708e33b66c7ab1"
+        },
+        "repositories": {
+          "media-proxy": "ghcr.io/fluxerapp/fluxer-media-proxy"
+        }
+      },
+      "Deployment/static-proxy": {
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/instance": "fluxer-media-proxy",
+            "app.kubernetes.io/name": "static-proxy"
+          }
+        },
+        "images": {
+          "static-proxy": "sha256:d95f4ba34d5e1b366965feaddec16d34662a5612f80fd57aba708e33b66c7ab1"
+        },
+        "repositories": {
+          "static-proxy": "ghcr.io/fluxerapp/fluxer-media-proxy"
+        }
+      }
+    },
+    "selectors": {
+      "PodDisruptionBudget/media-proxy-pdb": {
+        "matchLabels": {
+          "app.kubernetes.io/instance": "fluxer-media-proxy",
+          "app.kubernetes.io/name": "media-proxy"
+        }
+      },
+      "PodDisruptionBudget/static-proxy-pdb": {
+        "matchLabels": {
+          "app.kubernetes.io/instance": "fluxer-media-proxy",
+          "app.kubernetes.io/name": "static-proxy"
+        }
+      },
+      "Service/media-proxy": {
+        "app.kubernetes.io/instance": "fluxer-media-proxy",
+        "app.kubernetes.io/name": "media-proxy"
+      },
+      "Service/static-proxy": {
+        "app.kubernetes.io/instance": "fluxer-media-proxy",
+        "app.kubernetes.io/name": "static-proxy"
+      }
+    },
+    "spec_digests": {
+      "PodDisruptionBudget/media-proxy-pdb": "f3f6e653c7a59fd96b9d09d6fb3b96c47a0f263d60d0e4188ff937e85a907ab8",
+      "PodDisruptionBudget/static-proxy-pdb": "6aad8918735ba40e9a977b98c9c633abf34ad1c694d2cdfdf4238de569e9ed1f",
+      "Service/media-proxy": "4ae2b87639277b12370f904dc688b92ee86f63456863e7e67fe8aabdab0e1638",
+      "Service/static-proxy": "8609f37297be8271100c16a670379b9692446aa9b53b6b3115a9b147c0d26035",
+      "Deployment/media-proxy": "b2297c801698b6daee07312dfc6e5a971b0b9582e6dc5c4409de2ee206dccab2",
+      "Deployment/static-proxy": "7608bd5cb4bd366b990c0e88630cdafdcdaaff8efec4f98e34125190cbce4102"
+    },
+    "namespaces": {
+      "PodDisruptionBudget/media-proxy-pdb": "fluxer",
+      "PodDisruptionBudget/static-proxy-pdb": "fluxer",
+      "Service/media-proxy": "fluxer",
+      "Service/static-proxy": "fluxer",
+      "Deployment/media-proxy": "fluxer",
+      "Deployment/static-proxy": "fluxer"
+    }
+  },
+  "fluxer-messages": {
+    "resources": [
+      "Deployment/messages",
+      "PodDisruptionBudget/messages",
+      "PodDisruptionBudget/messages-shard",
+      "Service/messages",
+      "Service/messages-shard-headless",
+      "StatefulSet/messages-shard"
+    ],
+    "workloads": {
+      "Deployment/messages": {
+        "selector": {
+          "matchLabels": {
+            "app": "messages"
+          }
+        },
+        "images": {
+          "router": "sha256:148473df876449489a269b266e31615a9e46f3f93d56dc715ed1ecb1f1d184b3"
+        },
+        "repositories": {
+          "router": "ghcr.io/fluxerapp/fluxer-messages"
+        }
+      },
+      "StatefulSet/messages-shard": {
+        "selector": {
+          "matchLabels": {
+            "app": "messages-shard"
+          }
+        },
+        "images": {
+          "shard": "sha256:148473df876449489a269b266e31615a9e46f3f93d56dc715ed1ecb1f1d184b3"
+        },
+        "immutable": {
+          "serviceName": "messages-shard-headless",
+          "podManagementPolicy": "Parallel",
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "shard": "ghcr.io/fluxerapp/fluxer-messages"
+        }
+      }
+    },
+    "selectors": {
+      "PodDisruptionBudget/messages-shard": {
+        "matchLabels": {
+          "app": "messages-shard"
+        }
+      },
+      "PodDisruptionBudget/messages": {
+        "matchLabels": {
+          "app": "messages"
+        }
+      },
+      "Service/messages-shard-headless": {
+        "app": "messages-shard"
+      },
+      "Service/messages": {
+        "app": "messages"
+      }
+    },
+    "spec_digests": {
+      "PodDisruptionBudget/messages-shard": "178e52e3095cbad5fe1d005d026ba4fded4fbcf2127e084ea7464dd23612a90c",
+      "PodDisruptionBudget/messages": "c55c02703b228e706a751772cb8b3a4c1cdbac7350c0a867917474543a46b7c6",
+      "Service/messages-shard-headless": "43d216444e27c06e132354a25f21326e3ea92d09cfc4fd51f29d86ae31fd35e1",
+      "Service/messages": "dc0b07851aeeddcd6a37ef6ccacfe03a179df7c7199bc2d4c87b1127776e381f",
+      "Deployment/messages": "09837b020a0193df432d656aed99df051d905bcab358a987b340979e430240f0",
+      "StatefulSet/messages-shard": "cd7260623c33b1f6a13d85d16af50ff013aeb4b57279b74a52a9195ad216dd5c"
+    },
+    "namespaces": {
+      "PodDisruptionBudget/messages-shard": "fluxer",
+      "PodDisruptionBudget/messages": "fluxer",
+      "Service/messages-shard-headless": "fluxer",
+      "Service/messages": "fluxer",
+      "Deployment/messages": "fluxer",
+      "StatefulSet/messages-shard": "fluxer"
+    }
+  },
+  "fluxer-snowflakes": {
+    "resources": [
+      "Deployment/snowflakes",
+      "PodDisruptionBudget/snowflakes",
+      "PodDisruptionBudget/snowflakes-shard",
+      "Service/snowflakes",
+      "Service/snowflakes-shard-headless",
+      "StatefulSet/snowflakes-shard"
+    ],
+    "workloads": {
+      "Deployment/snowflakes": {
+        "selector": {
+          "matchLabels": {
+            "app": "snowflakes"
+          }
+        },
+        "images": {
+          "router": "sha256:0ab5dd47a938ead3b382643a10798abc51d3f9d9d92d96127c111111933f48fa"
+        },
+        "repositories": {
+          "router": "ghcr.io/fluxerapp/fluxer-snowflakes"
+        }
+      },
+      "StatefulSet/snowflakes-shard": {
+        "selector": {
+          "matchLabels": {
+            "app": "snowflakes-shard"
+          }
+        },
+        "images": {
+          "shard": "sha256:0ab5dd47a938ead3b382643a10798abc51d3f9d9d92d96127c111111933f48fa"
+        },
+        "immutable": {
+          "serviceName": "snowflakes-shard-headless",
+          "podManagementPolicy": "Parallel",
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "shard": "ghcr.io/fluxerapp/fluxer-snowflakes"
+        }
+      }
+    },
+    "selectors": {
+      "PodDisruptionBudget/snowflakes-shard": {
+        "matchLabels": {
+          "app": "snowflakes-shard"
+        }
+      },
+      "PodDisruptionBudget/snowflakes": {
+        "matchLabels": {
+          "app": "snowflakes"
+        }
+      },
+      "Service/snowflakes-shard-headless": {
+        "app": "snowflakes-shard"
+      },
+      "Service/snowflakes": {
+        "app": "snowflakes"
+      }
+    },
+    "spec_digests": {
+      "PodDisruptionBudget/snowflakes-shard": "298ebd997871f82023562821ff003ae81e6a043754893944e7666472c391e031",
+      "PodDisruptionBudget/snowflakes": "2b0ec64fe6b0c633eb339cdd9ee44073f111c6a6c2d95b315d41a5b0c6dd8f70",
+      "Service/snowflakes-shard-headless": "6adc6abaa5ea638215911e36b83e0dfc343f1c8e360394b0c285b0cf3d56217a",
+      "Service/snowflakes": "ce36e8baa8db37d53b2788f8bffea2aa80929a87a0ab651127706c3251f7dc9f",
+      "Deployment/snowflakes": "3133559b8d052508191a0e18578e156c6e0cef2ef9842219c8d837756f80c229",
+      "StatefulSet/snowflakes-shard": "d675d922a566970762204b06fce963722f5066127d8cf0385990839d5e23ac28"
+    },
+    "namespaces": {
+      "PodDisruptionBudget/snowflakes-shard": "fluxer",
+      "PodDisruptionBudget/snowflakes": "fluxer",
+      "Service/snowflakes-shard-headless": "fluxer",
+      "Service/snowflakes": "fluxer",
+      "Deployment/snowflakes": "fluxer",
+      "StatefulSet/snowflakes-shard": "fluxer"
+    }
+  },
+  "fluxer-unfurl": {
+    "resources": [
+      "Deployment/unfurl",
+      "PodDisruptionBudget/unfurl",
+      "PodDisruptionBudget/unfurl-shard",
+      "Service/unfurl",
+      "Service/unfurl-shard-headless",
+      "StatefulSet/unfurl-shard"
+    ],
+    "workloads": {
+      "Deployment/unfurl": {
+        "selector": {
+          "matchLabels": {
+            "app": "unfurl"
+          }
+        },
+        "images": {
+          "router": "sha256:f77279a4d16b8f17dfd3f12bbfea4cc8db2b34eb5cd49b5ba9019ee55bc6f64f"
+        },
+        "repositories": {
+          "router": "ghcr.io/fluxerapp/fluxer-unfurl"
+        }
+      },
+      "StatefulSet/unfurl-shard": {
+        "selector": {
+          "matchLabels": {
+            "app": "unfurl-shard"
+          }
+        },
+        "images": {
+          "shard": "sha256:f77279a4d16b8f17dfd3f12bbfea4cc8db2b34eb5cd49b5ba9019ee55bc6f64f"
+        },
+        "immutable": {
+          "serviceName": "unfurl-shard-headless",
+          "podManagementPolicy": "Parallel",
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "shard": "ghcr.io/fluxerapp/fluxer-unfurl"
+        }
+      }
+    },
+    "selectors": {
+      "PodDisruptionBudget/unfurl-shard": {
+        "matchLabels": {
+          "app": "unfurl-shard"
+        }
+      },
+      "PodDisruptionBudget/unfurl": {
+        "matchLabels": {
+          "app": "unfurl"
+        }
+      },
+      "Service/unfurl-shard-headless": {
+        "app": "unfurl-shard"
+      },
+      "Service/unfurl": {
+        "app": "unfurl"
+      }
+    },
+    "spec_digests": {
+      "PodDisruptionBudget/unfurl-shard": "00076bb576fec05a2229eb4f9b8bd60889201772969abe29b129011b7fa953b3",
+      "PodDisruptionBudget/unfurl": "357a4cdeabfea7e1a1e4eebf79eaea57db0489efa0c0a9e25486d3844aae01d7",
+      "Service/unfurl-shard-headless": "bee99bae4f4a665863df36fe6b22eab0139d2b79755988dd2a3b39a52578841c",
+      "Service/unfurl": "5fee636dcdf3f25e2f649df9b9e4d4d7cafdbc83a6e26f38a146f2e215ad4da2",
+      "Deployment/unfurl": "01e02dd26e7c97607f45b488d74eb402470c6b7916ad0a6211a99d83fd751e7d",
+      "StatefulSet/unfurl-shard": "4a00be1993247b8ab1b6e0c791992a451efddd23306e1b10aa84ec10a7cad366"
+    },
+    "namespaces": {
+      "PodDisruptionBudget/unfurl-shard": "fluxer",
+      "PodDisruptionBudget/unfurl": "fluxer",
+      "Service/unfurl-shard-headless": "fluxer",
+      "Service/unfurl": "fluxer",
+      "Deployment/unfurl": "fluxer",
+      "StatefulSet/unfurl-shard": "fluxer"
+    }
+  },
+  "fluxer-users": {
+    "resources": [
+      "Deployment/users",
+      "PodDisruptionBudget/users",
+      "PodDisruptionBudget/users-shard",
+      "Service/users",
+      "Service/users-shard-headless",
+      "StatefulSet/users-shard"
+    ],
+    "workloads": {
+      "Deployment/users": {
+        "selector": {
+          "matchLabels": {
+            "app": "users"
+          }
+        },
+        "images": {
+          "router": "sha256:1f811b5d123e32aa5fc8f6077a9dda7c2b1023857f27db29e7a4e4e275fcee66"
+        },
+        "repositories": {
+          "router": "ghcr.io/fluxerapp/fluxer-users"
+        }
+      },
+      "StatefulSet/users-shard": {
+        "selector": {
+          "matchLabels": {
+            "app": "users-shard"
+          }
+        },
+        "images": {
+          "shard": "sha256:1f811b5d123e32aa5fc8f6077a9dda7c2b1023857f27db29e7a4e4e275fcee66"
+        },
+        "immutable": {
+          "serviceName": "users-shard-headless",
+          "podManagementPolicy": "Parallel",
+          "volumeClaimTemplates": null
+        },
+        "repositories": {
+          "shard": "ghcr.io/fluxerapp/fluxer-users"
+        }
+      }
+    },
+    "selectors": {
+      "PodDisruptionBudget/users-shard": {
+        "matchLabels": {
+          "app": "users-shard"
+        }
+      },
+      "PodDisruptionBudget/users": {
+        "matchLabels": {
+          "app": "users"
+        }
+      },
+      "Service/users-shard-headless": {
+        "app": "users-shard"
+      },
+      "Service/users": {
+        "app": "users"
+      }
+    },
+    "spec_digests": {
+      "PodDisruptionBudget/users-shard": "c1f5ef6c46bdf03fd8749b790bf2abbf6466f7c9621aa0f81286a3a8a4d99e25",
+      "PodDisruptionBudget/users": "bcc7a46cfe9420edd533683e6698a323d5c17ca9c8a6818236a1934dc2577654",
+      "Service/users-shard-headless": "59c3f14d287a578cd461baa9d428f137347d7201c19ef3dab8ba4568fbe48d1c",
+      "Service/users": "71240d53841cc103d045ffc7abe7ab3250a7661f7659f88182e20bc55ccf3208",
+      "Deployment/users": "cfd99b3cc1c423a32a4382eda26b2fa3186049ad950ac2b6585657d4ebbf49b4",
+      "StatefulSet/users-shard": "7d2c23e7c818a6543f47384e73b478673bed122d33cd7feb8302cd64c64819d3"
+    },
+    "namespaces": {
+      "PodDisruptionBudget/users-shard": "fluxer",
+      "PodDisruptionBudget/users": "fluxer",
+      "Service/users-shard-headless": "fluxer",
+      "Service/users": "fluxer",
+      "Deployment/users": "fluxer",
+      "StatefulSet/users-shard": "fluxer"
+    }
+  }
+}

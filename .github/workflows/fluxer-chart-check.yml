@@ -1,0 +1,42 @@
+name: Fluxer Chart Compatibility
+
+on:
+  pull_request:
+    paths:
+      - "charts/fluxer/**"
+      - "clusters/main/apps/fluxer/**"
+      - "tests/scripts/fluxer-chart-test.py"
+      - "tests/fixtures/fluxer-deployment-contract.json"
+      - ".github/workflows/fluxer-chart-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-fluxer-charts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+      - name: Install render and schema validation tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/fluxer-cli" "$RUNNER_TEMP/fluxer-bin"
+          cd "$RUNNER_TEMP/fluxer-cli"
+          curl -fLsS "https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz" -o helm-v4.3.0-linux-amd64.tar.gz
+          curl -fLsS "https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz.sha256sum" -o helm.sha256sum
+          sha256sum --check helm.sha256sum
+          tar xzf helm-v4.3.0-linux-amd64.tar.gz
+          mv linux-amd64/helm "$RUNNER_TEMP/fluxer-bin/helm"
+          curl -fLsS "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.6.0/kustomize_v5.6.0_linux_amd64.tar.gz" -o kustomize.tar.gz
+          tar xzf kustomize.tar.gz -C "$RUNNER_TEMP/fluxer-bin"
+          curl -fLsS "https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz" -o kubeconform.tar.gz
+          tar xzf kubeconform.tar.gz -C "$RUNNER_TEMP/fluxer-bin" kubeconform
+          echo "$RUNNER_TEMP/fluxer-bin" >> "$GITHUB_PATH"
+      - name: Render charts and validate migration contracts
+        run: uv run --python 3.13 --with pyyaml==6.0.3 python tests/scripts/fluxer-chart-test.py
