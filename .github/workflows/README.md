@@ -86,6 +86,20 @@ PRで `clusters/` 配下のファイルが変更された場合に自動実行�
 シークレット不要。クラスタへのアクセスなしの純粋なローカルバリデーション。
 FluxはGitマージ時に自動reconcileするため、applyワークフローは不要。
 
+#### fluxer-update.yml / fluxer-update-kind.yml (更新PR)
+
+毎日 08:17 JST と手動実行で Fluxer upstream chart / `v1` image の更新を別々の PR にする。
+互換性失敗は Draft PR、自動マージなし。取得・検証 job は read-only、公開 job のみ
+`GITHUB_TOKEN` の contents / pull-requests / actions write を利用する。
+候補 HEAD に対する `fluxer-chart-check.yml` と `flux-check.yml` を明示 dispatch する。
+詳細・手動変更保護・実動作確認は [運用手順](../../docs/fluxer-auto-update.md) を参照。
+
+#### fluxer-chart-check.yml (互換性)
+
+Fluxer の変更 PR と updater からの dispatch で、upstream hash、image lock、
+9 release の render と既存 runtime/ownership contract を検証する。
+アプリの実動作検証はマージ前に別途行う。
+
 ## Required Secrets
 
 | Secret | 内容 | 用途 |

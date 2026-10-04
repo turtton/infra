@@ -9,9 +9,26 @@
   },
   "packageRules": [
     {
-      "description": "Fluxerの旧サービス別chartを維持するため、新chart構成への移行までupstream参照の更新を停止する",
+      "description": "停止中のFluxer旧upstream参照はrollback用に固定し、自動更新は専用Actionsで管理する",
       "matchManagers": ["flux"],
       "matchFileNames": ["clusters/main/apps/fluxer/source-gitrepository.yaml"],
+      "enabled": false
+    },
+    {
+      "description": "Fluxer vendor原本とアプリimageは専用Actionsでまとめて更新し、Renovateとの二重更新を避ける",
+      "matchFileNames": [
+        "charts/fluxer/**",
+        "clusters/main/apps/fluxer/images.lock.json",
+        "clusters/main/apps/fluxer/helmrelease-admin.yaml",
+        "clusters/main/apps/fluxer/helmrelease-api.yaml",
+        "clusters/main/apps/fluxer/helmrelease-app-proxy.yaml",
+        "clusters/main/apps/fluxer/helmrelease-gateway.yaml",
+        "clusters/main/apps/fluxer/helmrelease-media-proxy.yaml",
+        "clusters/main/apps/fluxer/helmrelease-messages.yaml",
+        "clusters/main/apps/fluxer/helmrelease-snowflakes.yaml",
+        "clusters/main/apps/fluxer/helmrelease-unfurl.yaml",
+        "clusters/main/apps/fluxer/helmrelease-users.yaml"
+      ],
       "enabled": false
     },
     {

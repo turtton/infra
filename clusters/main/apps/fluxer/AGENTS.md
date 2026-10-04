@@ -33,6 +33,9 @@ Cloudflare Tunnel → Caddy:80 → app-proxy:8080 (SPA)
 - `upgrade.chartNameChangeStrategy: InPlaceUpdate` と旧 selector を維持すること。Pod の `helm.sh/chart` label 固定パッチは無関係な infra commit による再起動を防ぐため必須
 - 検証: `uv run --with pyyaml==6.0.3 python tests/scripts/fluxer-chart-test.py`
 - Image registry: `ghcr.io/fluxerapp`
+- 自動更新: `.github/workflows/fluxer-update.yml` が毎日 08:17 JST に chart と `v1` image を別々の PR として提案。自動マージは禁止。運用手順は `docs/fluxer-auto-update.md`
+- Image pin の正本は `images.lock.json`。9 release の値と一致させ、image 更新でのみ変更する。runtime fixture は image digest 以外の既存動作・所有権を固定するため、失敗候補に合わせて自動再生成しない
+- Updater/guard の検証: `uv run --with pyyaml==6.0.3 python tests/scripts/test-update-fluxer.py`、`tests/scripts/test-fluxer-chart-contract.py`、`tests/scripts/test-fluxer-update-workflow.py`（後者2つも同じ uv run prefix）
 
 ## Key Configuration Gotchas
 

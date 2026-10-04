@@ -6,9 +6,15 @@ on:
       - "clusters/**"
       - "tests/scripts/atm10-observability-test.sh"
       - ".github/workflows/flux-check.yml"
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Expected branch HEAD when dispatched by the Fluxer updater
+        type: string
+        required: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -19,8 +25,17 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
+      - name: Check dispatched revision
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          ACTUAL_SHA: ${{ github.sha }}
+        run: test -z "$EXPECTED_SHA" || test "$EXPECTED_SHA" = "$ACTUAL_SHA"
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
       - name: Install kustomize
         run: |
@@ -68,7 +83,7 @@ jobs:
           exit "$EXIT_CODE"
 
       - name: Comment validation result on PR
-        if: always()
+        if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v9
         env:
           VALIDATE_OUTPUT: ${{ steps.validate.outputs.output }}

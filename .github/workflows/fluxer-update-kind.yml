@@ -1,0 +1,290 @@
+name: Prepare Fluxer Update Proposal
+
+on:
+  workflow_call:
+    inputs:
+      kind:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+      - uses: ./.github/actions/setup-fluxer-tools
+      - name: Resolve and prepare update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATE_KIND: ${{ inputs.kind }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/fluxer-proposal"
+          uv run --python 3.13 --with pyyaml==6.0.3 python scripts/update-fluxer.py \
+            --kind "$UPDATE_KIND" --report "$RUNNER_TEMP/fluxer-proposal/report.md"
+          git add charts/fluxer/current clusters/main/apps/fluxer/helmrelease-*.yaml clusters/main/apps/fluxer/images.lock.json
+          changed=false
+          if ! git diff --cached --quiet; then changed=true; fi
+          git diff --cached --binary > "$RUNNER_TEMP/fluxer-proposal/candidate.patch"
+          jq -n --arg kind "$UPDATE_KIND" --arg base_sha "$(git rev-parse HEAD)" \
+            --argjson changed "$changed" \
+            '{kind:$kind,base_sha:$base_sha,changed:$changed}' > "$RUNNER_TEMP/fluxer-proposal/metadata.json"
+      - name: Validate proposed runtime contracts
+        id: validate
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          uv run --python 3.13 --with pyyaml==6.0.3 python tests/scripts/fluxer-chart-test.py \
+            2>&1 | tee "$RUNNER_TEMP/fluxer-validation.log"
+      - name: Record validation result
+        env:
+          VALIDATION_RESULT: ${{ steps.validate.outcome }}
+        run: |
+          set -euo pipefail
+          jq --argjson compatible "$([ "$VALIDATION_RESULT" = success ] && echo true || echo false)" \
+            '. + {compatible:$compatible}' "$RUNNER_TEMP/fluxer-proposal/metadata.json" \
+            > "$RUNNER_TEMP/fluxer-metadata.json"
+          mv "$RUNNER_TEMP/fluxer-metadata.json" "$RUNNER_TEMP/fluxer-proposal/metadata.json"
+          {
+            echo
+            echo "### Compatibility check: $VALIDATION_RESULT"
+            echo
+            echo '```text'
+            tail -n 80 "$RUNNER_TEMP/fluxer-validation.log"
+            echo '```'
+          } >> "$RUNNER_TEMP/fluxer-proposal/report.md"
+          cat "$RUNNER_TEMP/fluxer-proposal/report.md" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fluxer-proposal-${{ inputs.kind }}
+          path: ${{ runner.temp }}/fluxer-proposal/
+          retention-days: 7
+
+  publish:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UPDATE_BRANCH: codex/fluxer-${{ inputs.kind }}-updates
+      UPDATE_KIND: ${{ inputs.kind }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: fluxer-proposal-${{ inputs.kind }}
+          path: ${{ runner.temp }}/fluxer-proposal/
+      - name: Check candidate and preserve manual branch edits
+        id: candidate
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          metadata="$RUNNER_TEMP/fluxer-proposal/metadata.json"
+          test "$(jq -r .kind "$metadata")" = "$UPDATE_KIND"
+          # A newer main needs a fresh proposal; never apply a stale patch to it.
+          if [ "$(jq -r .base_sha "$metadata")" != "$(git rev-parse HEAD)" ]; then
+            echo "Main changed during preparation; defer to the next run." >> "$GITHUB_STEP_SUMMARY"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(jq -r .changed "$metadata")"
+          test "$changed" = true || test "$changed" = false
+          compatible="$(jq -r .compatible "$metadata")"
+          test "$compatible" = true || test "$compatible" = false
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "compatible=$compatible" >> "$GITHUB_OUTPUT"
+          if [ "$changed" != true ]; then exit 0; fi
+          existing="$(gh pr list --head "$UPDATE_BRANCH" --base main --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            # Human fixes must be moved to a separate PR, never overwritten here.
+            gh pr view "$existing" --json headRefOid,commits,body > "$RUNNER_TEMP/fluxer-existing-pr.json"
+            checked_head="$(jq -r .headRefOid "$RUNNER_TEMP/fluxer-existing-pr.json")"
+            recorded_head="$(jq -r .body "$RUNNER_TEMP/fluxer-existing-pr.json" | sed -n 's/^<!-- fluxer-update-head:\([0-9a-f]\{40\}\) -->$/\1/p')"
+            if [ "$recorded_head" != "$checked_head" ]; then
+              echo "::error::The update branch changed after automation published it; preserve it for manual inspection."
+              exit 1
+            fi
+            jq -r '.commits[].authors[].login' "$RUNNER_TEMP/fluxer-existing-pr.json" > "$RUNNER_TEMP/fluxer-authors.txt"
+            if [ ! -s "$RUNNER_TEMP/fluxer-authors.txt" ]; then
+              echo "::error::The update branch contains manual commits; preserve it and resolve those changes separately."
+              exit 1
+            fi
+            while IFS= read -r author; do
+              if [ "$author" != 'github-actions[bot]' ]; then
+                echo "::error::The update branch contains manual commits; preserve it and resolve those changes separately."
+                exit 1
+              fi
+            done < "$RUNNER_TEMP/fluxer-authors.txt"
+            # An amended bot commit keeps its author; check the committer too.
+            jq -r '.commits[].oid' "$RUNNER_TEMP/fluxer-existing-pr.json" > "$RUNNER_TEMP/fluxer-commits.txt"
+            while IFS= read -r commit; do
+              committer="$(gh api "repos/$GH_REPO/commits/$commit" --jq '.committer.login // empty')"
+              if [ "$committer" != 'github-actions[bot]' ]; then
+                echo "::error::A human amended the update branch; preserve it for manual inspection."
+                exit 1
+              fi
+            done < "$RUNNER_TEMP/fluxer-commits.txt"
+          elif gh api "repos/$GH_REPO/git/ref/heads/$UPDATE_BRANCH" > /dev/null 2>&1; then
+            echo "::error::An existing branch has no open automation PR; preserve it for manual inspection."
+            exit 1
+          else
+            checked_head=""
+          fi
+          echo "existing_pr=$existing" >> "$GITHUB_OUTPUT"
+          echo "checked_head=$checked_head" >> "$GITHUB_OUTPUT"
+          git apply --index "$RUNNER_TEMP/fluxer-proposal/candidate.patch"
+          git diff --cached --name-only > "$RUNNER_TEMP/fluxer-paths.txt"
+          while IFS= read -r path; do
+            case "$path" in
+              charts/fluxer/current/*)
+                test "$UPDATE_KIND" = charts ;;
+              clusters/main/apps/fluxer/images.lock.json)
+                test "$UPDATE_KIND" = images ;;
+              clusters/main/apps/fluxer/helmrelease-admin.yaml|clusters/main/apps/fluxer/helmrelease-api.yaml|clusters/main/apps/fluxer/helmrelease-app-proxy.yaml|clusters/main/apps/fluxer/helmrelease-gateway.yaml|clusters/main/apps/fluxer/helmrelease-media-proxy.yaml|clusters/main/apps/fluxer/helmrelease-messages.yaml|clusters/main/apps/fluxer/helmrelease-snowflakes.yaml|clusters/main/apps/fluxer/helmrelease-unfurl.yaml|clusters/main/apps/fluxer/helmrelease-users.yaml)
+                ;;
+              *) echo "::error::Unexpected proposal path: $path"; exit 1 ;;
+            esac
+          done < "$RUNNER_TEMP/fluxer-paths.txt"
+      - name: Create or refresh update PR
+        if: steps.candidate.outputs.changed == 'true'
+        id: pr
+        env:
+          GH_REPO: ${{ github.repository }}
+          EXISTING_PR: ${{ steps.candidate.outputs.existing_pr }}
+          CHECKED_HEAD: ${{ steps.candidate.outputs.checked_head }}
+          COMPATIBLE: ${{ steps.candidate.outputs.compatible }}
+        run: |
+          set -euo pipefail
+          remote_git() {
+            git -c credential.helper= -c 'credential.helper=!gh auth git-credential' "$@"
+          }
+          publication_started=false
+          head=""
+          # Git and the PR API are separate writes. If the API fails, inspect
+          # its outcome before restoring only the exact branch HEAD we pushed.
+          recover_publication() {
+            status=$?
+            trap - ERR
+            set +e
+            if [ "$publication_started" != true ]; then exit "$status"; fi
+            if ! remote_git ls-remote --heads origin "refs/heads/$UPDATE_BRANCH" > "$RUNNER_TEMP/fluxer-remote-head.txt"; then
+              echo "::warning::Cannot inspect publication outcome; preserve the branch for inspection."
+              exit "$status"
+            fi
+            remote_head="$(cut -f1 "$RUNNER_TEMP/fluxer-remote-head.txt")"
+            if [ "$remote_head" != "$head" ]; then
+              echo "::warning::The update branch changed during publication; preserve the newer HEAD."
+              exit "$status"
+            fi
+            recovery_pr="$EXISTING_PR"
+            if [ -z "$recovery_pr" ]; then
+              if ! recovery_pr="$(gh pr list --head "$UPDATE_BRANCH" --base main --state open --json number --jq '.[0].number // empty')"; then
+                echo "::warning::Cannot inspect PR creation outcome; preserve the branch for inspection."
+                exit "$status"
+              fi
+            fi
+            if [ -n "$recovery_pr" ]; then
+              if ! gh pr view "$recovery_pr" --json body > "$RUNNER_TEMP/fluxer-recovery-pr.json"; then
+                echo "::warning::Cannot inspect PR publication outcome; preserve the branch for inspection."
+                exit "$status"
+              fi
+              recorded_head="$(jq -r .body "$RUNNER_TEMP/fluxer-recovery-pr.json" | sed -n 's/^<!-- fluxer-update-head:\([0-9a-f]\{40\}\) -->$/\1/p')"
+              if [ "$recorded_head" = "$head" ]; then
+                echo "::warning::PR publication succeeded despite the API error; retain its recorded HEAD for the next run."
+                exit "$status"
+              fi
+              if [ "$recorded_head" != "$CHECKED_HEAD" ] || [ -z "$CHECKED_HEAD" ]; then
+                echo "::warning::The PR marker changed during publication; preserve it for inspection."
+                exit "$status"
+              fi
+            fi
+            if [ -n "$CHECKED_HEAD" ]; then
+              recovery_ref="$CHECKED_HEAD:refs/heads/$UPDATE_BRANCH"
+            else
+              recovery_ref=":refs/heads/$UPDATE_BRANCH"
+            fi
+            if remote_git push --force-with-lease="refs/heads/$UPDATE_BRANCH:$head" origin "$recovery_ref"; then
+              echo "::warning::Restored the branch after incomplete PR publication; the next run can retry."
+            else
+              echo "::warning::The branch advanced during recovery; preserve the newer HEAD."
+            fi
+            exit "$status"
+          }
+          trap recover_publication ERR
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          candidate_tree="$(git write-tree)"
+          if [ -n "$CHECKED_HEAD" ]; then
+            remote_git fetch --no-tags origin "$CHECKED_HEAD"
+            if [ "$(git rev-parse "$CHECKED_HEAD^{tree}")" = "$candidate_tree" ]; then
+              echo "The existing proposal already contains this candidate; reuse its commit and PR." >> "$GITHUB_STEP_SUMMARY"
+              head="$CHECKED_HEAD"
+            fi
+          fi
+          number="$EXISTING_PR"
+          if [ -z "$head" ]; then
+            git checkout -b "$UPDATE_BRANCH"
+            git commit -m "chore(fluxer): update $UPDATE_KIND"
+            head="$(git rev-parse HEAD)"
+            # Empty expected HEAD also protects concurrent branch creation.
+            publication_started=true
+            remote_git push --force-with-lease="refs/heads/$UPDATE_BRANCH:$CHECKED_HEAD" origin "HEAD:refs/heads/$UPDATE_BRANCH"
+            body="$RUNNER_TEMP/fluxer-proposal/report.md"
+            printf '\n<!-- fluxer-update-head:%s -->\n' "$head" >> "$body"
+            if [ -n "$EXISTING_PR" ]; then
+              gh pr edit "$EXISTING_PR" --title "chore(fluxer): update $UPDATE_KIND" --body-file "$body"
+            else
+              args=(--base main --head "$UPDATE_BRANCH" --title "chore(fluxer): update $UPDATE_KIND" --body-file "$body" --label dependencies)
+              if [ "$COMPATIBLE" != true ]; then args+=(--draft); fi
+              gh pr create "${args[@]}"
+              number="$(gh pr list --head "$UPDATE_BRANCH" --base main --state open --json number --jq '.[0].number')"
+            fi
+          fi
+          gh pr view "$number" --json headRefOid,isDraft > "$RUNNER_TEMP/fluxer-published-pr.json"
+          test "$(jq -r .headRefOid "$RUNNER_TEMP/fluxer-published-pr.json")" = "$head"
+          is_draft="$(jq -r .isDraft "$RUNNER_TEMP/fluxer-published-pr.json")"
+          if [ "$COMPATIBLE" != true ] && [ "$is_draft" != true ]; then
+            gh pr ready "$number" --undo
+          elif [ "$COMPATIBLE" = true ] && [ "$is_draft" = true ]; then
+            gh pr ready "$number"
+          fi
+          echo "pull-request-number=$number" >> "$GITHUB_OUTPUT"
+          echo "pull-request-head-sha=$head" >> "$GITHUB_OUTPUT"
+      - name: Run validation on the proposed commit
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.pull-request-number }}
+          EXPECTED_SHA: ${{ steps.pr.outputs.pull-request-head-sha }}
+        run: |
+          set -euo pipefail
+          test "$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)" = "$EXPECTED_SHA"
+          # Reuse successful/active checks; retry failed or missing checks on an
+          # unchanged proposal without pushing another commit or editing its PR.
+          for workflow in fluxer-chart-check.yml flux-check.yml; do
+            gh run list --workflow "$workflow" --commit "$EXPECTED_SHA" --branch "$UPDATE_BRANCH" --event workflow_dispatch \
+              --limit 100 --json status,conclusion > "$RUNNER_TEMP/fluxer-runs.json"
+            if jq -e 'any(.[]; .conclusion == "success" or .status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "pending" or .status == "requested")' "$RUNNER_TEMP/fluxer-runs.json" > /dev/null; then
+              echo "Reuse existing $workflow validation for $EXPECTED_SHA." >> "$GITHUB_STEP_SUMMARY"
+            else
+              # Dispatch uses GITHUB_TOKEN and binds checks to this exact HEAD.
+              gh workflow run "$workflow" --ref "$UPDATE_BRANCH" -f expected_sha="$EXPECTED_SHA"
+            fi
+          done
+          echo "Update PR: https://github.com/$GH_REPO/pull/$PR_NUMBER (HEAD $EXPECTED_SHA)" >> "$GITHUB_STEP_SUMMARY"
