@@ -8,12 +8,12 @@ spec:
   interval: 1h
   chart:
     spec:
-      chart: ./deploy/helm/api
+      chart: ./charts/fluxer/legacy/api
       version: "0.1.0"
       sourceRef:
         kind: GitRepository
-        name: fluxer-upstream
-        namespace: fluxer
+        name: flux-system
+        namespace: flux-system
       interval: 1h
   postRenderers:
     - kustomize:
