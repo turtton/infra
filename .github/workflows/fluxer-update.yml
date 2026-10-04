@@ -1,0 +1,34 @@
+name: Fluxer Update Proposals
+
+on:
+  schedule:
+    # 毎日 08:17 JST
+    - cron: "17 23 * * *"
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: Update candidates to check
+        type: choice
+        options: [all, charts, images]
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fluxer-update-proposals
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: ${{ fromJSON(inputs.kind == 'charts' && '["charts"]' || inputs.kind == 'images' && '["images"]' || '["charts","images"]') }}
+    uses: ./.github/workflows/fluxer-update-kind.yml
+    with:
+      kind: ${{ matrix.kind }}

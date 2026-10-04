@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "channel": "v1",
+  "platform": "linux/amd64",
+  "releases": {
+    "fluxer-admin": {
+      "Deployment/admin": {
+        "admin": {
+          "repository": "ghcr.io/fluxerapp/fluxer-admin",
+          "tag": "v1",
+          "digest": "sha256:5f06e15eb5a81db506b081852553d29ba45976c98be909dea5ef24be8545b3ab"
+        }
+      }
+    },
+    "fluxer-api": {
+      "Deployment/api": {
+        "api": {
+          "repository": "ghcr.io/fluxerapp/fluxer-api",
+          "tag": "v1",
+          "digest": "sha256:9f6125bb99e0a1e77bf837b2d4afc7bc975d982afa185189928dee5061c82ad7"
+        }
+      }
+    },
+    "fluxer-app-proxy": {
+      "Deployment/app-proxy": {
+        "app-proxy": {
+          "repository": "ghcr.io/fluxerapp/fluxer-app-proxy-self-hosted",
+          "tag": "v1",
+          "digest": "sha256:5ad657fead85e317a1e2542f0a6a89236d02389deef426bab7f0b2b9384cef2d"
+        }
+      }
+    },
+    "fluxer-gateway": {
+      "Deployment/gateway": {
+        "gateway": {
+          "repository": "ghcr.io/fluxerapp/fluxer-gateway",
+          "tag": "v1",
+          "digest": "sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946"
+        }
+      },
+      "StatefulSet/gateway-calls": {
+        "gateway": {
+          "repository": "ghcr.io/fluxerapp/fluxer-gateway",
+          "tag": "v1",
+          "digest": "sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946"
+        }
+      },
+      "StatefulSet/gateway-guilds": {
+        "gateway": {
+          "repository": "ghcr.io/fluxerapp/fluxer-gateway",
+          "tag": "v1",
+          "digest": "sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d"
+        }
+      },
+      "StatefulSet/gateway-presence": {
+        "gateway": {
+          "repository": "ghcr.io/fluxerapp/fluxer-gateway",
+          "tag": "v1",
+          "digest": "sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d"
+        }
+      },
+      "StatefulSet/gateway-push": {
+        "gateway": {
+          "repository": "ghcr.io/fluxerapp/fluxer-gateway",
+          "tag": "v1",
+          "digest": "sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d"
+        }
+      },
+      "StatefulSet/gateway-sessions": {
+        "gateway": {
+          "repository": "ghcr.io/fluxerapp/fluxer-gateway",
+          "tag": "v1",
+          "digest": "sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946"
+        }
+      }
+    },
+    "fluxer-media-proxy": {
+      "Deployment/media-proxy": {
+        "media-proxy": {
+          "repository": "ghcr.io/fluxerapp/fluxer-media-proxy",
+          "tag": "v1",
+          "digest": "sha256:d95f4ba34d5e1b366965feaddec16d34662a5612f80fd57aba708e33b66c7ab1"
+        }
+      },
+      "Deployment/static-proxy": {
+        "static-proxy": {
+          "repository": "ghcr.io/fluxerapp/fluxer-media-proxy",
+          "tag": "v1",
+          "digest": "sha256:d95f4ba34d5e1b366965feaddec16d34662a5612f80fd57aba708e33b66c7ab1"
+        }
+      }
+    },
+    "fluxer-messages": {
+      "Deployment/messages": {
+        "router": {
+          "repository": "ghcr.io/fluxerapp/fluxer-messages",
+          "tag": "v1",
+          "digest": "sha256:148473df876449489a269b266e31615a9e46f3f93d56dc715ed1ecb1f1d184b3"
+        }
+      },
+      "StatefulSet/messages-shard": {
+        "shard": {
+          "repository": "ghcr.io/fluxerapp/fluxer-messages",
+          "tag": "v1",
+          "digest": "sha256:148473df876449489a269b266e31615a9e46f3f93d56dc715ed1ecb1f1d184b3"
+        }
+      }
+    },
+    "fluxer-snowflakes": {
+      "Deployment/snowflakes": {
+        "router": {
+          "repository": "ghcr.io/fluxerapp/fluxer-snowflakes",
+          "tag": "v1",
+          "digest": "sha256:0ab5dd47a938ead3b382643a10798abc51d3f9d9d92d96127c111111933f48fa"
+        }
+      },
+      "StatefulSet/snowflakes-shard": {
+        "shard": {
+          "repository": "ghcr.io/fluxerapp/fluxer-snowflakes",
+          "tag": "v1",
+          "digest": "sha256:0ab5dd47a938ead3b382643a10798abc51d3f9d9d92d96127c111111933f48fa"
+        }
+      }
+    },
+    "fluxer-unfurl": {
+      "Deployment/unfurl": {
+        "router": {
+          "repository": "ghcr.io/fluxerapp/fluxer-unfurl",
+          "tag": "v1",
+          "digest": "sha256:f77279a4d16b8f17dfd3f12bbfea4cc8db2b34eb5cd49b5ba9019ee55bc6f64f"
+        }
+      },
+      "StatefulSet/unfurl-shard": {
+        "shard": {
+          "repository": "ghcr.io/fluxerapp/fluxer-unfurl",
+          "tag": "v1",
+          "digest": "sha256:f77279a4d16b8f17dfd3f12bbfea4cc8db2b34eb5cd49b5ba9019ee55bc6f64f"
+        }
+      }
+    },
+    "fluxer-users": {
+      "Deployment/users": {
+        "router": {
+          "repository": "ghcr.io/fluxerapp/fluxer-users",
+          "tag": "v1",
+          "digest": "sha256:1f811b5d123e32aa5fc8f6077a9dda7c2b1023857f27db29e7a4e4e275fcee66"
+        }
+      },
+      "StatefulSet/users-shard": {
+        "shard": {
+          "repository": "ghcr.io/fluxerapp/fluxer-users",
+          "tag": "v1",
+          "digest": "sha256:1f811b5d123e32aa5fc8f6077a9dda7c2b1023857f27db29e7a4e4e275fcee66"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+name: Setup Fluxer validation tools
+description: Install pinned Helm, Kustomize, and kubeconform in the runner temporary directory
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$RUNNER_TEMP/fluxer-cli" "$RUNNER_TEMP/fluxer-bin"
+        cd "$RUNNER_TEMP/fluxer-cli"
+        curl -fLsS "https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz" -o helm-v4.3.0-linux-amd64.tar.gz
+        curl -fLsS "https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz.sha256sum" -o helm.sha256sum
+        sha256sum --check helm.sha256sum
+        tar xzf helm-v4.3.0-linux-amd64.tar.gz
+        mv linux-amd64/helm "$RUNNER_TEMP/fluxer-bin/helm"
+        curl -fLsS "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.6.0/kustomize_v5.6.0_linux_amd64.tar.gz" -o kustomize.tar.gz
+        tar xzf kustomize.tar.gz -C "$RUNNER_TEMP/fluxer-bin"
+        curl -fLsS "https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz" -o kubeconform.tar.gz
+        tar xzf kubeconform.tar.gz -C "$RUNNER_TEMP/fluxer-bin" kubeconform
+        echo "$RUNNER_TEMP/fluxer-bin" >> "$GITHUB_PATH"

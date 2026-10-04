@@ -78,3 +78,10 @@ Continue using the `flux-system` source for rollback; do not resume the suspende
 upstream GitRepository. Verify Ready conditions, resource UIDs, PVC bindings, and
 application flows again after rollback. Database restores are not part of this
 chart-only rollback.
+
+## Updates after migration
+
+The migration retained running image digests. Subsequent chart and image updates
+are proposed separately by GitHub Actions and require manual review and merge.
+See [Fluxer update operation](fluxer-auto-update.md) for the image lock, CI gates,
+and application checks.
