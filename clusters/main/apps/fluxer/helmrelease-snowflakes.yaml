@@ -8,25 +8,228 @@ spec:
   interval: 1h
   chart:
     spec:
-      chart: ./charts/fluxer/legacy/snowflakes
-      version: "0.1.0"
+      chart: ./charts/fluxer/current/fluxer-svc
+      version: 0.1.0
       sourceRef:
         kind: GitRepository
         name: flux-system
         namespace: flux-system
       interval: 1h
+      reconcileStrategy: Revision
+  upgrade:
+    chartNameChangeStrategy: InPlaceUpdate
+  # Preserve existing immutable selectors and Helm-owned PDB names.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: snowflakes
+            patch: |-
+              - op: replace
+                path: /spec/selector/matchLabels
+                value:
+                  app: snowflakes
+              - op: add
+                path: /spec/template/metadata/labels/app
+                value: snowflakes
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1version
+                value: v1
+              - op: add
+                path: /metadata/labels/app.kubernetes.io~1version
+                value: v1
+              - op: replace
+                path: /spec/template/metadata/labels/app.kubernetes.io~1name
+                value: snowflakes
+              - op: replace
+                path: /metadata/labels/app.kubernetes.io~1name
+                value: snowflakes
+          - target:
+              kind: StatefulSet
+              name: snowflakes-shard
+            patch: |-
+              - op: replace
+                path: /spec/selector/matchLabels
+                value:
+                  app: snowflakes-shard
+              - op: add
+                path: /spec/template/metadata/labels/app
+                value: snowflakes-shard
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1version
+                value: v1
+              - op: add
+                path: /metadata/labels/app.kubernetes.io~1version
+                value: v1
+              - op: replace
+                path: /spec/template/metadata/labels/app.kubernetes.io~1name
+                value: snowflakes
+              - op: replace
+                path: /metadata/labels/app.kubernetes.io~1name
+                value: snowflakes
+          - target:
+              kind: Service
+              name: snowflakes
+            patch: |-
+              - op: replace
+                path: /spec/selector
+                value:
+                  app: snowflakes
+          - target:
+              kind: Service
+              name: snowflakes-shard-headless
+            patch: |-
+              - op: replace
+                path: /spec/selector
+                value:
+                  app: snowflakes-shard
+          - target:
+              kind: PodDisruptionBudget
+              name: snowflakes-pdb
+            patch: |-
+              - op: replace
+                path: /metadata/name
+                value: snowflakes
+              - op: replace
+                path: /spec/selector/matchLabels
+                value:
+                  app: snowflakes
+          - target:
+              kind: PodDisruptionBudget
+              name: snowflakes-shard-pdb
+            patch: |-
+              - op: replace
+                path: /metadata/name
+                value: snowflakes-shard
+              - op: replace
+                path: /spec/selector/matchLabels
+                value:
+                  app: snowflakes-shard
+    # Keep Pod templates stable when infra main changes without chart changes.
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: "(Deployment|StatefulSet)"
+            patch: |-
+              - op: replace
+                path: /spec/template/metadata/labels/helm.sh~1chart
+                value: fluxer-svc-0.1.0
   values:
-    global:
+    image:
       registry: ghcr.io/fluxerapp
-      namespace: fluxer
-
-    svc:
-      name: snowflakes
-      image: fluxer-snowflakes
       tag: v1
-      nats:
-        url: nats://nats.fluxer.svc.cluster.local:4222
-      shard:
-        replicas: 1
-      router:
-        replicas: 1
+    # Clear upstream defaults before restoring the running service configuration.
+    env: null
+    envFrom: []
+    # The old default ghcr-pull-secret does not exist; these GHCR images are public.
+    imagePullSecrets: []
+    extraEnv:
+      - name: FLUXER_SVC_NATS_URL
+        value: nats://nats.fluxer.svc.cluster.local:4222
+      - name: FLUXER_SVC_CACHE_MAX_ENTRIES
+        value: '100000'
+      - name: FLUXER_SVC_CACHE_TTL_MS
+        value: '30000'
+    podAnnotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/port: '8090'
+      prometheus.io/path: /_metrics
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+    probes:
+      startup: null
+      liveness:
+        httpGet:
+          path: /_healthz
+          port: http
+        initialDelaySeconds: 2
+        periodSeconds: 15
+      readiness:
+        httpGet:
+          path: /_health
+          port: http
+        initialDelaySeconds: 1
+        periodSeconds: 5
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
+    port: 8090
+    router:
+      replicas: 1
+      minReadySeconds: 10
+      terminationGracePeriodSeconds: 60
+      resources:
+        limits:
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 64Mi
+      pdb:
+        minAvailable: 50%
+    shard:
+      replicas: 1
+      minReadySeconds: 10
+      terminationGracePeriodSeconds: 60
+      resources:
+        limits:
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 64Mi
+      pdb:
+        minAvailable: 50%
+      extraEnv:
+        - name: FLUXER_SVC_MAX_CONCURRENT_REQUESTS
+          value: '128'
+      podSecurityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      probes:
+        startup:
+          httpGet:
+            path: /_healthz
+            port: http
+          initialDelaySeconds: 1
+          periodSeconds: 5
+          failureThreshold: 60
+        liveness:
+          httpGet:
+            path: /_healthz
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          failureThreshold: 3
+        readiness:
+          httpGet:
+            path: /_health
+            port: http
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          failureThreshold: 2
+      updateStrategy:
+        type: RollingUpdate
+    # Each HelmRelease continues to own only its existing service and shard.
+    services:
+      gifs: null
+      messages: null
+      snowflakes:
+        # Pin the currently running image while changing the chart layout.
+        image:
+          name: fluxer-snowflakes
+          digest: sha256:0ab5dd47a938ead3b382643a10798abc51d3f9d9d92d96127c111111933f48fa
+        shard:
+          env: null
+      unfurl: null
+      users: null

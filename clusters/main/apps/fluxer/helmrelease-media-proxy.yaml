@@ -8,131 +8,213 @@ spec:
   interval: 1h
   chart:
     spec:
-      chart: ./charts/fluxer/legacy/media-proxy
-      version: "0.1.0"
+      chart: ./charts/fluxer/current/fluxer-media-proxy
+      version: 0.1.0
       sourceRef:
         kind: GitRepository
         name: flux-system
         namespace: flux-system
       interval: 1h
+      reconcileStrategy: Revision
+  upgrade:
+    chartNameChangeStrategy: InPlaceUpdate
+  values:
+    # Keep the running application version while migrating the chart layout.
+    image:
+      registry: ghcr.io/fluxerapp
+      tag: v1
+    # Disable upstream example endpoints and the default fluxer-env Secret.
+    env: null
+    envFrom: []
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+      capabilities: null
+    probes:
+      startup: null
+      liveness:
+        failureThreshold: 3
+        httpGet:
+          path: /_health
+          port: http
+        initialDelaySeconds: 10
+        periodSeconds: 15
+        timeoutSeconds: 5
+      readiness:
+        failureThreshold: 2
+        httpGet:
+          path: /_health
+          port: http
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        timeoutSeconds: 2
+    strategy:
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
+      type: RollingUpdate
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                    - toliworker-1
+                    - toliworker-2
+                    - toliworker-3
+    topologySpreadConstraints:
+      - maxSkew: 1
+        nodeAffinityPolicy: Honor
+        nodeTaintsPolicy: Honor
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+    workloads:
+      media-proxy:
+        image:
+          name: fluxer-media-proxy
+          digest: sha256:d95f4ba34d5e1b366965feaddec16d34662a5612f80fd57aba708e33b66c7ab1
+        replicas: 1
+        minReadySeconds: 10
+        terminationGracePeriodSeconds: 60
+        resources:
+          limits:
+            cpu: 4000m
+            memory: 4Gi
+          requests:
+            cpu: 300m
+            memory: 768Mi
+        env: null
+        extraEnv:
+          - name: NODE_ENV
+            value: production
+          - name: FLUXER_ENV
+            value: production
+          - name: BUILD_VERSION
+            value: v1
+          - name: FLUXER_MEDIA_PROXY_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                key: media_proxy_secret_key
+                name: fluxer-runtime-keys
+          - name: FLUXER_MEDIA_PROXY_STORAGE_BACKEND
+            value: s3
+          - name: FLUXER_MEDIA_PROXY_UPLOAD_RELAY_SECRET_BASE64
+            valueFrom:
+              secretKeyRef:
+                key: relay_secret_base64
+                name: fluxer-upload-relay
+          - name: FLUXER_S3_ENDPOINT
+            value: http://seaweedfs.fluxer.svc.cluster.local:8333
+          - name: FLUXER_S3_REGION
+            value: us-east-1
+          - name: FLUXER_S3_FORCE_PATH_STYLE
+            value: 'true'
+          - name: FLUXER_S3_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                key: FLUXER_S3_ACCESS_KEY_ID
+                name: fluxer-s3-credentials
+          - name: FLUXER_S3_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                key: FLUXER_S3_SECRET_ACCESS_KEY
+                name: fluxer-s3-credentials
+          - name: FLUXER_S3_BUCKET_CDN
+            value: fluxer
+          - name: FLUXER_S3_BUCKET_UPLOADS
+            value: fluxer
+        extraVolumeMounts:
+          - mountPath: /etc/fluxer/keys
+            name: keys
+            readOnly: true
+        extraVolumes:
+          - name: keys
+            secret:
+              optional: true
+              secretName: fluxer-keys
+        pdb:
+          minAvailable: 50%
+        # This chart emits FLUXER_MEDIA_PROXY_MODE from mode.
+        mode: upload
+      static-proxy:
+        image:
+          name: fluxer-media-proxy
+          digest: sha256:d95f4ba34d5e1b366965feaddec16d34662a5612f80fd57aba708e33b66c7ab1
+        replicas: 1
+        minReadySeconds: 10
+        terminationGracePeriodSeconds: 60
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 256Mi
+        env: null
+        extraEnv:
+          - name: NODE_ENV
+            value: production
+          - name: FLUXER_ENV
+            value: production
+          - name: BUILD_VERSION
+            value: v1
+          - name: FLUXER_MEDIA_PROXY_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                key: media_proxy_secret_key
+                name: fluxer-runtime-keys
+          - name: FLUXER_MEDIA_PROXY_STORAGE_BACKEND
+            value: s3
+          - name: FLUXER_S3_ENDPOINT
+            value: http://seaweedfs.fluxer.svc.cluster.local:8333
+          - name: FLUXER_S3_REGION
+            value: us-east-1
+          - name: FLUXER_S3_FORCE_PATH_STYLE
+            value: 'true'
+          - name: FLUXER_S3_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                key: FLUXER_S3_ACCESS_KEY_ID
+                name: fluxer-s3-credentials
+          - name: FLUXER_S3_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                key: FLUXER_S3_SECRET_ACCESS_KEY
+                name: fluxer-s3-credentials
+          - name: FLUXER_S3_BUCKET_CDN
+            value: fluxer
+          - name: FLUXER_S3_BUCKET_STATIC
+            value: fluxer
+          - name: FLUXER_S3_BUCKET_UPLOADS
+            value: fluxer
+        extraVolumeMounts:
+          - mountPath: /etc/fluxer/keys
+            name: keys
+            readOnly: true
+        extraVolumes:
+          - name: keys
+            secret:
+              optional: true
+              secretName: fluxer-keys
+        pdb:
+          minAvailable: 50%
+        # Preserve the existing static-proxy workload rather than add uploads.
+        mode: static
+      uploads: null
   postRenderers:
+    # Keep Pod templates stable when infra main changes without chart changes.
     - kustomize:
         patches:
           - target:
-              kind: Deployment
-              name: media-proxy
+              group: apps
+              version: v1
+              kind: "(Deployment|StatefulSet)"
             patch: |-
-              - op: remove
-                path: /spec/template/spec/imagePullSecrets
-          - target:
-              kind: Deployment
-              name: static-proxy
-            patch: |-
-              - op: remove
-                path: /spec/template/spec/imagePullSecrets
-  values:
-    global:
-      registry: ghcr.io/fluxerapp
-      namespace: fluxer
-
-    mediaProxy:
-      image: fluxer-media-proxy
-      tag: v1
-      replicas: 1
-      port: 8080
-      nsfwServiceEndpoint: ""
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - toliworker-1
-                      - toliworker-2
-                      - toliworker-3
-      env:
-        - name: FLUXER_MEDIA_PROXY_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-runtime-keys
-              key: media_proxy_secret_key
-        - name: FLUXER_MEDIA_PROXY_STORAGE_BACKEND
-          value: s3
-        - name: FLUXER_MEDIA_PROXY_MODE
-          value: upload
-        - name: FLUXER_MEDIA_PROXY_UPLOAD_RELAY_SECRET_BASE64
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-upload-relay
-              key: relay_secret_base64
-        - name: FLUXER_S3_ENDPOINT
-          value: http://seaweedfs.fluxer.svc.cluster.local:8333
-        - name: FLUXER_S3_REGION
-          value: us-east-1
-        - name: FLUXER_S3_FORCE_PATH_STYLE
-          value: "true"
-        - name: FLUXER_S3_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-s3-credentials
-              key: FLUXER_S3_ACCESS_KEY_ID
-        - name: FLUXER_S3_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-s3-credentials
-              key: FLUXER_S3_SECRET_ACCESS_KEY
-        - name: FLUXER_S3_BUCKET_CDN
-          value: fluxer
-        - name: FLUXER_S3_BUCKET_UPLOADS
-          value: fluxer
-
-    staticProxy:
-      image: fluxer-media-proxy
-      tag: v1
-      replicas: 1
-      port: 8080
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - toliworker-1
-                      - toliworker-2
-                      - toliworker-3
-      env:
-        - name: FLUXER_MEDIA_PROXY_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-runtime-keys
-              key: media_proxy_secret_key
-        - name: FLUXER_MEDIA_PROXY_STORAGE_BACKEND
-          value: s3
-        - name: FLUXER_MEDIA_PROXY_MODE
-          value: static
-        - name: FLUXER_S3_ENDPOINT
-          value: http://seaweedfs.fluxer.svc.cluster.local:8333
-        - name: FLUXER_S3_REGION
-          value: us-east-1
-        - name: FLUXER_S3_FORCE_PATH_STYLE
-          value: "true"
-        - name: FLUXER_S3_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-s3-credentials
-              key: FLUXER_S3_ACCESS_KEY_ID
-        - name: FLUXER_S3_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-s3-credentials
-              key: FLUXER_S3_SECRET_ACCESS_KEY
-        - name: FLUXER_S3_BUCKET_CDN
-          value: fluxer
-        - name: FLUXER_S3_BUCKET_STATIC
-          value: fluxer
-        - name: FLUXER_S3_BUCKET_UPLOADS
-          value: fluxer
+              - op: replace
+                path: /spec/template/metadata/labels/helm.sh~1chart
+                value: fluxer-media-proxy-0.1.0

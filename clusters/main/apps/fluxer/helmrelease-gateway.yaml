@@ -8,64 +8,19 @@ spec:
   interval: 1h
   chart:
     spec:
-      chart: ./charts/fluxer/legacy/gateway
-      version: "0.1.0"
+      chart: ./charts/fluxer/current/fluxer-gateway
+      version: 0.1.0
       sourceRef:
         kind: GitRepository
         name: flux-system
         namespace: flux-system
       interval: 1h
+      reconcileStrategy: Revision
+  upgrade:
+    chartNameChangeStrategy: InPlaceUpdate
   postRenderers:
     - kustomize:
         patches:
-          - target:
-              kind: Deployment
-              name: gateway
-            patch: |-
-              - op: remove
-                path: /spec/template/spec/imagePullSecrets
-              - op: remove
-                path: /spec/template/spec/nodeSelector
-          - target:
-              kind: StatefulSet
-              name: gateway-guilds
-            patch: |-
-              - op: remove
-                path: /spec/template/spec/imagePullSecrets
-              - op: remove
-                path: /spec/template/spec/nodeSelector
-          - target:
-              kind: StatefulSet
-              name: gateway-presence
-            patch: |-
-              - op: remove
-                path: /spec/template/spec/imagePullSecrets
-              - op: remove
-                path: /spec/template/spec/nodeSelector
-          - target:
-              kind: StatefulSet
-              name: gateway-sessions
-            patch: |-
-              - op: remove
-                path: /spec/template/spec/imagePullSecrets
-              - op: remove
-                path: /spec/template/spec/nodeSelector
-          - target:
-              kind: StatefulSet
-              name: gateway-calls
-            patch: |-
-              - op: remove
-                path: /spec/template/spec/imagePullSecrets
-              - op: remove
-                path: /spec/template/spec/nodeSelector
-          - target:
-              kind: StatefulSet
-              name: gateway-push
-            patch: |-
-              - op: remove
-                path: /spec/template/spec/imagePullSecrets
-              - op: remove
-                path: /spec/template/spec/nodeSelector
           - target:
               kind: NetworkPolicy
               name: gateway
@@ -74,200 +29,428 @@ spec:
                 path: /spec/ingress
                 value:
                   - {}
+          - target:
+              kind: StatefulSet
+              name: gateway-calls
+            patch: |-
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1gateway-role
+                value: calls
+          - target:
+              kind: StatefulSet
+              name: gateway-guilds
+            patch: |-
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1gateway-role
+                value: guilds
+          - target:
+              kind: StatefulSet
+              name: gateway-presence
+            patch: |-
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1gateway-role
+                value: presence
+          - target:
+              kind: StatefulSet
+              name: gateway-push
+            patch: |-
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1gateway-role
+                value: push
+          - target:
+              kind: StatefulSet
+              name: gateway-sessions
+            patch: |-
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1gateway-role
+                value: sessions
+    # Keep Pod templates stable when infra main changes without chart changes.
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: "(Deployment|StatefulSet)"
+            patch: |-
+              - op: replace
+                path: /spec/template/metadata/labels/helm.sh~1chart
+                value: fluxer-gateway-0.1.0
   values:
-    global:
+    image:
       registry: ghcr.io/fluxerapp
-      namespace: fluxer
-
-    gateway:
-      image: fluxer-gateway
       tag: v1
-      replicas: 1
-      port: 8080
-      nodeSelector: {}
-      tolerations: []
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - toliworker-1
-                      - toliworker-2
-                      - toliworker-3
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: gateway
-                    app.kubernetes.io/instance: fluxer-gateway
-                topologyKey: kubernetes.io/hostname
-      env:
-        - name: FLUXER_SELF_HOSTED
-          value: "true"
-        - name: FLUXER_BASE_DOMAIN
-          value: chat.turtton.net
-        - name: FLUXER_PUBLIC_SCHEME
-          value: https
-        - name: FLUXER_PUBLIC_PORT
-          value: "443"
-        - name: FLUXER_TRUST_CLIENT_IP_HEADER
-          value: "true"
-        - name: FLUXER_CLIENT_IP_HEADER_NAME
-          value: x-forwarded-for
-
-        # Database
-        - name: FLUXER_DATABASE_BACKEND
-          value: postgres
-        - name: FLUXER_POSTGRES_HOST
-          value: fluxer-db-rw.fluxer.svc.cluster.local
-        - name: FLUXER_POSTGRES_PORT
-          value: "5432"
-        - name: FLUXER_POSTGRES_DATABASE
-          value: fluxer
-        - name: FLUXER_POSTGRES_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-db-app
-              key: username
-        - name: FLUXER_POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-db-app
-              key: password
-        - name: FLUXER_POSTGRES_SSLMODE
-          value: require
-
-        # KV / NATS
-        - name: FLUXER_KV_URL
-          value: redis://valkey.fluxer.svc.cluster.local:6379/0
-        - name: FLUXER_NATS_URL
-          value: nats://nats.fluxer.svc.cluster.local:4222
-        - name: FLUXER_NATS_JETSTREAM_URL
-          value: nats://nats.fluxer.svc.cluster.local:4222
-        - name: FLUXER_SVC_NATS_URL
-          value: nats://nats.fluxer.svc.cluster.local:4222
-        - name: FLUXER_SVC_SHARD_COUNT
-          value: "1"
-
-        # Search
-        - name: FLUXER_SEARCH_ENGINE
-          value: meilisearch
-        - name: FLUXER_SEARCH_URL
-          value: http://meilisearch.fluxer.svc.cluster.local:7700
-        - name: FLUXER_SEARCH_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: meilisearch-key
-              key: MEILI_MASTER_KEY
-
-        # S3
-        - name: FLUXER_S3_ENDPOINT
-          value: http://seaweedfs.fluxer.svc.cluster.local:8333
-        - name: FLUXER_S3_REGION
-          value: us-east-1
-        - name: FLUXER_S3_FORCE_PATH_STYLE
-          value: "true"
-        - name: FLUXER_S3_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-s3-credentials
-              key: FLUXER_S3_ACCESS_KEY_ID
-        - name: FLUXER_S3_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-s3-credentials
-              key: FLUXER_S3_SECRET_ACCESS_KEY
-        - name: FLUXER_S3_BUCKET_CDN
-          value: fluxer
-        - name: FLUXER_S3_BUCKET_UPLOADS
-          value: fluxer-uploads
-
-        # Gateway-specific
-        - name: FLUXER_GATEWAY_PORT
-          value: "8080"
-        - name: FLUXER_GATEWAY_MEDIA_PROXY_ENDPOINT
-          value: https://chat.turtton.net/media
-        - name: FLUXER_GATEWAY_STATIC_CDN_ENDPOINT
-          value: https://chat.turtton.net
-        - name: FLUXER_GATEWAY_LOGGER_LEVEL
-          value: info
-        - name: FLUXER_INTERNAL_API_ENDPOINT
-          value: http://caddy:8088/api
-        - name: FLUXER_GATEWAY_RPC_AUTH_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-runtime-keys
-              key: gateway_rpc_auth_token
-        - name: FLUXER_MEDIA_PROXY_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-runtime-keys
-              key: media_proxy_secret_key
-
-        # Auth secrets (required by gateway)
-        - name: FLUXER_SUDO_MODE_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-runtime-keys
-              key: sudo_mode_secret
-        - name: FLUXER_CONNECTION_INITIATION_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-runtime-keys
-              key: connection_initiation_secret
-        - name: FLUXER_VAPID_PUBLIC_KEY
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-runtime-keys
-              key: vapid_public_key
-        - name: FLUXER_VAPID_PRIVATE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-runtime-keys
-              key: vapid_private_key
-        - name: FLUXER_VAPID_EMAIL
-          value: noreply@chat.turtton.net
-
-    cluster:
+    # Clear upstream example endpoints and the default fluxer-env Secret.
+    env: null
+    envFrom: []
+    extraEnv:
+      - name: NODE_ENV
+        value: production
+      - name: FLUXER_ENV
+        value: production
+      - name: FLUXER_ERLANG_COOKIE
+        valueFrom:
+          secretKeyRef:
+            key: cookie
+            name: fluxer-gateway-erlang-cookie
+      - name: FLUXER_GATEWAY_CLUSTER_DISCOVERY_POLL_INTERVAL_MS
+        value: '5000'
+      - name: FLUXER_SELF_HOSTED
+        value: 'true'
+      - name: FLUXER_BASE_DOMAIN
+        value: chat.turtton.net
+      - name: FLUXER_PUBLIC_SCHEME
+        value: https
+      - name: FLUXER_PUBLIC_PORT
+        value: '443'
+      - name: FLUXER_TRUST_CLIENT_IP_HEADER
+        value: 'true'
+      - name: FLUXER_CLIENT_IP_HEADER_NAME
+        value: x-forwarded-for
+      - name: FLUXER_DATABASE_BACKEND
+        value: postgres
+      - name: FLUXER_POSTGRES_HOST
+        value: fluxer-db-rw.fluxer.svc.cluster.local
+      - name: FLUXER_POSTGRES_PORT
+        value: '5432'
+      - name: FLUXER_POSTGRES_DATABASE
+        value: fluxer
+      - name: FLUXER_POSTGRES_USERNAME
+        valueFrom:
+          secretKeyRef:
+            key: username
+            name: fluxer-db-app
+      - name: FLUXER_POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: password
+            name: fluxer-db-app
+      - name: FLUXER_POSTGRES_SSLMODE
+        value: require
+      - name: FLUXER_KV_URL
+        value: redis://valkey.fluxer.svc.cluster.local:6379/0
+      - name: FLUXER_NATS_URL
+        value: nats://nats.fluxer.svc.cluster.local:4222
+      - name: FLUXER_NATS_JETSTREAM_URL
+        value: nats://nats.fluxer.svc.cluster.local:4222
+      - name: FLUXER_SVC_NATS_URL
+        value: nats://nats.fluxer.svc.cluster.local:4222
+      - name: FLUXER_SVC_SHARD_COUNT
+        value: '1'
+      - name: FLUXER_SEARCH_ENGINE
+        value: meilisearch
+      - name: FLUXER_SEARCH_URL
+        value: http://meilisearch.fluxer.svc.cluster.local:7700
+      - name: FLUXER_SEARCH_API_KEY
+        valueFrom:
+          secretKeyRef:
+            key: MEILI_MASTER_KEY
+            name: meilisearch-key
+      - name: FLUXER_S3_ENDPOINT
+        value: http://seaweedfs.fluxer.svc.cluster.local:8333
+      - name: FLUXER_S3_REGION
+        value: us-east-1
+      - name: FLUXER_S3_FORCE_PATH_STYLE
+        value: 'true'
+      - name: FLUXER_S3_ACCESS_KEY_ID
+        valueFrom:
+          secretKeyRef:
+            key: FLUXER_S3_ACCESS_KEY_ID
+            name: fluxer-s3-credentials
+      - name: FLUXER_S3_SECRET_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            key: FLUXER_S3_SECRET_ACCESS_KEY
+            name: fluxer-s3-credentials
+      - name: FLUXER_S3_BUCKET_CDN
+        value: fluxer
+      - name: FLUXER_S3_BUCKET_UPLOADS
+        value: fluxer-uploads
+      - name: FLUXER_GATEWAY_PORT
+        value: '8080'
+      - name: FLUXER_GATEWAY_MEDIA_PROXY_ENDPOINT
+        value: https://chat.turtton.net/media
+      - name: FLUXER_GATEWAY_STATIC_CDN_ENDPOINT
+        value: https://chat.turtton.net
+      - name: FLUXER_GATEWAY_LOGGER_LEVEL
+        value: info
+      - name: FLUXER_INTERNAL_API_ENDPOINT
+        value: http://caddy:8088/api
+      - name: FLUXER_GATEWAY_RPC_AUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            key: gateway_rpc_auth_token
+            name: fluxer-runtime-keys
+      - name: FLUXER_MEDIA_PROXY_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            key: media_proxy_secret_key
+            name: fluxer-runtime-keys
+      - name: FLUXER_SUDO_MODE_SECRET
+        valueFrom:
+          secretKeyRef:
+            key: sudo_mode_secret
+            name: fluxer-runtime-keys
+      - name: FLUXER_CONNECTION_INITIATION_SECRET
+        valueFrom:
+          secretKeyRef:
+            key: connection_initiation_secret
+            name: fluxer-runtime-keys
+      - name: FLUXER_VAPID_PUBLIC_KEY
+        valueFrom:
+          secretKeyRef:
+            key: vapid_public_key
+            name: fluxer-runtime-keys
+      - name: FLUXER_VAPID_PRIVATE_KEY
+        valueFrom:
+          secretKeyRef:
+            key: vapid_private_key
+            name: fluxer-runtime-keys
+      - name: FLUXER_VAPID_EMAIL
+        value: noreply@chat.turtton.net
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+    probes:
+      startup:
+        failureThreshold: 30
+        httpGet:
+          path: /_health
+          port: http
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        timeoutSeconds: 5
+      liveness:
+        failureThreshold: 3
+        httpGet:
+          path: /_health
+          port: http
+        initialDelaySeconds: 10
+        periodSeconds: 15
+        timeoutSeconds: 5
+      readiness:
+        exec:
+          command:
+            - /bin/sh
+            - -c
+            - curl -fsS --max-time 5 http://127.0.0.1:8080/_health/ready >/dev/null 2>&1 || exit 1
+        failureThreshold: 3
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        timeoutSeconds: 5
+    strategy:
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
+      type: RollingUpdate
+    updateStrategy:
+      type: RollingUpdate
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+    networkPolicy:
       enabled: true
-      discoveryDnsName: fluxer-gateway-headless.fluxer.svc.cluster.local
-      discoveryNodeBasename: fluxer_gateway
-      erlangDistribution:
-        port: 8081
-        epmdPort: 4369
-      erlangCookieSecret:
-        name: fluxer-gateway-erlang-cookie
-        key: cookie
-
-    roles:
-      enabled: true
-      websocket:
+    # Keep each workload on its current live image digest, including older role Pods.
+    deployments:
+      gateway:
+        image:
+          name: fluxer-gateway
+          digest: sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946
         role: websocket
-      common:
-        nodeSelector: {}
-        tolerations: []
+        replicas: 1
+        buildVersion: v1
+        minReadySeconds: 0
+        terminationGracePeriodSeconds: 45
         resources:
+          limits:
+            memory: 16Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - attempt=0; while [ "$attempt" -lt 6 ]; do curl -fsS --max-time 2 http://127.0.0.1:8080/_health/drain
+                  >/dev/null 2>&1 && break; attempt=$((attempt+1)); sleep 1; done; sleep 30
+        extraVolumeMounts:
+          - mountPath: /etc/fluxer/keys
+            name: keys
+            readOnly: true
+        extraVolumes:
+          - name: keys
+            secret:
+              optional: true
+              secretName: fluxer-keys
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: In
+                      values:
+                        - toliworker-1
+                        - toliworker-2
+                        - toliworker-3
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - podAffinityTerm:
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/instance: fluxer-gateway
+                      app.kubernetes.io/name: gateway
+                  topologyKey: kubernetes.io/hostname
+                weight: 100
+    statefulsets:
+      gateway-calls:
+        image:
+          name: fluxer-gateway
+          digest: sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946
+        role: calls
+        replicas: 1
+        terminationGracePeriodSeconds: 45
+        resources:
+          limits:
+            memory: 256Mi
           requests:
             cpu: 100m
             memory: 128Mi
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - curl -fsS --max-time 2 http://127.0.0.1:8080/_health/drain >/dev/null 2>&1 || true; sleep 20
+        extraVolumeMounts:
+          - mountPath: /etc/fluxer/keys
+            name: keys
+            readOnly: true
+        extraVolumes:
+          - name: keys
+            secret:
+              optional: true
+              secretName: fluxer-keys
+      gateway-guilds:
+        image:
+          name: fluxer-gateway
+          digest: sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d
+        role: guilds
+        replicas: 1
+        terminationGracePeriodSeconds: 45
+        resources:
           limits:
             memory: 256Mi
-      sessions:
-        enabled: true
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - curl -fsS --max-time 2 http://127.0.0.1:8080/_health/drain >/dev/null 2>&1 || true; sleep 20
+        extraVolumeMounts:
+          - mountPath: /etc/fluxer/keys
+            name: keys
+            readOnly: true
+        extraVolumes:
+          - name: keys
+            secret:
+              optional: true
+              secretName: fluxer-keys
+      gateway-presence:
+        image:
+          name: fluxer-gateway
+          digest: sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d
+        role: presence
         replicas: 1
-      presence:
-        enabled: true
+        terminationGracePeriodSeconds: 45
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - curl -fsS --max-time 2 http://127.0.0.1:8080/_health/drain >/dev/null 2>&1 || true; sleep 20
+        extraVolumeMounts:
+          - mountPath: /etc/fluxer/keys
+            name: keys
+            readOnly: true
+        extraVolumes:
+          - name: keys
+            secret:
+              optional: true
+              secretName: fluxer-keys
+      gateway-push:
+        image:
+          name: fluxer-gateway
+          digest: sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d
+        role: push
         replicas: 1
-      guilds:
-        enabled: true
+        terminationGracePeriodSeconds: 45
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - curl -fsS --max-time 2 http://127.0.0.1:8080/_health/drain >/dev/null 2>&1 || true; sleep 20
+        extraVolumeMounts:
+          - mountPath: /etc/fluxer/keys
+            name: keys
+            readOnly: true
+        extraVolumes:
+          - name: keys
+            secret:
+              optional: true
+              secretName: fluxer-keys
+      gateway-sessions:
+        image:
+          name: fluxer-gateway
+          digest: sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946
+        role: sessions
         replicas: 1
-      calls:
-        enabled: true
-      push:
-        enabled: true
-        replicas: 1
+        terminationGracePeriodSeconds: 45
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - curl -fsS --max-time 2 http://127.0.0.1:8080/_health/drain >/dev/null 2>&1 || true; sleep 20
+        extraVolumeMounts:
+          - mountPath: /etc/fluxer/keys
+            name: keys
+            readOnly: true
+        extraVolumes:
+          - name: keys
+            secret:
+              optional: true
+              secretName: fluxer-keys

@@ -8,51 +8,257 @@ spec:
   interval: 1h
   chart:
     spec:
-      chart: ./charts/fluxer/legacy/users
-      version: "0.1.0"
+      chart: ./charts/fluxer/current/fluxer-svc
+      version: 0.1.0
       sourceRef:
         kind: GitRepository
         name: flux-system
         namespace: flux-system
       interval: 1h
+      reconcileStrategy: Revision
+  upgrade:
+    chartNameChangeStrategy: InPlaceUpdate
+  # Preserve existing immutable selectors and Helm-owned PDB names.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: users
+            patch: |-
+              - op: replace
+                path: /spec/selector/matchLabels
+                value:
+                  app: users
+              - op: add
+                path: /spec/template/metadata/labels/app
+                value: users
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1version
+                value: v1
+              - op: add
+                path: /metadata/labels/app.kubernetes.io~1version
+                value: v1
+              - op: replace
+                path: /spec/template/metadata/labels/app.kubernetes.io~1name
+                value: users
+              - op: replace
+                path: /metadata/labels/app.kubernetes.io~1name
+                value: users
+          - target:
+              kind: StatefulSet
+              name: users-shard
+            patch: |-
+              - op: replace
+                path: /spec/selector/matchLabels
+                value:
+                  app: users-shard
+              - op: add
+                path: /spec/template/metadata/labels/app
+                value: users-shard
+              - op: add
+                path: /spec/template/metadata/labels/app.kubernetes.io~1version
+                value: v1
+              - op: add
+                path: /metadata/labels/app.kubernetes.io~1version
+                value: v1
+              - op: replace
+                path: /spec/template/metadata/labels/app.kubernetes.io~1name
+                value: users
+              - op: replace
+                path: /metadata/labels/app.kubernetes.io~1name
+                value: users
+          - target:
+              kind: Service
+              name: users
+            patch: |-
+              - op: replace
+                path: /spec/selector
+                value:
+                  app: users
+          - target:
+              kind: Service
+              name: users-shard-headless
+            patch: |-
+              - op: replace
+                path: /spec/selector
+                value:
+                  app: users-shard
+          - target:
+              kind: PodDisruptionBudget
+              name: users-pdb
+            patch: |-
+              - op: replace
+                path: /metadata/name
+                value: users
+              - op: replace
+                path: /spec/selector/matchLabels
+                value:
+                  app: users
+          - target:
+              kind: PodDisruptionBudget
+              name: users-shard-pdb
+            patch: |-
+              - op: replace
+                path: /metadata/name
+                value: users-shard
+              - op: replace
+                path: /spec/selector/matchLabels
+                value:
+                  app: users-shard
+    # Keep Pod templates stable when infra main changes without chart changes.
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: "(Deployment|StatefulSet)"
+            patch: |-
+              - op: replace
+                path: /spec/template/metadata/labels/helm.sh~1chart
+                value: fluxer-svc-0.1.0
   values:
-    global:
+    image:
       registry: ghcr.io/fluxerapp
-      namespace: fluxer
-
-    svc:
-      name: users
-      image: fluxer-users
       tag: v1
-      nats:
-        url: nats://nats.fluxer.svc.cluster.local:4222
-      shard:
-        replicas: 1
-      router:
-        replicas: 1
+    # Clear upstream defaults before restoring the running service configuration.
+    env: null
+    envFrom: []
+    # The old default ghcr-pull-secret does not exist; these GHCR images are public.
+    imagePullSecrets: []
+    extraEnv:
+      - name: FLUXER_SVC_NATS_URL
+        value: nats://nats.fluxer.svc.cluster.local:4222
+      - name: FLUXER_SVC_CACHE_MAX_ENTRIES
+        value: '100000'
+      - name: FLUXER_SVC_CACHE_TTL_MS
+        value: '30000'
+      - name: FLUXER_DATABASE_BACKEND
+        value: postgres
+      - name: FLUXER_POSTGRES_HOST
+        value: fluxer-db-rw.fluxer.svc.cluster.local
+      - name: FLUXER_POSTGRES_PORT
+        value: '5432'
+      - name: FLUXER_POSTGRES_DATABASE
+        value: fluxer
+      - name: FLUXER_POSTGRES_USERNAME
+        valueFrom:
+          secretKeyRef:
+            key: username
+            name: fluxer-db-app
+      - name: FLUXER_POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: password
+            name: fluxer-db-app
+      - name: FLUXER_POSTGRES_SSL
+        value: 'true'
+      - name: FLUXER_POSTGRES_SSL_CA
+        valueFrom:
+          secretKeyRef:
+            key: ca.crt
+            name: fluxer-db-ca
+    podAnnotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/port: '8090'
+      prometheus.io/path: /_metrics
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+    probes:
+      startup: null
+      liveness:
+        httpGet:
+          path: /_healthz
+          port: http
+        initialDelaySeconds: 2
+        periodSeconds: 15
+      readiness:
+        httpGet:
+          path: /_health
+          port: http
+        initialDelaySeconds: 1
+        periodSeconds: 5
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
+    port: 8090
+    router:
+      replicas: 1
+      minReadySeconds: 10
+      terminationGracePeriodSeconds: 60
+      resources:
+        limits:
+          memory: 256Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+      pdb:
+        minAvailable: 50%
+    shard:
+      replicas: 1
+      minReadySeconds: 10
+      terminationGracePeriodSeconds: 60
+      resources:
+        limits:
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 256Mi
+      pdb:
+        minAvailable: 50%
       extraEnv:
-        - name: FLUXER_DATABASE_BACKEND
-          value: postgres
-        - name: FLUXER_POSTGRES_HOST
-          value: fluxer-db-rw.fluxer.svc.cluster.local
-        - name: FLUXER_POSTGRES_PORT
-          value: "5432"
-        - name: FLUXER_POSTGRES_DATABASE
+        - name: FLUXER_CASSANDRA_HOSTS
+          value: cassandra:9042
+        - name: FLUXER_CASSANDRA_KEYSPACE
           value: fluxer
-        - name: FLUXER_POSTGRES_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-db-app
-              key: username
-        - name: FLUXER_POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-db-app
-              key: password
-        - name: FLUXER_POSTGRES_SSL
-          value: "true"
-        - name: FLUXER_POSTGRES_SSL_CA
-          valueFrom:
-            secretKeyRef:
-              name: fluxer-db-ca
-              key: ca.crt
+        - name: FLUXER_SVC_MAX_CONCURRENT_REQUESTS
+          value: '64'
+      podSecurityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      probes:
+        startup:
+          httpGet:
+            path: /_healthz
+            port: http
+          initialDelaySeconds: 1
+          periodSeconds: 5
+          failureThreshold: 60
+        liveness:
+          httpGet:
+            path: /_healthz
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          failureThreshold: 3
+        readiness:
+          httpGet:
+            path: /_health
+            port: http
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          failureThreshold: 2
+      updateStrategy:
+        type: RollingUpdate
+    # Each HelmRelease continues to own only its existing service and shard.
+    services:
+      gifs: null
+      messages: null
+      snowflakes: null
+      unfurl: null
+      users:
+        # Pin the currently running image while changing the chart layout.
+        image:
+          name: fluxer-users
+          digest: sha256:1f811b5d123e32aa5fc8f6077a9dda7c2b1023857f27db29e7a4e4e275fcee66
+        shard:
+          env: null

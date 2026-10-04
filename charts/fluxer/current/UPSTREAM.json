@@ -1,0 +1,31 @@
+{
+  "repository": "https://github.com/fluxerapp/fluxer",
+  "commit": "5799ef705dccb993560be1a31e9b129cf5772968",
+  "files": {
+    "LICENSE": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+    "fluxer-api/Chart.yaml": "63c352be7f38f8439ce869d34598dba0ea825da3a4a7197493d3063c4e6fc16b",
+    "fluxer-api/templates/_helpers.tpl": "20c0f9af44cef99718e0bd9d416a077d4c0513102cfd6156ee0e15117721d704",
+    "fluxer-api/templates/api.yaml": "335931d6105af06633200da39f6887c5a0ecec2ae4986532ece0df216be2dbf8",
+    "fluxer-api/templates/workers.yaml": "e014c1bc574f875f3e861aef210199acafb705c3ae0711b1396400aef907fb8d",
+    "fluxer-api/values.yaml": "8d7cc5a6188678cb53ae9e7b93a40cafce63e55fb8e8a5a17758cd3900ea8bde",
+    "fluxer-gateway/Chart.yaml": "3bcdede84241b6f27ae0b888932dce6dc2a247dd5149db9bf28fcaa08ecb4214",
+    "fluxer-gateway/templates/_helpers.tpl": "b4b200703f463889e2b270c1351f51a1fd687399c38dfcc0fcffe5d8a21a071d",
+    "fluxer-gateway/templates/deployments.yaml": "040b27fab860de3df8448c331542c5720a06c045288d6238f40a37b2bff3178d",
+    "fluxer-gateway/templates/headless-service.yaml": "500836eae0e2c8e09430d7bcbe630809c0c1dd30040eae1dc22d79c270191706",
+    "fluxer-gateway/templates/networkpolicy.yaml": "7d11e785408a2cb9e0c1ee85d35e27de61a1a67d9a651df304d3cc66c7a887bd",
+    "fluxer-gateway/templates/statefulsets.yaml": "62efc0631c86334f535e1552b6d46b1412655c9c2337fcfa53f970a35e65851d",
+    "fluxer-gateway/values.yaml": "f79f96385c74d9d5680b1a74b1d99a43df7f997c7a0ccb55dd1822bb6ffc69a4",
+    "fluxer-media-proxy/Chart.yaml": "db50d73abddcba285d28cb2a3484187677b646e02e9ef2754752ec55ea2fedd1",
+    "fluxer-media-proxy/templates/_helpers.tpl": "14c418222805c0b87c37ba2ab180bf9bd6cc1806cf67f2ceea28236617b52407",
+    "fluxer-media-proxy/templates/workloads.yaml": "bed2c845137f754acc421477a9209dd63330e6dbc16e85050ea02bbfd205c4a3",
+    "fluxer-media-proxy/values.yaml": "17490c784c1a4c3dedca7fa6ea0a895d6ae1a1c9a6f9deba8470b811e412cf1d",
+    "fluxer-svc/Chart.yaml": "84eb4e0afd515abc61d74219633e0c7e6fa4561ab04fa7e5601df32a7fa2202c",
+    "fluxer-svc/templates/_helpers.tpl": "91df1dc366ffcf3d9300aeee10934caaea8f944cad423106230ffc03ba268fb5",
+    "fluxer-svc/templates/workloads.yaml": "4bf188be4f92199fc58d433550d6bb63f51866b43586990dcd0934896ee479d0",
+    "fluxer-svc/values.yaml": "1aaf3b016c2b1830695896f59c03d5df0f9976d4dbb8fd98b999ba194db18524",
+    "fluxer-web/Chart.yaml": "9e93233f9b391bb4403f88731ca1ed79b167fd4d86dcefc7961c9c1c7188e8ea",
+    "fluxer-web/templates/_helpers.tpl": "ff6cbf03d6470c1bf46f4932e22f76b07207cf694400b1269fd562c3e2bbe295",
+    "fluxer-web/templates/workloads.yaml": "009f03668b7418f6005f06c9ac1d5feaf7bc21e299a978db585afb996fd0fcc0",
+    "fluxer-web/values.yaml": "50a2fb0207ad573a93ff0c0386513008437a08952bb542362b3f60fcc1542528"
+  }
+}
