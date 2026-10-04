@@ -8,7 +8,7 @@ spec:
   interval: 1h
   url: https://github.com/fluxerapp/fluxer
   ref:
-    commit: c157ab5752084ba424b80b66f7b3b6ca4abba1e3
+    commit: 5d0c9c7cbed158324e050810970f7ceaa3436332
   ignore: |
     # Only include deploy/helm/ directory
     /*
