@@ -259,7 +259,7 @@ spec:
       gateway:
         image:
           name: fluxer-gateway
-          digest: sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946
+          digest: sha256:d721006050b6a7637145a60b973fbaf8d486a7f84300fcbce0b51afac0308972
         role: websocket
         replicas: 1
         buildVersion: v1
@@ -312,7 +312,7 @@ spec:
       gateway-calls:
         image:
           name: fluxer-gateway
-          digest: sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946
+          digest: sha256:d721006050b6a7637145a60b973fbaf8d486a7f84300fcbce0b51afac0308972
         role: calls
         replicas: 1
         terminationGracePeriodSeconds: 45
@@ -341,7 +341,7 @@ spec:
       gateway-guilds:
         image:
           name: fluxer-gateway
-          digest: sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d
+          digest: sha256:d721006050b6a7637145a60b973fbaf8d486a7f84300fcbce0b51afac0308972
         role: guilds
         replicas: 1
         terminationGracePeriodSeconds: 45
@@ -370,7 +370,7 @@ spec:
       gateway-presence:
         image:
           name: fluxer-gateway
-          digest: sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d
+          digest: sha256:d721006050b6a7637145a60b973fbaf8d486a7f84300fcbce0b51afac0308972
         role: presence
         replicas: 1
         terminationGracePeriodSeconds: 45
@@ -399,7 +399,7 @@ spec:
       gateway-push:
         image:
           name: fluxer-gateway
-          digest: sha256:b870d505964639e7c1a174e719fa18669a7f74489a8bbdcbbdef4dab37961e5d
+          digest: sha256:d721006050b6a7637145a60b973fbaf8d486a7f84300fcbce0b51afac0308972
         role: push
         replicas: 1
         terminationGracePeriodSeconds: 45
@@ -428,7 +428,7 @@ spec:
       gateway-sessions:
         image:
           name: fluxer-gateway
-          digest: sha256:2532256427dbfd4c5611e44b5e1f45ba13ed55335b8ddf656027ce75a82ec946
+          digest: sha256:d721006050b6a7637145a60b973fbaf8d486a7f84300fcbce0b51afac0308972
         role: sessions
         replicas: 1
         terminationGracePeriodSeconds: 45
