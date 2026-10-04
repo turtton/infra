@@ -9,6 +9,12 @@
   },
   "packageRules": [
     {
+      "description": "Fluxerの旧サービス別chartを維持するため、新chart構成への移行までupstream参照の更新を停止する",
+      "matchManagers": ["flux"],
+      "matchFileNames": ["clusters/main/apps/fluxer/source-gitrepository.yaml"],
+      "enabled": false
+    },
+    {
       "description": "ネットワーク・ストレージ等の基盤コントローラはアプリと別PRにする (同時ロールアウト事故防止)",
       "matchFileNames": ["clusters/main/infrastructure/**"],
       "groupName": "infrastructure controllers"
