@@ -228,7 +228,7 @@ spec:
         # Pin the currently running image while changing the chart layout.
         image:
           name: fluxer-snowflakes
-          digest: sha256:0ab5dd47a938ead3b382643a10798abc51d3f9d9d92d96127c111111933f48fa
+          digest: sha256:d1c71cb49f6d23049ab996a3ba3683c5f9106055b3a003bf6d427722e9fbcadc
         shard:
           env: null
       unfurl: null
