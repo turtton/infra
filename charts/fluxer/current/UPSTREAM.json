@@ -1,6 +1,5 @@
 {
-  "repository": "https://github.com/fluxerapp/fluxer",
-  "commit": "5799ef705dccb993560be1a31e9b129cf5772968",
+  "commit": "575a5adbeff0b46390fb08901c7166649255204c",
   "files": {
     "LICENSE": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
     "fluxer-api/Chart.yaml": "63c352be7f38f8439ce869d34598dba0ea825da3a4a7197493d3063c4e6fc16b",
@@ -26,6 +25,7 @@
     "fluxer-web/Chart.yaml": "9e93233f9b391bb4403f88731ca1ed79b167fd4d86dcefc7961c9c1c7188e8ea",
     "fluxer-web/templates/_helpers.tpl": "ff6cbf03d6470c1bf46f4932e22f76b07207cf694400b1269fd562c3e2bbe295",
     "fluxer-web/templates/workloads.yaml": "009f03668b7418f6005f06c9ac1d5feaf7bc21e299a978db585afb996fd0fcc0",
-    "fluxer-web/values.yaml": "50a2fb0207ad573a93ff0c0386513008437a08952bb542362b3f60fcc1542528"
-  }
+    "fluxer-web/values.yaml": "d7bed5d21d32611b42141a70dabb49b2275c95a315e3bf15ee31e159a3607833"
+  },
+  "repository": "https://github.com/fluxerapp/fluxer"
 }
