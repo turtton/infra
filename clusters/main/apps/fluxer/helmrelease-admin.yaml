@@ -84,7 +84,7 @@ spec:
       admin:
         image:
           name: fluxer-admin
-          digest: sha256:8f28883b9a86e6f68db1a414e164a0c997f80597435c1d772cd5f54c91551011
+          digest: sha256:280575da058284663daf5c8ca7593f9faef36e062dea36d510c26f4f698e5a6e
         replicas: 1
         minReadySeconds: 10
         terminationGracePeriodSeconds: 60
