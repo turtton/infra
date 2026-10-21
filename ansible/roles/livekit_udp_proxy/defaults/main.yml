@@ -1,5 +1,5 @@
 ---
 livekit_udp_proxy_listen_port: 7882
 livekit_udp_proxy_upstream_host: ""
-livekit_udp_proxy_upstream_port: 7882
+livekit_udp_proxy_upstream_port: 30082
 livekit_udp_proxy_timeout: 60s
