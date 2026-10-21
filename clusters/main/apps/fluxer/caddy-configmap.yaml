@@ -71,11 +71,11 @@ data:
         }
 
         handle /livekit {
-            reverse_proxy livekit:7880
+            respond 404
         }
 
-        handle_path /livekit/* {
-            reverse_proxy livekit:7880
+        handle /livekit/* {
+            respond 404
         }
 
         handle {
