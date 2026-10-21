@@ -22,7 +22,9 @@ unrelated and stays enabled.
    that node and inspect `tailscale0`. Update the SOPS inventory if the node
    has been re-enrolled.
 2. Review the Terraform ACL change locally. After merge, run **OpenTofu Apply**
-   on `main` in `plan` mode, then `apply` mode.
+   on `main` with `scope=tailscale-acl` in `plan` mode, then `apply` mode. This
+   exceptional target is intended to avoid applying unrelated drift. Review
+   the remaining changes separately with a full plan afterward.
 3. Check the Sakura VPS packet filter. If enabled, allow public UDP/7882.
    Ansible only manages the VPS nftables rules, not the Sakura control panel.
 4. Run **Ansible Apply** on `main` with `vps.yml` in `check` mode, then `apply`
