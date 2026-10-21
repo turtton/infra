@@ -81,7 +81,7 @@
     "spec_digests": {
       "PodDisruptionBudget/api-pdb": "df12f8913ffb88dd92818a229ddfa80dd5233db15dd1433d145fdd519a68e0df",
       "Service/api": "0790db40957c9485671a65f8b6c3ca0d1bd47c92629ad3ff355b59605c977d65",
-      "Deployment/api": "2d7ed3ada35d898cb697a71df3cee21db85a6be5fd7edd664884c1cce6613d36"
+      "Deployment/api": "ffbe946bdf42873083e35e8e8489dc91435113ab7314c6b2bc64caa168401632"
     },
     "namespaces": {
       "PodDisruptionBudget/api-pdb": "fluxer",

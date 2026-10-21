@@ -107,36 +107,13 @@ Key Ring:
 
 ## LiveKit (Voice/Calls)
 
-LiveKit サーバーが `clusters/main/apps/fluxer/livekit-helmrelease.yaml` でデプロイされている。
-UDP は無効化され、ICE-TCP (7881) + WebSocket/HTTP (7880) のみで動作する。
+通話は停止中。以前の Tailscale Funnel 経由のメディア通信は利用できず、
+LiveKit の認証情報も公開リポジトリに記載された値と一致していたため、
+API の `FLUXER_LIVEKIT_ENABLED=false`、
+Caddy の `/livekit` 404 応答、LiveKit と Funnel の GitOps リソース削除を行った。
+Attic の Funnel は別管理で、引き続き使用する。
 
-### Architecture
-
-```
-Browser ─┬─ wss://chat.turtton.net/livekit ──→ Cloudflare Tunnel ──→ Caddy ──→ livekit:7880 (signaling)
-          └─ tcp://livekit-media.<tailnet>.ts.net:7881 ──→ Tailscale Funnel ──→ livekit:7881 (ICE-TCP media)
-```
-
-- シグナリング: Cloudflare Tunnel → Caddy (/livekit/*) → livekit:7880
-- メディア (ICE-TCP): Tailscale Funnel → livekit-tailscale-forwarder → livekit:7881
-
-### Configuration
-
-- `helmrelease-api.yaml`: `FLUXER_LIVEKIT_ENABLED=true`, URL/Key/Secret/Webhook 設定済み
-- `helmrelease-gateway.yaml`: `roles.calls.enabled: true`
-- `livekit-helmrelease.yaml`: UDP無効 (`port_range_start: null`, `port_range_end: null`)、
-  ICE-TCP on 7881、Redis は Valkey を利用
-- `livekit-keys.sops.yaml`: SOPS 暗号化済み。API key/secret を保持
-
-### Tailscale Funnel
-
-- `livekit-tailscale-forwarder.yaml`: Tailscale sidecar が `livekit:7881` への TCP 転送 + Funnel 公開
-- 事前に `tailscale-livekit-auth` Secret (namespace: fluxer) に Tailscale auth key が必要
-- Tailscale ACL で使用するタグに `funnel` 属性が付与されていることを確認
-
-### 注意点
-
-- Cloudflare Tunnel は UDP を通さないため、メディアは ICE-TCP (TCP) のみ
-- Tailscale Funnel TCP は raw TCP フォワーディングを行う
-- ブラウザの WebRTC スタックが ICE-TCP にフォールバックできる必要がある
-- `livekit-keys.sops.yaml` の API_SECRET は運用前に適切な値に変更すること
+通話を再開する際は、新しい API key/secret を生成して SOPS Secret で管理し、
+HelmRelease values や平文の Git 履歴に書かないこと。
+メディア通信には VPS の公開 UDP ポートから Tailscale 経由で LiveKit へ転送する方式を検証する。
+シグナリングとメディア双方の接続試験を終えるまで公開設定を戻さない。
