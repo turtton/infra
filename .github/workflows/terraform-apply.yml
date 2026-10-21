@@ -39,6 +39,8 @@ jobs:
 
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_wrapper: false
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
@@ -74,15 +76,26 @@ jobs:
             echo '::error::OpenTofu plan failed. Detailed output is withheld from public Actions logs.'
             exit "$result"
           fi
-          if [ "$result" -eq 2 ]; then
+          # Keep resource details and values out of the public Actions log.
+          tofu show -json /tmp/tofu-plan.bin | jq -c '
+            [.resource_changes[]? | select(.change.actions != ["no-op"]) | (.change.actions | join("/"))]
+            | {count: length, action_counts: (group_by(.) | map({action: .[0], count: length}))}
+          ' > /tmp/tofu-plan-summary.json
+          change_count=$(jq -r '.count' /tmp/tofu-plan-summary.json)
+          if { [ "$result" -eq 0 ] && [ "$change_count" -ne 0 ]; } ||
+             { [ "$result" -eq 2 ] && [ "$change_count" -eq 0 ]; }; then
+            echo '::error::OpenTofu exit code disagrees with the saved plan. Apply is blocked.'
+            exit 1
+          fi
+          if [ "$change_count" -gt 0 ]; then
             echo 'changes=true' >> "$GITHUB_OUTPUT"
             echo 'OpenTofu plan completed with changes.'
           else
             echo 'changes=false' >> "$GITHUB_OUTPUT"
             echo 'OpenTofu plan completed with no changes.'
           fi
-          # Only action counts are suitable for this public Actions log.
-          tofu show -json /tmp/tofu-plan.bin | jq -r '[.resource_changes[]? | select(.change.actions != ["no-op"]) | (.change.actions | join("/"))] | group_by(.)[] | "\(.[0]): \(length)"'
+          jq -r '.action_counts[] | "\(.action): \(.count)"' /tmp/tofu-plan-summary.json
+          rm -f /tmp/tofu-plan-summary.json
 
       - name: Confirm main still matches the reviewed revision
         if: inputs.mode == 'apply'
