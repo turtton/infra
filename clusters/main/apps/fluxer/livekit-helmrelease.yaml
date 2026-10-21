@@ -74,6 +74,9 @@ spec:
               kind: Deployment
               name: livekit
             patch: |-
+              - op: add
+                path: /spec/template/spec/enableServiceLinks
+                value: false
               - op: remove
                 path: /spec/template/spec/containers/0/ports/1/hostPort
           - target:
