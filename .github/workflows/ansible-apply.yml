@@ -112,6 +112,14 @@ jobs:
             echo 'Ansible check completed.'
           elif [ "$MODE" = apply ]; then
             if ! ansible-playbook "playbooks/$PLAYBOOK" --limit "$TARGET_GROUP" > /tmp/ansible-run.log 2>&1; then
+              if [ "$PLAYBOOK" = vps-livekit.yml ]; then
+                if grep -q 'UNREACHABLE!' /tmp/ansible-run.log; then
+                  echo '::error::VPS was unreachable over SSH/Tailscale.'
+                else
+                  failed_task=$(awk '/^TASK \[/{task=$0} /^fatal:/{print task; exit}' /tmp/ansible-run.log)
+                  echo "::error::VPS UDP apply failed at ${failed_task:-an unknown task}."
+                fi
+              fi
               echo '::error::Ansible apply failed. Detailed output is withheld from public Actions logs.'
               exit 1
             fi
