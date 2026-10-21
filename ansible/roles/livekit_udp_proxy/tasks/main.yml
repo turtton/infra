@@ -28,6 +28,11 @@
     group: root
     mode: "0755"
 
+- name: Inspect NGINX configuration path
+  ansible.builtin.stat:
+    path: /etc/nginx/nginx.conf
+  register: livekit_udp_proxy_nginx_conf
+
 - name: Include UDP stream configuration
   ansible.builtin.blockinfile:
     path: /etc/nginx/nginx.conf
@@ -38,6 +43,12 @@
           include /etc/nginx/streams-enabled/*.conf;
       }
   notify: Reload NGINX
+  when: not ansible_check_mode or livekit_udp_proxy_nginx_conf.stat.exists
+
+- name: Inspect stream configuration directory
+  ansible.builtin.stat:
+    path: /etc/nginx/streams-enabled
+  register: livekit_udp_proxy_stream_dir
 
 - name: Configure LiveKit UDP proxy
   ansible.builtin.template:
@@ -47,6 +58,7 @@
     group: root
     mode: "0644"
   notify: Reload NGINX
+  when: not ansible_check_mode or livekit_udp_proxy_stream_dir.stat.exists
 
 - name: Validate NGINX configuration
   ansible.builtin.command: nginx -t
