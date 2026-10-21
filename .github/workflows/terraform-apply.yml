@@ -11,6 +11,14 @@ on:
         options:
           - plan
           - apply
+      scope:
+        description: Limit an exceptional run to the Tailscale ACL
+        required: true
+        type: choice
+        default: full
+        options:
+          - full
+          - tailscale-acl
 
 concurrency:
   group: ${{ github.workflow }}
@@ -67,9 +75,15 @@ jobs:
         id: plan
         working-directory: terraform
         shell: bash
+        env:
+          PLAN_SCOPE: ${{ inputs.scope }}
         run: |
+          plan_args=()
+          if [ "$PLAN_SCOPE" = 'tailscale-acl' ]; then
+            plan_args+=('-target=tailscale_acl.this')
+          fi
           set +e
-          tofu plan -detailed-exitcode -input=false -no-color -out=/tmp/tofu-plan.bin > /tmp/tofu-plan.log 2>&1
+          tofu plan "${plan_args[@]}" -detailed-exitcode -input=false -no-color -out=/tmp/tofu-plan.bin > /tmp/tofu-plan.log 2>&1
           result=$?
           set -e
           if [ "$result" -ne 0 ] && [ "$result" -ne 2 ]; then
@@ -77,11 +91,19 @@ jobs:
             exit "$result"
           fi
           # Keep resource details and values out of the public Actions log.
-          tofu show -json /tmp/tofu-plan.bin | jq -c '
-            [.resource_changes[]? | select(.change.actions != ["no-op"]) | (.change.actions | join("/"))]
-            | {count: length, action_counts: (group_by(.) | map({action: .[0], count: length}))}
+          tofu show -json /tmp/tofu-plan.bin | jq -c --arg scope "$PLAN_SCOPE" '
+            [.resource_changes[]? | select(.change.actions != ["no-op"])] as $changes
+            | {
+                count: ($changes | length),
+                action_counts: ($changes | map(.change.actions | join("/")) | group_by(.) | map({action: .[0], count: length})),
+                unexpected_scope_change: ($scope == "tailscale-acl" and any($changes[]; .address != "tailscale_acl.this" or .change.actions != ["update"]))
+              }
           ' > /tmp/tofu-plan-summary.json
           change_count=$(jq -r '.count' /tmp/tofu-plan-summary.json)
+          if jq -e '.unexpected_scope_change' /tmp/tofu-plan-summary.json > /dev/null; then
+            echo '::error::The ACL-scoped plan contains another action. Apply is blocked.'
+            exit 1
+          fi
           if { [ "$result" -eq 0 ] && [ "$change_count" -ne 0 ]; } ||
              { [ "$result" -eq 2 ] && [ "$change_count" -eq 0 ]; }; then
             echo '::error::OpenTofu exit code disagrees with the saved plan. Apply is blocked.'

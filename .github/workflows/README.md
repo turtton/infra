@@ -35,6 +35,7 @@ PRで `terraform/` 配下のファイルが変更された場合に自動実行�
 GitHub Actions UIから、`main` のレビュー済み revision を `turtton` が手動実行する。
 通常は PR の静的検証 → マージ → `plan` の変更件数を確認 → `apply` の順で実行する。
 属性値を含む詳細出力は公開 Actions ログへ掲載しない。詳細の確認が必要な変更はローカルで plan する。
+`scope=tailscale-acl` は、未確認の変更が他に残る場合に ACL だけを確認・適用する例外的な選択肢。対象外の変更が計画に混入した場合は失敗する。適用後は `scope=full` の plan で残りの差分を改めて確認する。
 `apply` は同じ実行で作成した plan ファイルを適用し、成功後に暗号化された
 state ファイルを自動的に git commit & push する。
 
