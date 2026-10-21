@@ -6,6 +6,7 @@ resources:
   - source-gitrepository.yaml
   - gateway-erlang-cookie.sops.yaml
   - runtime-keys.sops.yaml
+  - livekit-keys.sops.yaml
   - upload-relay.sops.yaml
   - helmrelease-api.yaml
   - helmrelease-app-proxy.yaml
@@ -16,6 +17,8 @@ resources:
   - helmrelease-users.yaml
   - helmrelease-messages.yaml
   - helmrelease-unfurl.yaml
+  - livekit-helmrepository.yaml
+  - livekit-helmrelease.yaml
   - cnpg-cluster.yaml
   - seaweedfs-statefulset.yaml
   - seaweedfs-service.yaml

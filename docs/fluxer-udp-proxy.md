@@ -47,6 +47,12 @@ unrelated and stays enabled.
   can remove this limitation after media traffic is proven.
 - Restore Caddy `/livekit` signaling only after the server and API are ready.
 
+The server manifest and rotated credentials are prepared in
+`clusters/main/apps/fluxer/livekit-helmrelease.yaml` and
+`livekit-keys.sops.yaml`. Verify the HelmRelease and pod are healthy before
+enabling the Fluxer API or Caddy route. The API secret references must point
+to `livekit-keys` when voice is enabled.
+
 Test with two non-tailnet devices on separate networks. Confirm connection,
 two-way audio, selected WebRTC ICE candidate, VPS receive/transmit packets,
 and recovery after LiveKit restart. If no packets reach the VPS, inspect the

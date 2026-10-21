@@ -1,0 +1,68 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: livekit
+  namespace: fluxer
+spec:
+  interval: 1h
+  targetNamespace: fluxer
+  chart:
+    spec:
+      chart: livekit-server
+      version: "1.9.0"
+      sourceRef:
+        kind: HelmRepository
+        name: livekit
+        namespace: flux-system
+      interval: 1h
+  values:
+    fullnameOverride: livekit
+    loadBalancer:
+      type: disable
+      servicePort: 7880
+    podHostNetwork: true
+    replicaCount: 1
+    terminationGracePeriodSeconds: 600
+    deploymentAnnotations:
+      secret.reloader.stakater.com/reload: livekit-keys
+
+    image:
+      tag: v1.13.10
+
+    podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+
+    livekit:
+      port: 7880
+      log_level: info
+      key_file: keys.yaml
+      rtc:
+        udp_port: 7882
+        port_range_start: 0
+        port_range_end: 0
+        tcp_port: 0
+        use_external_ip: false
+        node_ip: 133.167.115.94
+      turn:
+        enabled: false
+      redis:
+        address: valkey.fluxer.svc.cluster.local:6379
+        db: 0
+      webhook:
+        urls:
+          - http://api:8080/webhooks/livekit
+        api_key: fluxer
+
+    storeKeysInSecret:
+      enabled: true
+      existingSecret: livekit-keys
+
+    nodeSelector:
+      kubernetes.io/hostname: toliworker-1
