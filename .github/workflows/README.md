@@ -16,10 +16,12 @@ PRで `ansible/` 配下のファイルが変更された場合に自動実行。
 #### ansible-apply.yml (Apply)
 
 GitHub Actions UIから、`main` のレビュー済み revision を手動実行する。
-実行者は `turtton` に限定し、playbook (`site.yml` / `network-update.yml` / `vps.yml`)
-と `check` / `apply` を選択する。
+実行者は `turtton` に限定し、playbook と `check` / `apply` を選択する。
 通常は PR の静的検証 → マージ → `check` → `apply` の順で実行する。
 本番接続が必要な出力は公開 Actions ログへ掲載しない。
+Fluxer の公開 UDP 経路は `vps-udp-probe.yml` と `probe` モードを選び、
+外部 runner から VPS 公開 UDP/7882 へ送信して公開インターフェースと
+Tailscale 側 UDP/30082 の受信を確認する。詳細は [運用手順](../../docs/fluxer-udp-proxy.md) を参照。
 
 ### OpenTofu
 

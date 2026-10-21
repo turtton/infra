@@ -35,6 +35,15 @@ unrelated and stays enabled.
    voice disabled until LiveKit has fresh credentials and the end-to-end test
    below passes.
 
+The **Ansible Apply** workflow can run `vps-udp-probe.yml` with `mode=probe`.
+It sends a marker packet from a GitHub runner outside the home network and
+captures it on the VPS public interface and the Tailscale interface. A failure
+at "Verify public UDP reached the VPS" points to the Sakura packet filter or
+the runner's outbound path. A failure at "Verify UDP was forwarded into
+Tailscale" points to the VPS proxy or local firewall. If both pass, continue
+with the NodePort and LiveKit checks. The test does not verify return traffic
+or two-way audio.
+
 ## LiveKit cutover prerequisites
 
 - Generate a new LiveKit API key and secret. Store them only in a SOPS Secret;

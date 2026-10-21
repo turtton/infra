@@ -1,0 +1,95 @@
+---
+- name: Probe public LiveKit UDP forwarding
+  hosts: vps
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install packet capture tool for the UDP probe
+      ansible.builtin.apt:
+        name: tcpdump
+        state: present
+
+    - name: Capture a public UDP packet
+      ansible.builtin.command:
+        argv:
+          - timeout
+          - "18"
+          - tcpdump
+          - -n
+          - -q
+          - -i
+          - "{{ nftables_vps_public_interface | default('ens3') }}"
+          - -c
+          - "1"
+          - udp dst port 7882 and udp[8:4] = 0x6c697665 and udp[12:4] = 0x6b69742d
+      async: 25
+      poll: 0
+      register: livekit_public_capture
+      changed_when: false
+
+    - name: Capture a forwarded Tailscale UDP packet
+      ansible.builtin.command:
+        argv:
+          - timeout
+          - "18"
+          - tcpdump
+          - -n
+          - -q
+          - -i
+          - tailscale0
+          - -c
+          - "1"
+          - udp dst port 30082 and udp[8:4] = 0x6c697665 and udp[12:4] = 0x6b69742d
+      async: 25
+      poll: 0
+      register: livekit_tailscale_capture
+      changed_when: false
+
+    - name: Let packet captures start
+      ansible.builtin.pause:
+        seconds: 2
+
+    - name: Send public UDP probe packets from the controller
+      ansible.builtin.shell: |
+        for attempt in 1 2 3 4 5; do
+          printf 'livekit-udp-probe' > /dev/udp/{{ vps_bootstrap_public_ip }}/7882
+          sleep 0.2
+        done
+      args:
+        executable: /bin/bash
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: Wait for public UDP capture
+      ansible.builtin.async_status:
+        jid: "{{ livekit_public_capture.ansible_job_id }}"
+      register: livekit_public_result
+      until: livekit_public_result is finished
+      retries: 22
+      delay: 1
+      failed_when: false
+      changed_when: false
+
+    - name: Wait for Tailscale UDP capture
+      ansible.builtin.async_status:
+        jid: "{{ livekit_tailscale_capture.ansible_job_id }}"
+      register: livekit_tailscale_result
+      until: livekit_tailscale_result is finished
+      retries: 22
+      delay: 1
+      failed_when: false
+      changed_when: false
+
+    - name: Verify public UDP reached the VPS
+      ansible.builtin.assert:
+        that:
+          - livekit_public_result.rc == 0
+        fail_msg: Public UDP/7882 did not reach the VPS.
+
+    - name: Verify UDP was forwarded into Tailscale
+      ansible.builtin.assert:
+        that:
+          - livekit_tailscale_result.rc == 0
+        fail_msg: UDP/30082 did not leave the VPS through Tailscale.
