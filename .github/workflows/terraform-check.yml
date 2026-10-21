@@ -34,6 +34,11 @@ jobs:
         working-directory: terraform
         run: tofu init -backend=false -input=false -no-color
 
+      - name: Provide a placeholder SSH file for static validation
+        run: |
+          mkdir -p ~/.ssh
+          printf 'validation-only\n' > ~/.ssh/id_ed25519
+
       - name: Validate configuration
         working-directory: terraform
         run: tofu validate -no-color
