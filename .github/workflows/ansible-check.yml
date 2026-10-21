@@ -40,7 +40,7 @@ jobs:
       - name: Syntax check playbooks
         working-directory: ansible
         run: |
-          for playbook in site.yml network-update.yml switch.yml vps.yml bootstrap-vps.yml; do
+          for playbook in site.yml network-update.yml switch.yml vps.yml bootstrap-vps.yml vps-livekit.yml vps-udp-probe.yml; do
             ansible-playbook "playbooks/$playbook" --syntax-check
           done
 
