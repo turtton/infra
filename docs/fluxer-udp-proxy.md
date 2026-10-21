@@ -5,14 +5,14 @@ This runbook prepares one media path without enabling voice:
 
 ```text
 Browser -- UDP/7882 --> Sakura VPS (NGINX stream)
-                         -- Tailscale UDP/7882 --> toliworker-1 --> LiveKit
+                         -- Tailscale UDP/30082 --> toliworker-1 --> LiveKit UDP/7882
 ```
 
 The VPS proxy listens on its public interface and forwards to the current
-Tailscale address of `toliworker-1`. The LiveKit pod must later run on that
-node with host networking and `rtc.udp_port: 7882`; the existing Caddy route
+Tailscale address of `toliworker-1`. The LiveKit pod runs on that
+node behind a UDP NodePort and uses `rtc.udp_port: 7882`; the existing Caddy route
 can then carry only WebSocket signaling. The new Tailscale grant adds
-`tag:mcproxy` to `tag:infra-talos-cluster` on UDP/7882. The Attic Funnel is
+`tag:mcproxy` to `tag:infra-talos-cluster` on UDP/30082. The Attic Funnel is
 unrelated and stays enabled.
 
 ## Apply in order
@@ -42,9 +42,9 @@ unrelated and stays enabled.
 - Configure LiveKit with a single UDP mux port (`rtc.udp_port: 7882`), disable
   the old TCP and TURN Funnel paths, advertise the VPS public IPv4 as
   `rtc.node_ip`, and set `rtc.use_external_ip: false`.
-- Pin the LiveKit pod to `toliworker-1` for this initial host-network path.
-  The node is a single point of failure. A later NodePort or multi-node design
-  can remove this limitation after media traffic is proven.
+- Pin the LiveKit pod to `toliworker-1` for the initial NodePort path.
+  The node is a single point of failure. A multi-node design can remove this
+  limitation after media traffic is proven.
 - Restore Caddy `/livekit` signaling only after the server and API are ready.
 
 The server manifest and rotated credentials are prepared in

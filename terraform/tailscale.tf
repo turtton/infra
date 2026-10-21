@@ -150,7 +150,7 @@ resource "tailscale_acl" "this" {
       {
         src = ["tag:mcproxy"]
         dst = ["tag:infra-talos-cluster"]
-        ip  = ["udp:7882"]
+        ip  = ["udp:30082"]
       },
       {
         src = ["autogroup:member", "autogroup:shared"]

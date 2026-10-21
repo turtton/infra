@@ -118,5 +118,6 @@ HelmRelease values や平文の Git 履歴に書かないこと。
 メディア通信には VPS の公開 UDP ポートから Tailscale 経由で LiveKit へ転送する方式を検証する。
 シグナリングとメディア双方の接続試験を終えるまで公開設定を戻さない。
 `livekit-keys.sops.yaml` は新しい認証情報を保持する。`livekit-helmrelease.yaml` は
-`toliworker-1` の host network で UDP/7882 を受け、VPS の公開 IP を ICE 候補として通知する。
+`toliworker-1` 上の Pod で UDP/7882 を受け、NodePort UDP/30082 を経由する。
+VPS の公開 IP を ICE 候補として通知する。
 API の音声設定と Caddy の `/livekit` は検証完了まで無効のままにする。
