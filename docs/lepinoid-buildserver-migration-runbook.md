@@ -82,12 +82,12 @@ mainworker-1 = {
 1. **atm10 を一時停止**: `clusters/main/apps/atm10/deployment.yaml` の `replicas` を 0 にして commit & push（Flux 管理のため手動 `kubectl scale` は reconcile で戻される）。**実施済み（2026-09-07, main@fedadbc）**
 2. **Longhorn 側の事前ゲート**: `mainworker-1` ノード上の replica / backing image が **ゼロ**であることを確認。**実施済み**: `lepinoid-data`（1Gi）と `atm10-data`（10Gi）のレプリカが存在したため、`nodes.longhorn.io/mainworker-1` に `allowScheduling=false, evictionRequested=true` を設定して eviction 完了（0 台確認）
 3. `kubectl drain mainworker-1 --ignore-daemonsets --delete-emptydir-data` **実施済み**
-4. PR を作成し CI の plan コメントで確認 — **続行条件: 差分が `talos_node["mainworker-1"]`（VM）と `talos_machine_configuration_apply.worker["mainworker-1"]`（`replace_triggered_by` により自動で replace）のみであること。`talos_machine_secrets.this` と `talos_machine_bootstrap.this` が置換対象に含まれていたら絶対に進まない**
+4. PR を作成して静的検証を通し、権限のあるローカル環境で `tofu plan` の詳細を確認してからマージする。**続行条件: 差分が `talos_node["mainworker-1"]`（VM）と `talos_machine_configuration_apply.worker["mainworker-1"]`（`replace_triggered_by` により自動で replace）のみであること。`talos_machine_secrets.this` と `talos_machine_bootstrap.this` が置換対象に含まれていたら絶対に進まない**
 5. **旧 VM 停止 + Node CR 削除（apply 前に手動実施）**: CI の apply は destroy/create を一続きで行うため、事前に停止点を作る:
    1. Proxmox 上で `qm shutdown 1016` → 停止を確認
    2. `kubectl delete node mainworker-1`（cordon 状態の残留防止。kubelet が停止済みなので再作成されない）
    3. `kubectl delete nodes.longhorn.io mainworker-1`（旧 disk UUID の残存防止）
-6. **`/tf-apply` を PR にコメント**（turtton のみ実行可）。apply 末尾の `data.talos_cluster_health.this`（全 worker 検査）が新 VM の起動と競合して失敗した場合は、VM 作成と config apply は完了しているため、ノード復帰後に再度 `/tf-apply` で残差分を回収する
+6. **main の OpenTofu Apply workflow を `plan`、続いて `apply` で手動実行**（turtton のみ実行可）。apply 末尾の `data.talos_cluster_health.this`（全 worker 検査）が新 VM の起動と競合して失敗した場合は、VM 作成と config apply は完了しているため、ノード復帰後に再度 `plan` と `apply` で残差分を回収する
 7. 再 join 後の確認:
    - `kubectl get nodes` で Ready
    - `kubectl get node mainworker-1 -o jsonpath='{.spec.unschedulable}'` が空/false であること（残っていれば `kubectl uncordon`）
