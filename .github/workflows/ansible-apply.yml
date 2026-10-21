@@ -19,6 +19,7 @@ on:
           - site.yml
           - network-update.yml
           - vps.yml
+          - vps-livekit.yml
 
 concurrency:
   group: ${{ github.workflow }}
@@ -72,7 +73,7 @@ jobs:
         run: |
           case "$PLAYBOOK" in
             site.yml|network-update.yml) echo 'group=proxmox' >> "$GITHUB_OUTPUT" ;;
-            vps.yml) echo 'group=vps' >> "$GITHUB_OUTPUT" ;;
+            vps.yml|vps-livekit.yml) echo 'group=vps' >> "$GITHUB_OUTPUT" ;;
             *) echo '::error::Unsupported playbook'; exit 1 ;;
           esac
 
@@ -97,6 +98,14 @@ jobs:
         run: |
           if [ "$MODE" = check ]; then
             if ! ansible-playbook "playbooks/$PLAYBOOK" --check --diff --limit "$TARGET_GROUP" > /tmp/ansible-run.log 2>&1; then
+              if [ "$PLAYBOOK" = vps-livekit.yml ]; then
+                if grep -q 'UNREACHABLE!' /tmp/ansible-run.log; then
+                  echo '::error::VPS was unreachable over SSH/Tailscale.'
+                else
+                  failed_task=$(awk '/^TASK \[/{task=$0} /^fatal:/{print task; exit}' /tmp/ansible-run.log)
+                  echo "::error::VPS UDP check failed at ${failed_task:-an unknown task}."
+                fi
+              fi
               echo '::error::Ansible check failed. Detailed output is withheld from public Actions logs.'
               exit 1
             fi

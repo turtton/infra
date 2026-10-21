@@ -1,0 +1,9 @@
+---
+- name: Configure VPS LiveKit UDP path
+  hosts: vps
+  become: true
+  gather_facts: true
+
+  roles:
+    - nftables_vps
+    - livekit_udp_proxy

@@ -27,8 +27,8 @@ unrelated and stays enabled.
    the remaining changes separately with a full plan afterward.
 3. Check the Sakura VPS packet filter. If enabled, allow public UDP/7882.
    Ansible only manages the VPS nftables rules, not the Sakura control panel.
-4. Run **Ansible Apply** on `main` with `vps.yml` in `check` mode, then `apply`
-   mode. The role installs NGINX with its stream module, listens on UDP/7882,
+4. Run **Ansible Apply** on `main` with `vps-livekit.yml` in `check` mode, then
+   `apply` mode. The role installs NGINX with its stream module, listens on UDP/7882,
    and forwards to the selected Talos node. TCP/80 is not opened in nftables.
 5. On the VPS, verify `nginx -t`, `ss -ulnp | grep 7882`, and the nftables
    input rule. From the VPS, verify the Tailscale peer is online. Keep Fluxer
