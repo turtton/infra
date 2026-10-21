@@ -192,7 +192,7 @@ ACL 再付与を飛ばすと exporter は HTTP 200 + 空 body を返す silent f
    # monitoring_agent_pve_exporter_api_token_value を新しいトークン値に書き換えて保存
    ```
 
-4. **Ansible 適用**（PR から `/ansible-apply` でも可、ローカルでも可）
+4. **Ansible 適用**（PR マージ後に main の Ansible Apply workflow で `site.yml` の `check` → `apply`、またはローカル）
 
    ```bash
    ansible-playbook playbooks/site.yml

@@ -6,57 +6,37 @@ Ansible playbookとOpenTofuをGitHub Actions経由で実行するためのワー
 
 ### Ansible
 
-#### ansible-check.yml (Dry-Run)
+#### ansible-check.yml (Validate)
 
 PRで `ansible/` 配下のファイルが変更された場合に自動実行。
 
-- `--check --diff` でdry-runを実行
-- 結果をPRにコメントとして投稿
-- コメント末尾に `/ansible-apply` の案内を表示
+- `ansible-lint`、playbook の構文、対象ホストの範囲を検証
+- Secret、Tailscale、SSH接続を使わずに実行
 
 #### ansible-apply.yml (Apply)
 
-2つのトリガーを持つ:
-
-**1. PRコメント `/ansible-apply`**
-
-PRにコメント `/ansible-apply` を投稿すると実行される。
-
-```
-PR作成 → dry-run自動実行 → 結果確認 → `/ansible-apply` コメント → 本番適用 → 結果確認 → マージ
-```
-
-**2. workflow_dispatch (手動実行)**
-
-GitHub Actions UIから手動で実行。playbook (`site.yml` / `network-update.yml`) を選択可能。
+GitHub Actions UIから、`main` のレビュー済み revision を手動実行する。
+実行者は `turtton` に限定し、playbook (`site.yml` / `network-update.yml` / `vps.yml`)
+と `check` / `apply` を選択する。
+通常は PR の静的検証 → マージ → `check` → `apply` の順で実行する。
+本番接続が必要な出力は公開 Actions ログへ掲載しない。
 
 ### OpenTofu
 
-#### terraform-check.yml (Plan)
+#### terraform-check.yml (Validate)
 
 PRで `terraform/` 配下のファイルが変更された場合に自動実行。
 
-- `tofu plan` を実行
-- 結果をPRにコメントとして投稿
-- コメント末尾に `/tf-apply` の案内を表示
+- `tofu fmt` と backend を使わない `tofu validate` を実行
+- Secret、Tailscale、SSH接続を使わずに実行
 
 #### terraform-apply.yml (Apply)
 
-2つのトリガーを持つ:
-
-**1. PRコメント `/tf-apply`**
-
-PRにコメント `/tf-apply` を投稿すると実行される（`turtton`ユーザー限定）。
-
-```
-PR作成 → plan自動実行 → 結果確認 → `/tf-apply` コメント → apply実行 → 暗号化stateをcommit → 結果確認 → マージ
-```
-
-**2. workflow_dispatch (手動実行)**
-
-GitHub Actions UIから手動で実行。mainブランチのterraform構成をapplyする。
-
-apply成功後、暗号化されたstateファイルを自動的にgit commit & pushする。
+GitHub Actions UIから、`main` のレビュー済み revision を `turtton` が手動実行する。
+通常は PR の静的検証 → マージ → `plan` の変更件数を確認 → `apply` の順で実行する。
+属性値を含む詳細出力は公開 Actions ログへ掲載しない。詳細の確認が必要な変更はローカルで plan する。
+`apply` は同じ実行で作成した plan ファイルを適用し、成功後に暗号化された
+state ファイルを自動的に git commit & push する。
 
 #### terraform-rotate.yml (Tailscale auth key ローテーション)
 
@@ -131,6 +111,6 @@ GitHub ActionsランナーがProxmoxノードにSSH接続するため、Tailscal
 
 - SSH秘密鍵とvaultパスワードはジョブ終了時に必ず削除 (`Cleanup` ステップ)
 - Tailscale接続はephemeralノードとして扱われる
-- PRコメントトリガーは `issue_comment` イベントで、PRに紐づくコメントのみ反応
+- PR チェックは Secret を持たず、本番接続もしない
+- 本番の plan/check/apply は `main` の固定 revision から手動実行する
 - OpenTofuのstateはPBKDF2+AES-GCMで暗号化されており、パスフレーズなしでは復号不可
-- `/tf-apply` コマンドは `turtton` ユーザーのみ実行可能

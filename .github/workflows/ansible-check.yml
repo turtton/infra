@@ -1,9 +1,10 @@
-name: Ansible Dry-Run
+name: Ansible Validate
 
 on:
   pull_request:
     paths:
-      - "ansible/**"
+      - 'ansible/**'
+      - '.github/workflows/ansible-check.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -11,29 +12,26 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  dry-run:
+  validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout PR revision without credentials
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
       - name: Install Ansible
-        run: pip install "ansible==14.2.0"
-
-      - name: Install SOPS
-        run: |
-          curl -LO https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64
-          install -m 755 sops-v3.9.4.linux.amd64 /usr/local/bin/sops
+        run: pip install 'ansible==14.2.0'
 
       - name: Install Ansible collections
         working-directory: ansible
         run: ansible-galaxy collection install -r requirements.yml
 
       - name: Install ansible-lint
-        run: pip install "ansible-lint==26.6.0"
+        run: pip install 'ansible-lint==26.6.0'
 
       - name: Run ansible-lint
         working-directory: ansible
@@ -43,154 +41,21 @@ jobs:
         working-directory: ansible
         run: |
           for playbook in site.yml network-update.yml switch.yml vps.yml bootstrap-vps.yml; do
-            echo "=== Checking $playbook ==="
-            ansible-playbook playbooks/$playbook --syntax-check
+            ansible-playbook "playbooks/$playbook" --syntax-check
           done
 
       - name: Assert proxmox-only hosts in site.yml
         working-directory: ansible
+        shell: bash
         run: |
-          HOSTS=$(ansible-playbook playbooks/site.yml --list-hosts 2>/dev/null | awk '/hosts \([0-9]+\):/{f=1;next} f && NF {gsub(/^ +/, ""); print}')
-          EXPECTED="main data toliunit"
-          for host in $EXPECTED; do
-            if ! echo "$HOSTS" | grep -qw "$host"; then
-              echo "ERROR: Expected host '$host' not found in site.yml"
-              echo "Hosts found:"
-              echo "$HOSTS"
+          hosts=$(ansible-playbook playbooks/site.yml --list-hosts 2>/dev/null | awk '/hosts \([0-9]+\):/{f=1;next} f && NF {gsub(/^ +/, ""); print}')
+          for host in main data toliunit; do
+            if ! echo "$hosts" | grep -qw "$host"; then
+              echo "Expected host '$host' not found in site.yml"
               exit 1
             fi
           done
-          # Count hosts to ensure no extras
-          COUNT=$(echo "$HOSTS" | wc -l)
-          if [ "$COUNT" -ne 3 ]; then
-            echo "ERROR: Expected exactly 3 proxmox hosts (main, data, toliunit), found $COUNT"
-            echo "Hosts found:"
-            echo "$HOSTS"
+          if [ "$(echo "$hosts" | wc -l)" -ne 3 ]; then
+            echo "Expected exactly three proxmox hosts; found: $hosts"
             exit 1
           fi
-          echo "OK: site.yml only targets proxmox hosts: main, data, toliunit"
-
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v4
-        with:
-          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-          tags: tag:ci
-
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-
-      - name: Run dry-run for proxmox
-        id: dry_run
-        working-directory: ansible
-        env:
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: |
-          set +e
-          OUTPUT=$(ansible-playbook playbooks/site.yml \
-            --check --diff --limit proxmox 2>&1)
-          EXIT_CODE=$?
-          echo "$OUTPUT"
-          {
-            echo "output<<ANSIBLE_EOF"
-            echo "$OUTPUT" | tail -80
-            echo "ANSIBLE_EOF"
-          } >> "$GITHUB_OUTPUT"
-          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
-          exit $EXIT_CODE
-
-      - name: Run dry-run for vps
-        id: dry_run_vps
-        working-directory: ansible
-        env:
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: |
-          set +e
-          OUTPUT=$(ansible-playbook playbooks/vps.yml \
-            --check --diff --limit vps 2>&1)
-          EXIT_CODE=$?
-          echo "$OUTPUT"
-          {
-            echo "output<<ANSIBLE_EOF"
-            echo "$OUTPUT" | tail -80
-            echo "ANSIBLE_EOF"
-          } >> "$GITHUB_OUTPUT"
-          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
-          exit $EXIT_CODE
-
-      - name: Comment dry-run result on PR
-        if: always()
-        uses: actions/github-script@v9
-        env:
-          DRY_RUN_OUTPUT: ${{ steps.dry_run.outputs.output }}
-          DRY_RUN_EXIT_CODE: ${{ steps.dry_run.outputs.exit_code }}
-        with:
-          script: |
-            const marker = '<!-- ansible-dry-run -->';
-            const exitCode = process.env.DRY_RUN_EXIT_CODE;
-            const status = exitCode === '0' ? '✅ Dry-run passed' : '❌ Dry-run failed';
-            const output = process.env.DRY_RUN_OUTPUT;
-            const body = `${marker}\n### ${status}\n\n<details><summary>Ansible output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>\n\nComment \`/ansible-apply\` to apply these changes.`;
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-            const existing = comments.find(c => c.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: body
-              });
-            }
-
-      - name: Comment VPS dry-run result on PR
-        if: always()
-        uses: actions/github-script@v9
-        env:
-          DRY_RUN_VPS_OUTPUT: ${{ steps.dry_run_vps.outputs.output }}
-          DRY_RUN_VPS_EXIT_CODE: ${{ steps.dry_run_vps.outputs.exit_code }}
-        with:
-          script: |
-            const marker = '<!-- ansible-dry-run-vps -->';
-            const exitCode = process.env.DRY_RUN_VPS_EXIT_CODE;
-            const status = exitCode === '0' ? '✅ VPS dry-run passed' : '❌ VPS dry-run failed';
-            const output = process.env.DRY_RUN_VPS_OUTPUT;
-            const body = `${marker}\n### ${status}\n\n<details><summary>Ansible output</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>\n\nComment \`/vps-apply\` to apply these changes.`;
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-            const existing = comments.find(c => c.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: body
-              });
-            }
-
-      - name: Cleanup
-        if: always()
-        run: rm -f ~/.ssh/id_ed25519
