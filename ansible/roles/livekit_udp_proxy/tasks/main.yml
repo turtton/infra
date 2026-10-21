@@ -1,0 +1,61 @@
+---
+- name: Require encrypted LiveKit upstream address
+  ansible.builtin.assert:
+    that:
+      - livekit_udp_proxy_upstream_host | length > 0
+    fail_msg: Set livekit_udp_proxy_upstream_host in the SOPS host inventory.
+
+- name: Install NGINX UDP stream proxy
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - libnginx-mod-stream
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Remove default HTTP listener
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload NGINX
+
+- name: Create stream configuration directory
+  ansible.builtin.file:
+    path: /etc/nginx/streams-enabled
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Include UDP stream configuration
+  ansible.builtin.blockinfile:
+    path: /etc/nginx/nginx.conf
+    marker: "# {mark} ANSIBLE MANAGED LIVEKIT UDP STREAM"
+    insertafter: EOF
+    block: |
+      stream {
+          include /etc/nginx/streams-enabled/*.conf;
+      }
+  notify: Reload NGINX
+
+- name: Configure LiveKit UDP proxy
+  ansible.builtin.template:
+    src: livekit.conf.j2
+    dest: /etc/nginx/streams-enabled/livekit.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload NGINX
+
+- name: Validate NGINX configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Enable and start NGINX
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+    state: started
+  when: not ansible_check_mode

@@ -10,4 +10,5 @@
     - ssh_hardening
     - docker_host
     - nftables_vps
+    - livekit_udp_proxy
     - haproxy_minecraft

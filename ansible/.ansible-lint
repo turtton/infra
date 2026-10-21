@@ -1,3 +1,4 @@
 ---
 exclude_paths:
   - inventory/group_vars/*/vault.sops.yml
+  - inventory/host_vars/*/*.sops.yml

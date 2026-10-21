@@ -1,0 +1,5 @@
+server {
+    listen {{ livekit_udp_proxy_listen_port }} udp reuseport;
+    proxy_pass {{ livekit_udp_proxy_upstream_host }}:{{ livekit_udp_proxy_upstream_port }};
+    proxy_timeout {{ livekit_udp_proxy_timeout }};
+}

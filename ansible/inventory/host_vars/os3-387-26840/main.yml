@@ -1,2 +1,5 @@
 ---
 vps_bootstrap_public_ip: 133.167.115.94
+nftables_vps_allowed_udp_ports_public:
+  - 41641
+  - 7882
