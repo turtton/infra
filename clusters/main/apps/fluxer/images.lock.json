@@ -29,13 +29,13 @@
       "Deployment/api": {
         "api": {
           "config_descriptor": {
-            "digest": "sha256:5ab8a5827746efcc6c288b3ff424f09b739aaee5e753efbddad6094c5cbbe032",
-            "size": 11157
+            "digest": "sha256:9da4eee19a2153d25c60baaee230415f442f1d9fb8e70f5592dd7900cc9a2518",
+            "size": 11143
           },
-          "digest": "sha256:243f6e98e62b3344503d304a0328d71244896be57acc575936278ddec9ac1c6c",
+          "digest": "sha256:cc2b3043723528fa4b380c8305106b24d2749f91b24ee555f3102d84b9da43bb",
           "repository": "ghcr.io/fluxerapp/fluxer-api",
           "runtime": {
-            "build_version": "2026.1020.202514",
+            "build_version": "2026.1023.104007",
             "command": [
               "node",
               "dist/AppEntrypoint.js"
@@ -46,7 +46,7 @@
             "user": "65532:65532",
             "working_dir": "/usr/src/app/fluxer_api"
           },
-          "source_revision": "65faf056b9fd264565db937e7d08b73bb9337d77",
+          "source_revision": "d3d3a5faaf77bb778b9982c2517f483e8d403323",
           "tag": "v1"
         }
       }
