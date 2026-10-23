@@ -107,17 +107,16 @@ Key Ring:
 
 ## LiveKit (Voice/Calls)
 
-通話は停止中。以前の Tailscale Funnel 経由のメディア通信は利用できず、
-LiveKit の認証情報も公開リポジトリに記載された値と一致していたため、
-API の `FLUXER_LIVEKIT_ENABLED=false`、
-Caddy の `/livekit` 404 応答、LiveKit と Funnel の GitOps リソース削除を行った。
-Attic の Funnel は別管理で、引き続き使用する。
+以前の Tailscale Funnel 経由のメディア通信は廃止した。Attic の Funnel は別管理で維持する。
+シグナリングは Cloudflare Tunnel → Caddy `/livekit` → LiveKit TCP/7880、
+メディアは VPS 公開 UDP/7882 → NGINX stream → Tailscale UDP/30082 →
+`toliworker-1` の LiveKit Pod UDP/7882 を通る。LiveKit は VPS 公開 IP を ICE 候補として通知する。
+`livekit-keys.sops.yaml` のローテーション済み API key/secret を LiveKit と Fluxer API が共有する。
+認証情報を HelmRelease values や平文の Git 履歴に書かないこと。
 
-通話を再開する際は、新しい API key/secret を生成して SOPS Secret で管理し、
-HelmRelease values や平文の Git 履歴に書かないこと。
-メディア通信には VPS の公開 UDP ポートから Tailscale 経由で LiveKit へ転送する方式を検証する。
-シグナリングとメディア双方の接続試験を終えるまで公開設定を戻さない。
-`livekit-keys.sops.yaml` は新しい認証情報を保持する。`livekit-helmrelease.yaml` は
-`toliworker-1` 上の Pod で UDP/7882 を受け、NodePort UDP/30082 を経由する。
-VPS の公開 IP を ICE 候補として通知する。
-API の音声設定と Caddy の `/livekit` は検証完了まで無効のままにする。
+通話の公開前に外部から VPS の UDP 経路を捕捉し、LiveKit への ICE 接続と
+２クライアント間の合成音声受信を確認した。実ブラウザでの双方向通話は別回線の端末でも確認すること。
+Pod は `toliworker-1` に固定されているため、このノードが停止すると通話も止まる。
+Caddy の ConfigMap は `subPath` マウントなので、経路変更時は Deployment の
+`infra.turtton.net/livekit-route-revision` を更新して Pod を再起動する。
+問題が出たら API の `FLUXER_LIVEKIT_ENABLED=false` と Caddy `/livekit` の 404 応答に戻す。

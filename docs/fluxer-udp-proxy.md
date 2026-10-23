@@ -1,7 +1,6 @@
 # Fluxer voice UDP path
 
-Fluxer voice is paused while the old LiveKit credentials and Funnel are retired.
-This runbook prepares one media path without enabling voice:
+Fluxer voice uses a VPS UDP media path. The retired LiveKit Funnel stays disabled:
 
 ```text
 Browser -- UDP/7882 --> Sakura VPS (NGINX stream)
@@ -31,9 +30,8 @@ unrelated and stays enabled.
    `apply` mode. The role installs NGINX with its stream module, listens on UDP/7882,
    and forwards to the selected Talos node. TCP/80 is not opened in nftables.
 5. On the VPS, verify `nginx -t`, `ss -ulnp | grep 7882`, and the nftables
-   input rule. From the VPS, verify the Tailscale peer is online. Keep Fluxer
-   voice disabled until LiveKit has fresh credentials and the end-to-end test
-   below passes.
+   input rule. From the VPS, verify the Tailscale peer is online. Verify fresh
+   LiveKit credentials and the end-to-end media path before enabling voice.
 
 The **Ansible Apply** workflow can run `vps-udp-probe.yml` with `mode=probe`.
 It sends a marker packet from a GitHub runner outside the home network and
@@ -62,7 +60,9 @@ The server manifest and rotated credentials are prepared in
 enabling the Fluxer API or Caddy route. The API secret references must point
 to `livekit-keys` when voice is enabled.
 
-Test with two non-tailnet devices on separate networks. Confirm connection,
+The public UDP probe, direct LiveKit ICE connection, and synthetic audio between
+two clients passed after the Sakura packet filter was updated. Test the Fluxer
+browser UI with two non-tailnet devices on separate networks. Confirm connection,
 two-way audio, selected WebRTC ICE candidate, VPS receive/transmit packets,
 and recovery after LiveKit restart. If no packets reach the VPS, inspect the
 Sakura packet filter. If packets reach the VPS but not LiveKit, inspect the
