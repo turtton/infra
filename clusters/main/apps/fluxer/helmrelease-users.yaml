@@ -153,6 +153,11 @@ spec:
             name: fluxer-db-app
       - name: FLUXER_POSTGRES_SSL
         value: 'true'
+      - name: FLUXER_PROFILE_PSEUDONYM_SECRET
+        valueFrom:
+          secretKeyRef:
+            key: profile_pseudonym_secret
+            name: fluxer-runtime-keys
       - name: FLUXER_POSTGRES_SSL_CA
         valueFrom:
           secretKeyRef:

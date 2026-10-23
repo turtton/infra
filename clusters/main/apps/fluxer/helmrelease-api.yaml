@@ -181,6 +181,11 @@ spec:
               secretKeyRef:
                 key: sudo_mode_secret
                 name: fluxer-runtime-keys
+          - name: FLUXER_PROFILE_PSEUDONYM_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: profile_pseudonym_secret
+                name: fluxer-runtime-keys
           - name: FLUXER_CONNECTION_INITIATION_SECRET
             valueFrom:
               secretKeyRef:

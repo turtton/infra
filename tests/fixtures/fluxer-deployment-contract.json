@@ -81,7 +81,7 @@
     "spec_digests": {
       "PodDisruptionBudget/api-pdb": "df12f8913ffb88dd92818a229ddfa80dd5233db15dd1433d145fdd519a68e0df",
       "Service/api": "0790db40957c9485671a65f8b6c3ca0d1bd47c92629ad3ff355b59605c977d65",
-      "Deployment/api": "2d7ed3ada35d898cb697a71df3cee21db85a6be5fd7edd664884c1cce6613d36"
+      "Deployment/api": "78d29df211b36608d078d080f7d36217fa7070b1870be2548fd8d1adf5f4fb9b"
     },
     "namespaces": {
       "PodDisruptionBudget/api-pdb": "fluxer",
@@ -664,8 +664,8 @@
       "PodDisruptionBudget/users": "bcc7a46cfe9420edd533683e6698a323d5c17ca9c8a6818236a1934dc2577654",
       "Service/users-shard-headless": "59c3f14d287a578cd461baa9d428f137347d7201c19ef3dab8ba4568fbe48d1c",
       "Service/users": "71240d53841cc103d045ffc7abe7ab3250a7661f7659f88182e20bc55ccf3208",
-      "Deployment/users": "cfd99b3cc1c423a32a4382eda26b2fa3186049ad950ac2b6585657d4ebbf49b4",
-      "StatefulSet/users-shard": "7d2c23e7c818a6543f47384e73b478673bed122d33cd7feb8302cd64c64819d3"
+      "Deployment/users": "f00ccdc62363b22fd4bc2cb4d1164c4b5883e3991ecf071ab12646ff46ba16b9",
+      "StatefulSet/users-shard": "90d5e4f10c6755d35d6b104fecbc686ff8c486d17d1f4ed700871cb65b2970be"
     },
     "namespaces": {
       "PodDisruptionBudget/users-shard": "fluxer",
