@@ -13,10 +13,10 @@ stringData:
     media_proxy_secret_key: ENC[AES256_GCM,data:yc+NBrEWnNGSX33TEPRHXyQre8shxe7VkUKYHEScbEPuBKm0U2lu/ZnNPUmFRiQyJRZ5exhPQP4nnzCiEg/Cow==,iv:wmc5+mi/Lmw6jOBflId50wvZiJlXqlxGtsXokbk6CEU=,tag:qgwhdrOPoftZWlf/SMPy8Q==,type:str]
     admin_secret_key_base: ENC[AES256_GCM,data:IDA4yueWocIiJXyxhHPi47WX8D71tJmp7LqEJZDuhVfxFJbFnRjAhMKNbq7j+oZEAalbCUQ5+DpXsqZ6/AGRLg==,iv:cJ8lQrER5Wc8M0QjL8CNmZPHFWmdA8jeaJknIg1e7Kc=,tag:7SGa7CzUFbQji+TBTlpUsA==,type:str]
     admin_oauth_client_secret: ENC[AES256_GCM,data:H7TzyK2+tm/XwV9xu8IORTk+9NJRm0lXYnzwD26hYMD1r6r4e0tsi3oq9UgP098MReptrA5Jb4wVI0aAzeKXkQ==,iv:wv7DnKChWrIGha5EG/e5TlL9TWgJsy08yEv+F9o89BA=,tag:O7oR4bNdZo+x/ExzH2FP0Q==,type:str]
+    profile_pseudonym_secret: ENC[AES256_GCM,data:KTdwGrbpUsZcc9JBzLJ4a/ZRPGSGLHjJC/u+LMhwsfka9P97eyKt3rsMjKbQOvO6U1uNws+kC9ICTpxZQvO0KA==,iv:PddU/6azcgvSvZ3UvHUK4e1GJV2CVoxQGXSWo82MHeU=,tag:8D87m1RNbMiJVeHi9lAX/g==,type:str]
 sops:
     age:
-        - recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
-          enc: |
+        - enc: |
             -----BEGIN AGE ENCRYPTED FILE-----
             YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAvUUFBdTl1UEd1M2xka095
             bVJ4aklaOUY1cVZnbmoyNk8rL2RUdjZtaGowCnZ1T0Y3aGJ1YTdXaExtbzBLMGUy
@@ -24,7 +24,8 @@ sops:
             aVhRa05pUXRNSDFzbmNubkxHai8vYzgKMkLiH0GOedpXOgi/VKbyB+7fy4bii0CD
             szuSE89+djTg8G6kcdXyICpm/fX2R80YhY4EporhUjjgtQpoPalIXg==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-06-20T03:09:07Z"
-    mac: ENC[AES256_GCM,data:Q9MNwoWJ+yfBjSTSG2GYbYqpIXtfTfXyHN+bqGeVQxuNzi+Q9ognh/JHQCJ9/I3ehgP4zOErum8YYyX0mWdFDXGnBYmDQKdqfbfYGQOjdRjJUWd6jTRaQ8Xxu+Jy2SeyJkZd1ak1YcdQGIEW4WOD9GGbpjgniy+jDoIlTA5VDM4=,iv:jkShVKDBdKSt7IrdcuBAKQPmOwIFIMHghMF+Jsaiw4w=,tag:hjQG+w932MhP6FwEPkyjVQ==,type:str]
+          recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
     encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-23T12:25:16Z"
+    mac: ENC[AES256_GCM,data:hU3661UzGnn+OcNl9yFTIfgJFzOz49L6OEPJ1oWHmxH7TiV3bn9Yw8UKMMApTKeWetTC1hTdPCw+NJeNa9Q1XoNrYf+fqjGD4nvqBLEF4D6QoCP1A1313bDb9QrNGV+19g+EqxUw97omX9jCeRlTdXtsLpWA327ZrixBH7uGyXo=,iv:qpqVe8UHRXUM6cJOI2+DV+IumD8kngXCFeVxoLqqrus=,tag:aI9WdEu+AXz4gXt8XGNZVw==,type:str]
     version: 3.11.0
