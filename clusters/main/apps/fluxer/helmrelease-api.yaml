@@ -227,7 +227,23 @@ spec:
                 key: FLUXER_S3_SECRET_ACCESS_KEY
                 name: fluxer-s3-credentials
           - name: FLUXER_LIVEKIT_ENABLED
-            value: 'false'
+            value: 'true'
+          - name: FLUXER_LIVEKIT_URL
+            value: wss://chat.turtton.net/livekit
+          - name: FLUXER_LIVEKIT_API_KEY
+            valueFrom:
+              secretKeyRef:
+                key: LIVEKIT_API_KEY
+                name: livekit-keys
+          - name: FLUXER_LIVEKIT_API_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: LIVEKIT_API_SECRET
+                name: livekit-keys
+          - name: FLUXER_LIVEKIT_WEBHOOK_URL
+            value: http://api:8080/webhooks/livekit
+          - name: FLUXER_LIVEKIT_DEFAULT_REGION
+            value: '{"id":"default","name":"Default","emoji":"🌐","latitude":0,"longitude":0}'
           - name: FLUXER_EMAIL_ENABLED
             value: 'false'
           - name: FLUXER_CAPTCHA_ENABLED

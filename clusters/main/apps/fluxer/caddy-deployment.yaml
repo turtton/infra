@@ -14,7 +14,7 @@ spec:
   template:
     metadata:
       annotations:
-        infra.turtton.net/livekit-route-revision: "paused-1"
+        infra.turtton.net/livekit-route-revision: "udp-vps-1"
       labels:
         app: caddy
     spec:
