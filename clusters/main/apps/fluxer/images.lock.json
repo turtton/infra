@@ -6,13 +6,13 @@
       "Deployment/admin": {
         "admin": {
           "config_descriptor": {
-            "digest": "sha256:ecb8f6ed21d942352f7fe2c64bba31261d8c22e80d57b1ca2d61b6dc52a66d56",
-            "size": 5405
+            "digest": "sha256:72ba5693893a692c370fe059712db7f1d49d1080f00a2e826dd2a84785f290ba",
+            "size": 5207
           },
-          "digest": "sha256:6d3e59ab710f29b8c775d954ef600bff213f0b1c7b83b6c28cdf0a5e8838cba2",
+          "digest": "sha256:bc02437e61a21613db3f3001363d563a9e7e16c97c0ef95814bd3e8a35a837af",
           "repository": "ghcr.io/fluxerapp/fluxer-admin",
           "runtime": {
-            "build_version": "2026.1017.35317",
+            "build_version": "2026.1030.220759",
             "command": [
               "/usr/local/bin/fluxer-admin"
             ],
@@ -20,7 +20,7 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "49a1ffabbed310958f27a6ace3fa7184c118fef2",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
@@ -29,13 +29,13 @@
       "Deployment/api": {
         "api": {
           "config_descriptor": {
-            "digest": "sha256:5ab8a5827746efcc6c288b3ff424f09b739aaee5e753efbddad6094c5cbbe032",
-            "size": 11157
+            "digest": "sha256:e91550b5869826ed02871f4760d1b322e049ea8185a37d94da929c14f56f8186",
+            "size": 10841
           },
-          "digest": "sha256:243f6e98e62b3344503d304a0328d71244896be57acc575936278ddec9ac1c6c",
+          "digest": "sha256:28c11b4e613af8989ba16aee6ab953c9fd6fe9d22b13fb070c869c985cc90679",
           "repository": "ghcr.io/fluxerapp/fluxer-api",
           "runtime": {
-            "build_version": "2026.1020.202514",
+            "build_version": "2026.1030.220714",
             "command": [
               "node",
               "dist/AppEntrypoint.js"
@@ -46,7 +46,7 @@
             "user": "65532:65532",
             "working_dir": "/usr/src/app/fluxer_api"
           },
-          "source_revision": "65faf056b9fd264565db937e7d08b73bb9337d77",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
@@ -55,13 +55,13 @@
       "Deployment/app-proxy": {
         "app-proxy": {
           "config_descriptor": {
-            "digest": "sha256:6b94dda6362c701d88a02a0c0cfb607148bc17a8e10fb7e0a8c13dda8841dcd0",
-            "size": 7305
+            "digest": "sha256:8e8313859e2eeee97a8cb14d5a86ec83d8686739ba6a7f3e4e2df993f8398664",
+            "size": 7313
           },
-          "digest": "sha256:fd134720cdc70c581c1ecf397fdc4d15b17fc876fbbada7d099b8ad491ffb54a",
+          "digest": "sha256:2810e499c307f08a050133f50c899ca67eb63a158720bc11b5e12487ad581cab",
           "repository": "ghcr.io/fluxerapp/fluxer-app-proxy-self-hosted",
           "runtime": {
-            "build_version": "2026.1019.95313",
+            "build_version": "2026.1030.220740",
             "command": [
               "/usr/local/bin/fluxer-app-proxy"
             ],
@@ -69,7 +69,7 @@
             "user": "65532:65532",
             "working_dir": "/srv/app"
           },
-          "source_revision": "7dfd34644860e739e6cc94e85ef7eefae2e0c609",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
@@ -78,13 +78,13 @@
       "Deployment/gateway": {
         "gateway": {
           "config_descriptor": {
-            "digest": "sha256:60941996b32042b21ecf2781980a15afb5052168a6b4c5dd5042098f22609bf7",
-            "size": 9502
+            "digest": "sha256:4a321c65b274571a1321d8cd069ee8b090de3624c19c5a38e0a86fe91cfe1961",
+            "size": 9456
           },
-          "digest": "sha256:4406827de7b04ff57a40fefd0b5f1b9e30850db247d42069040850ed59575484",
+          "digest": "sha256:42e0c8021b98d226e6c91c80e94e6c88f3894dcf7c1b71899ebcc42cd3b6ba50",
           "repository": "ghcr.io/fluxerapp/fluxer-gateway",
           "runtime": {
-            "build_version": "2026.1012.111351",
+            "build_version": "2026.1030.220726",
             "command": null,
             "entrypoint": [
               "/opt/fluxer_gateway/bin/docker_entrypoint.sh"
@@ -92,20 +92,20 @@
             "user": "65532:65532",
             "working_dir": "/opt/fluxer_gateway"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/gateway-calls": {
         "gateway": {
           "config_descriptor": {
-            "digest": "sha256:60941996b32042b21ecf2781980a15afb5052168a6b4c5dd5042098f22609bf7",
-            "size": 9502
+            "digest": "sha256:4a321c65b274571a1321d8cd069ee8b090de3624c19c5a38e0a86fe91cfe1961",
+            "size": 9456
           },
-          "digest": "sha256:4406827de7b04ff57a40fefd0b5f1b9e30850db247d42069040850ed59575484",
+          "digest": "sha256:42e0c8021b98d226e6c91c80e94e6c88f3894dcf7c1b71899ebcc42cd3b6ba50",
           "repository": "ghcr.io/fluxerapp/fluxer-gateway",
           "runtime": {
-            "build_version": "2026.1012.111351",
+            "build_version": "2026.1030.220726",
             "command": null,
             "entrypoint": [
               "/opt/fluxer_gateway/bin/docker_entrypoint.sh"
@@ -113,20 +113,20 @@
             "user": "65532:65532",
             "working_dir": "/opt/fluxer_gateway"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/gateway-guilds": {
         "gateway": {
           "config_descriptor": {
-            "digest": "sha256:60941996b32042b21ecf2781980a15afb5052168a6b4c5dd5042098f22609bf7",
-            "size": 9502
+            "digest": "sha256:4a321c65b274571a1321d8cd069ee8b090de3624c19c5a38e0a86fe91cfe1961",
+            "size": 9456
           },
-          "digest": "sha256:4406827de7b04ff57a40fefd0b5f1b9e30850db247d42069040850ed59575484",
+          "digest": "sha256:42e0c8021b98d226e6c91c80e94e6c88f3894dcf7c1b71899ebcc42cd3b6ba50",
           "repository": "ghcr.io/fluxerapp/fluxer-gateway",
           "runtime": {
-            "build_version": "2026.1012.111351",
+            "build_version": "2026.1030.220726",
             "command": null,
             "entrypoint": [
               "/opt/fluxer_gateway/bin/docker_entrypoint.sh"
@@ -134,20 +134,20 @@
             "user": "65532:65532",
             "working_dir": "/opt/fluxer_gateway"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/gateway-presence": {
         "gateway": {
           "config_descriptor": {
-            "digest": "sha256:60941996b32042b21ecf2781980a15afb5052168a6b4c5dd5042098f22609bf7",
-            "size": 9502
+            "digest": "sha256:4a321c65b274571a1321d8cd069ee8b090de3624c19c5a38e0a86fe91cfe1961",
+            "size": 9456
           },
-          "digest": "sha256:4406827de7b04ff57a40fefd0b5f1b9e30850db247d42069040850ed59575484",
+          "digest": "sha256:42e0c8021b98d226e6c91c80e94e6c88f3894dcf7c1b71899ebcc42cd3b6ba50",
           "repository": "ghcr.io/fluxerapp/fluxer-gateway",
           "runtime": {
-            "build_version": "2026.1012.111351",
+            "build_version": "2026.1030.220726",
             "command": null,
             "entrypoint": [
               "/opt/fluxer_gateway/bin/docker_entrypoint.sh"
@@ -155,20 +155,20 @@
             "user": "65532:65532",
             "working_dir": "/opt/fluxer_gateway"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/gateway-push": {
         "gateway": {
           "config_descriptor": {
-            "digest": "sha256:60941996b32042b21ecf2781980a15afb5052168a6b4c5dd5042098f22609bf7",
-            "size": 9502
+            "digest": "sha256:4a321c65b274571a1321d8cd069ee8b090de3624c19c5a38e0a86fe91cfe1961",
+            "size": 9456
           },
-          "digest": "sha256:4406827de7b04ff57a40fefd0b5f1b9e30850db247d42069040850ed59575484",
+          "digest": "sha256:42e0c8021b98d226e6c91c80e94e6c88f3894dcf7c1b71899ebcc42cd3b6ba50",
           "repository": "ghcr.io/fluxerapp/fluxer-gateway",
           "runtime": {
-            "build_version": "2026.1012.111351",
+            "build_version": "2026.1030.220726",
             "command": null,
             "entrypoint": [
               "/opt/fluxer_gateway/bin/docker_entrypoint.sh"
@@ -176,20 +176,20 @@
             "user": "65532:65532",
             "working_dir": "/opt/fluxer_gateway"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/gateway-sessions": {
         "gateway": {
           "config_descriptor": {
-            "digest": "sha256:60941996b32042b21ecf2781980a15afb5052168a6b4c5dd5042098f22609bf7",
-            "size": 9502
+            "digest": "sha256:4a321c65b274571a1321d8cd069ee8b090de3624c19c5a38e0a86fe91cfe1961",
+            "size": 9456
           },
-          "digest": "sha256:4406827de7b04ff57a40fefd0b5f1b9e30850db247d42069040850ed59575484",
+          "digest": "sha256:42e0c8021b98d226e6c91c80e94e6c88f3894dcf7c1b71899ebcc42cd3b6ba50",
           "repository": "ghcr.io/fluxerapp/fluxer-gateway",
           "runtime": {
-            "build_version": "2026.1012.111351",
+            "build_version": "2026.1030.220726",
             "command": null,
             "entrypoint": [
               "/opt/fluxer_gateway/bin/docker_entrypoint.sh"
@@ -197,7 +197,7 @@
             "user": "65532:65532",
             "working_dir": "/opt/fluxer_gateway"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
@@ -206,13 +206,13 @@
       "Deployment/media-proxy": {
         "media-proxy": {
           "config_descriptor": {
-            "digest": "sha256:647cdbebc35fec73f196017f93a2e7ca193cd19ffc427a9171b5f2b58c0576b1",
-            "size": 9099
+            "digest": "sha256:c7474bebef2714155eea258a901bf873be805f68727d03144045ec958e65db36",
+            "size": 9098
           },
-          "digest": "sha256:8c2da689db684ecf1751025b46ac3bf9728b72e763c599022dbd0ce08b0ff1c0",
+          "digest": "sha256:fde24c53607502f22e00462cbda3aa9f3fd45394c3188f5f923a92d5d2ca2f0d",
           "repository": "ghcr.io/fluxerapp/fluxer-media-proxy",
           "runtime": {
-            "build_version": "2026.1013.32826",
+            "build_version": "2026.1030.220816",
             "command": [
               "/usr/local/bin/fluxer-media-proxy"
             ],
@@ -223,20 +223,20 @@
             "user": "10001:10001",
             "working_dir": "/var/lib/fluxer"
           },
-          "source_revision": "83bb9d89c8f24f1975ee3a3e4c8c9ddb38d53929",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "Deployment/static-proxy": {
         "static-proxy": {
           "config_descriptor": {
-            "digest": "sha256:647cdbebc35fec73f196017f93a2e7ca193cd19ffc427a9171b5f2b58c0576b1",
-            "size": 9099
+            "digest": "sha256:c7474bebef2714155eea258a901bf873be805f68727d03144045ec958e65db36",
+            "size": 9098
           },
-          "digest": "sha256:8c2da689db684ecf1751025b46ac3bf9728b72e763c599022dbd0ce08b0ff1c0",
+          "digest": "sha256:fde24c53607502f22e00462cbda3aa9f3fd45394c3188f5f923a92d5d2ca2f0d",
           "repository": "ghcr.io/fluxerapp/fluxer-media-proxy",
           "runtime": {
-            "build_version": "2026.1013.32826",
+            "build_version": "2026.1030.220816",
             "command": [
               "/usr/local/bin/fluxer-media-proxy"
             ],
@@ -247,7 +247,7 @@
             "user": "10001:10001",
             "working_dir": "/var/lib/fluxer"
           },
-          "source_revision": "83bb9d89c8f24f1975ee3a3e4c8c9ddb38d53929",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
@@ -256,13 +256,13 @@
       "Deployment/messages": {
         "router": {
           "config_descriptor": {
-            "digest": "sha256:1fa6fedc90718c106b388c8c86eef7cbf75ba0eae80f1598f178cffab95e943e",
-            "size": 5123
+            "digest": "sha256:a52f2757f6c5127aa31e6ff56971b7cfec3b8603ee77ad6cc49681bf79312cfb",
+            "size": 4935
           },
-          "digest": "sha256:22f9c424ec1311cca13dc8c474c4254f6a939f02ba174f53a1be2a126e202cb1",
+          "digest": "sha256:0f58394b5a46181fab969d9f6f2f487baae5e97f47fa1f621ce4c630c266c60f",
           "repository": "ghcr.io/fluxerapp/fluxer-messages",
           "runtime": {
-            "build_version": "2026.1012.111357",
+            "build_version": "2026.1030.220810",
             "command": [
               "/usr/local/bin/fluxer-messages"
             ],
@@ -270,20 +270,20 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/messages-shard": {
         "shard": {
           "config_descriptor": {
-            "digest": "sha256:1fa6fedc90718c106b388c8c86eef7cbf75ba0eae80f1598f178cffab95e943e",
-            "size": 5123
+            "digest": "sha256:a52f2757f6c5127aa31e6ff56971b7cfec3b8603ee77ad6cc49681bf79312cfb",
+            "size": 4935
           },
-          "digest": "sha256:22f9c424ec1311cca13dc8c474c4254f6a939f02ba174f53a1be2a126e202cb1",
+          "digest": "sha256:0f58394b5a46181fab969d9f6f2f487baae5e97f47fa1f621ce4c630c266c60f",
           "repository": "ghcr.io/fluxerapp/fluxer-messages",
           "runtime": {
-            "build_version": "2026.1012.111357",
+            "build_version": "2026.1030.220810",
             "command": [
               "/usr/local/bin/fluxer-messages"
             ],
@@ -291,7 +291,7 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
@@ -300,13 +300,13 @@
       "Deployment/snowflakes": {
         "router": {
           "config_descriptor": {
-            "digest": "sha256:353874aa9a17c833cac3d74b299333364cc6c12c50506c4dd341ed91e15c79b8",
-            "size": 5130
+            "digest": "sha256:3229ce8a379db8f03d6e0fb67ac2927188a0c04e386b439a0c1de36f0af94387",
+            "size": 4926
           },
-          "digest": "sha256:ee5749aa58da78c4f6b3104f89d6f4a3bc895eb1d5d9f7dfa28661bf1fcb0451",
+          "digest": "sha256:766d8c5120428ebd73cd078a052b916d4f5c5f3b38d4c62cc1869a488e5acbda",
           "repository": "ghcr.io/fluxerapp/fluxer-snowflakes",
           "runtime": {
-            "build_version": "2026.1012.111327",
+            "build_version": "2026.1030.220731",
             "command": [
               "/usr/local/bin/fluxer-snowflakes"
             ],
@@ -314,20 +314,20 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/snowflakes-shard": {
         "shard": {
           "config_descriptor": {
-            "digest": "sha256:353874aa9a17c833cac3d74b299333364cc6c12c50506c4dd341ed91e15c79b8",
-            "size": 5130
+            "digest": "sha256:3229ce8a379db8f03d6e0fb67ac2927188a0c04e386b439a0c1de36f0af94387",
+            "size": 4926
           },
-          "digest": "sha256:ee5749aa58da78c4f6b3104f89d6f4a3bc895eb1d5d9f7dfa28661bf1fcb0451",
+          "digest": "sha256:766d8c5120428ebd73cd078a052b916d4f5c5f3b38d4c62cc1869a488e5acbda",
           "repository": "ghcr.io/fluxerapp/fluxer-snowflakes",
           "runtime": {
-            "build_version": "2026.1012.111327",
+            "build_version": "2026.1030.220731",
             "command": [
               "/usr/local/bin/fluxer-snowflakes"
             ],
@@ -335,7 +335,7 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
@@ -344,13 +344,13 @@
       "Deployment/unfurl": {
         "router": {
           "config_descriptor": {
-            "digest": "sha256:a50ce57929e1c4fc5d3676900840ee60656c4b054d607b87af18589085cfa344",
-            "size": 5124
+            "digest": "sha256:fdc13336310bf5ac3693e586428a43409b88b0feed1917d4a99fcc682f0f0a1e",
+            "size": 4935
           },
-          "digest": "sha256:0160c7f3ff54fab1c23c4c4fc5522506e5216555070a1a23cdee53f216a43bb4",
+          "digest": "sha256:ab70641772e7d74a2cf87ac725545b40755f690e5bdfd3fc302a3612f32eceb5",
           "repository": "ghcr.io/fluxerapp/fluxer-unfurl",
           "runtime": {
-            "build_version": "2026.1012.111349",
+            "build_version": "2026.1030.220723",
             "command": [
               "/usr/local/bin/fluxer-unfurl"
             ],
@@ -358,20 +358,20 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/unfurl-shard": {
         "shard": {
           "config_descriptor": {
-            "digest": "sha256:a50ce57929e1c4fc5d3676900840ee60656c4b054d607b87af18589085cfa344",
-            "size": 5124
+            "digest": "sha256:fdc13336310bf5ac3693e586428a43409b88b0feed1917d4a99fcc682f0f0a1e",
+            "size": 4935
           },
-          "digest": "sha256:0160c7f3ff54fab1c23c4c4fc5522506e5216555070a1a23cdee53f216a43bb4",
+          "digest": "sha256:ab70641772e7d74a2cf87ac725545b40755f690e5bdfd3fc302a3612f32eceb5",
           "repository": "ghcr.io/fluxerapp/fluxer-unfurl",
           "runtime": {
-            "build_version": "2026.1012.111349",
+            "build_version": "2026.1030.220723",
             "command": [
               "/usr/local/bin/fluxer-unfurl"
             ],
@@ -379,7 +379,7 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
@@ -388,13 +388,13 @@
       "Deployment/users": {
         "router": {
           "config_descriptor": {
-            "digest": "sha256:ee5f2d9580a48ce64985db4265f8886395dbb3a4a07f0f22e17877b6b9e7a39b",
-            "size": 5100
+            "digest": "sha256:f2d9e29a2c596cd377c7a841874f1dce632a66382ba7d1e94d6e364e00e7b919",
+            "size": 4896
           },
-          "digest": "sha256:54ffd0dae346d60bf45b330432b6e55133a2020f91523acb9f727676e78ae6a0",
+          "digest": "sha256:e08ccb57ca6977de8a53c57796f979003d1173915a5eb82dfa001cda16054763",
           "repository": "ghcr.io/fluxerapp/fluxer-users",
           "runtime": {
-            "build_version": "2026.1012.111317",
+            "build_version": "2026.1030.220723",
             "command": [
               "/usr/local/bin/fluxer-users"
             ],
@@ -402,20 +402,20 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       },
       "StatefulSet/users-shard": {
         "shard": {
           "config_descriptor": {
-            "digest": "sha256:ee5f2d9580a48ce64985db4265f8886395dbb3a4a07f0f22e17877b6b9e7a39b",
-            "size": 5100
+            "digest": "sha256:f2d9e29a2c596cd377c7a841874f1dce632a66382ba7d1e94d6e364e00e7b919",
+            "size": 4896
           },
-          "digest": "sha256:54ffd0dae346d60bf45b330432b6e55133a2020f91523acb9f727676e78ae6a0",
+          "digest": "sha256:e08ccb57ca6977de8a53c57796f979003d1173915a5eb82dfa001cda16054763",
           "repository": "ghcr.io/fluxerapp/fluxer-users",
           "runtime": {
-            "build_version": "2026.1012.111317",
+            "build_version": "2026.1030.220723",
             "command": [
               "/usr/local/bin/fluxer-users"
             ],
@@ -423,7 +423,7 @@
             "user": "65532:65532",
             "working_dir": "/usr/local/bin"
           },
-          "source_revision": "c9fdf8fead395841933b9ef328036510481f4dc1",
+          "source_revision": "be4ab49a4b1027f92876b68040ae88abecadb692",
           "tag": "v1"
         }
       }
