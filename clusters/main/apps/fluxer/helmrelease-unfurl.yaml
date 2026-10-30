@@ -240,7 +240,7 @@ spec:
         # Pin the currently running image while changing the chart layout.
         image:
           name: fluxer-unfurl
-          digest: sha256:0160c7f3ff54fab1c23c4c4fc5522506e5216555070a1a23cdee53f216a43bb4
+          digest: sha256:ab70641772e7d74a2cf87ac725545b40755f690e5bdfd3fc302a3612f32eceb5
         shard:
           env: null
       users: null

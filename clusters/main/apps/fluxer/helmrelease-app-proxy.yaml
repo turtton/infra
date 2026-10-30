@@ -77,7 +77,7 @@ spec:
       app-proxy:
         image:
           name: fluxer-app-proxy-self-hosted
-          digest: sha256:fd134720cdc70c581c1ecf397fdc4d15b17fc876fbbada7d099b8ad491ffb54a
+          digest: sha256:2810e499c307f08a050133f50c899ca67eb63a158720bc11b5e12487ad581cab
         replicas: 1
         minReadySeconds: 10
         terminationGracePeriodSeconds: 60
