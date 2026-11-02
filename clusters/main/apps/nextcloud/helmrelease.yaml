@@ -32,6 +32,11 @@ spec:
 
     nginx:
       enabled: true
+      resources:
+        requests:
+          memory: 64Mi
+        limits:
+          memory: 256Mi
 
     nextcloud:
       host: nextcloud
@@ -98,6 +103,12 @@ spec:
 
     cronjob:
       enabled: true
+      sidecar:
+        resources:
+          requests:
+            memory: 256Mi
+          limits:
+            memory: 2Gi
 
     persistence:
       enabled: true
