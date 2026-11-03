@@ -51,7 +51,7 @@ spec:
           cpu: 50m
           memory: 64Mi
         limits:
-          memory: 256Mi
+          memory: 512Mi
       # node-local化: cp-1の alloy-zq9jx で client-go throttling が 10-26分遅延となり
       # readiness probe が context deadline exceeded (29886回) となっていたため対策。
       # discovery.kubernetes はデフォルトで全クラスタを list/watch するため、
