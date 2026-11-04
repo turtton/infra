@@ -81,7 +81,9 @@ runtimeとvelocityのarchiveをinspectし、全レイヤーをlocal directoryへ
 実行記録: https://github.com/Lepinoid/lepinoid/actions/runs/41774649754
 small 2台・medium 2台の実ジョブ4並列は全ジョブ成功し、157秒の同時稼働を確認した。
 ARC自動起動の別試験では115秒の4並列、通信分離、Pod/PVCの自動回収がすべて成功した。
-終了後はrunner 0台、既存8 PVCに戻った。Node Pressure・eviction・既存Podの再起動増加は検出されなかった。
+終了後はrunner 0台、既存8 PVCに戻った。各試験の実行時間内ではNode Pressure・eviction・既存Podの再起動増加は検出されなかった。
+ARC試験終了の約21分後（06:25:40 UTC）にlivesync-bridgeが同期処理の未実装メソッド例外で再起動した。
+終了理由はError / exit code 1でOOMKilledではなく、CI負荷との関連を示す証拠は確認できなかった。
 常駐controllerとlistener 2台の実使用memoryは合計約36Miだった。
 
 ARC試験: https://github.com/Lepinoid/lepinoid/actions/runs/41782904976
