@@ -26,11 +26,28 @@ spec:
   postBuild:
     substitute:
       tenant_name: lepinoid
-      quota_requests_cpu: "12"
-      quota_requests_memory: 24Gi
-      quota_limits_cpu: "20"
-      quota_limits_memory: 40Gi
-      quota_pvc: "20"
+      # 既存テナントの枠に CI 4枠 (12 CPU / 24Gi) と ARC 常駐分を追加する。
+      quota_requests_cpu: "25"
+      quota_requests_memory: 50Gi
+      quota_limits_cpu: "34"
+      quota_limits_memory: 66Gi
+      quota_pvc: "24"
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: lepinoid-arc-rbac
+  namespace: flux-system
+spec:
+  wait: true
+  interval: 10m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/main/tenants/lepinoid-arc-rbac
+  prune: true
+  dependsOn:
+    - name: lepinoid-tenant-setup
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -49,6 +66,8 @@ spec:
   serviceAccountName: lepinoid-deployer
   dependsOn:
     - name: lepinoid-tenant-setup
+    - name: lepinoid-arc-rbac
+    - name: lepinoid-arc-crds
   decryption:
     provider: sops
     secretRef:

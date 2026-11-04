@@ -1,82 +1,88 @@
-# Lepinoid GitHub Actions runner 試験
+# Lepinoid のテナント内 ARC と容量試験
 
-Lepinoid の通常 CI を対象に、ホームラボ上の ephemeral runner の互換性、必要なサイズ、4ジョブ並列時の影響を確認する。
-試験用マニフェストは `clusters/main/apps/ci-runners-trial/` に独立して配置し、通常の apps Kustomization には追加しない。
-本番 CI の runner は試験結果を確認してから切り替える。
+ARC controller・listener・runner・使い捨てPVCはすべて `lepinoid` namespace に置き、`Lepinoid/infra` で管理する。
+このリポジトリでは共通CRD、テナントの権限、クォータ、適用順序を管理する。
 
-## 試験構成
+## 管理分担と起動順序
 
-| プロファイル | ジョブ全体の CPU | ジョブ全体のメモリ | 最大数 |
+| 管理元 | 対象 |
+|---|---|
+| turtton/infra | 公式ARC CRD、`lepinoid-helm` SA、namespace内のRBAC、ResourceQuota |
+| Lepinoid/infra | ARC controller、2 scale sets、GitHub App Secret、Cilium policy、runner/PVC template |
+| Lepinoid/lepinoid | CIのrunner選択、daemonless画像検査・転送、試験workflow |
+
+`infra-controllers` が公式OCI chart 0.15.1のCRDディレクトリを同期する。
+chartはdigestで固定し、CRDは `prune: false`・`deletionPolicy: Orphan` とする。
+CRD用sourceの `operation: extract` と、テナントのHelm chart用sourceの `operation: copy` は用途が異なる。
+
+テナントは `lepinoid-tenant-setup → lepinoid-arc-rbac → lepinoid-workloads` の順に適用し、
+workloadsはCRD同期にも依存する。HelmReleaseは `serviceAccountName: lepinoid-helm` を明示する。
+controllerは `watchSingleNamespace: lepinoid`、両chartのCRD管理は `Skip` に設定し、
+ClusterRoleや別namespaceの操作権限をテナントへ渡さない。
+
+## runner とクォータ
+
+| scale set | CPU request / limit | memory request / limit | 最大数 | 待機数 |
+|---|---:|---:|---:|---:|
+| lepi-ci-small | 2 / 2 | 4Gi / 4Gi | 2 | 0 |
+| lepi-ci-medium | 4 / 4 | 8Gi / 8Gi | 2 | 0 |
+
+runner 4枠で12 CPU / 24Gi。controllerとlistener 2台は別途request合計200m CPU / 512Mi、
+limit合計900m CPU / 1Giを見込む。各runnerは40Giの `longhorn-single` generic ephemeral PVCを使う。
+workspace、Gradle/JDK cache、Nix store、一時ファイルをPVCへ置き、Pod削除時に回収する。
+
+既存テナントの利用可能な枠を維持し、CIと常駐分を追加してクォータを拡張する。
+
+| リソース | 導入前 | 導入後 |
+|---|---:|---:|
+| requests.cpu | 12 | 25 |
+| requests.memory | 24Gi | 50Gi |
+| limits.cpu | 20 | 34 |
+| limits.memory | 40Gi | 66Gi |
+| PVC数 | 20 | 24 |
+
+クォータはnamespace全体の割当上限であり、この量の実メモリを事前消費しない。
+配置判定は実在Podのrequests、実行時制限はlimitsで行う。
+requests / limitsが必須でも両者を同じ値にする義務はない。今回は容量と性能を確認する基準として等しく設定する。
+
+runnerの配置先は `toliworker-1/2/3`。同じ物理ホスト `toliunit` の36物理コア・72スレッドを共有し、
+各VMは20Giである。OSディスクの空き約12〜15Giと、別Longhornディスクの空きは区別する。
+
+## 認証・通信・画像処理
+
+GitHub App `lepinoid-vuddy` を利用し、組織runner group `lepinoid-ci` は `Lepinoid/lepinoid` だけに公開する。
+Appの秘密鍵は `Lepinoid/infra` のSOPS Secretで管理し、runnerへは渡さない。
+runnerのSA token mountを無効化し、Ciliumの明示denyで同namespaceアプリ・API・ホスト・LANへの通信を遮断する。
+controller / listenerにはKubernetes API、DNS、公開IPv4への通信を許可する。
+
+画像はNixのDocker archiveをSkopeoで検査・転送し、privilegedなDocker daemonは使わない。
+Skopeoは大きな一時ファイルに `TMPDIR` だけではなく、`--tmpdir "$RUNNER_TEMP/skopeo"` を明示する。
+
+## 2026-11-04 の容量試験
+
+同一ソース、空のGradle cache、memory 8Gi、Gradle workers=2でruntimeの全チェックと配布物生成を比較した。
+
+| CPU | Gradle実行時間 | XMLスイート | failures / errors |
 |---|---:|---:|---:|
-| small | 2 | 4Gi | 2 |
-| medium | 4 | 8Gi | 2 |
+| 2 vCPU | 33分52秒 | 524 | 0 / 0 |
+| 4 vCPU | 28分55秒 | 524 | 0 / 0 |
 
-合計は最大4ジョブ、12 CPU、24Gi。Docker daemon が必要なジョブでは runner と DinD sidecar の合計をこの枠内に収める。
-2 vCPU の比較試験では medium のメモリを8Giに保ち、CPUだけ2に下げる。比較用 runner も medium の2枠に数える。
+4 vCPUは約15%短縮した。成功したテストレポートではTCP/UI関連の待機を含むテストが長く、
+CPU増加だけで全体が比例して短縮する処理ではない。テストの分離やfork設定は変更していない。
+比較時の最大working setは約5.8Giで、runtimeには8Gi枠を使う。
 
-配置先は `toliworker-1/2/3` に限定する。現在は同一の物理ホスト `toliunit`（Xeon Gold 6140×2、36物理コア・72スレッド）上で動作するため、別ノードへの分散で物理障害に対する冗長性は増えない。
+small 2枠のassets converter、resource pack、world-import compileはそれぞれ約6分50秒・6分45秒で成功した。
+小さい方の最大working setは約3.2〜3.5Giだった。
 
-各 runner は専用の使い捨て40Gi PVCを持ち、workspace、Gradle/tool cache、Nix store、Dockerのデータを保存する。
-再生成できる試験データのため `longhorn-single` を使用する。OS領域の空きとPVCの空きは別に監視する。
+Skopeoの独立PoCでは、非root・capabilityなし・read-only rootfs・Dockerなしの1 CPU / 1Giコンテナで、
+runtimeとvelocityのarchiveをinspectし、全レイヤーをlocal directoryへcopyできた。
+両configが一致し、合計43秒、一時領域最大約2.15Giだった。GHCRへの本番pushはこのPoCの対象外。
 
-## 認証と分離
+実行記録: https://github.com/Lepinoid/lepinoid/actions/runs/41774649754
+small 2台・medium 2台の実ジョブ4並列は全ジョブ成功し、157秒の同時稼働を確認した。
+ARC自動起動の別試験では115秒の4並列、通信分離、Pod/PVCの自動回収がすべて成功した。
+終了後はrunner 0台、既存8 PVCに戻った。Node Pressure・eviction・既存Podの再起動増加は検出されなかった。
+常駐controllerとlistener 2台の実使用memoryは合計約36Miだった。
 
-ローカルの `gh` で対象リポジトリに対する `generate-jitconfig` を呼び、1ジョブだけ受け付ける設定を Kubernetes Secret へ渡す。
-GitHub の長期トークンをクラスタへコピーしない。Secret、PVC、runner は試験 Job のライフサイクルに合わせて破棄する。
-再試行には新しいJIT設定を発行する。
-
-runner には Kubernetes の操作権限を与えず、ServiceAccount token もマウントしない。
-NetworkPolicy でクラスタ・LAN・Tailscaleへの通信を遮断し、DNSとインターネットへの通信を許可する。
-Docker が必要な場合だけ Pod 内の専用 daemon を使い、ホストの Docker socket・hostPath・host network は使わない。
-DinD は privileged container を必要とするため、runnerは信頼済みの同一リポジトリのPRだけを対象とし、試験起動ラベルで明示的に実行する。
-
-## 検証手順
-
-ローカルでは `uv`、`gh`、`kubectl` を使う。`gh` は対象リポジトリのrunner管理権限、`kubectl` は試験namespaceのJob/Secret/PVC管理権限が必要。
-以下はinfraのworktreeから実行する。
-
-```sh
-kubectl apply -k clusters/main/apps/ci-runners-trial
-uv run python scripts/ci-runners-trial.py create \
-  --size medium --cpu-override 2 --label lepi-ci-baseline --name runtime-baseline
-uv run python scripts/ci-runners-trial.py create --size medium --name runtime-medium
-uv run python scripts/ci-runners-trial.py status
-```
-
-対象のLepinoid PRに `ci-self-hosted-trial` ラベルを付けて比較を開始する。
-Jobの完了とGitHub側の判定を確認した後、次の4枠を起動する。
-
-```sh
-uv run python scripts/ci-runners-trial.py cleanup
-uv run python scripts/ci-runners-trial.py create --size small --name assets-a
-uv run python scripts/ci-runners-trial.py create --size small --name assets-b
-uv run python scripts/ci-runners-trial.py create --size medium --name runtime
-uv run python scripts/ci-runners-trial.py create \
-  --size medium --docker --label lepi-ci-docker --name docker
-```
-
-`create` の出力にあるGitHub runner IDを記録する。Jobは終了300秒後にTTLで削除されるため、失敗・未接続runnerのGitHub登録はTTL後に残っていないかIDで確認する。
-`cleanup` は完了Jobだけを回収する。実行中の試験Jobを止める場合は `cleanup --job <slot> --cancel` と対象を指定する。
-
-1. standalone Kustomization と生成 Job を server-side dry-run で確認し、試験namespaceを適用する。
-2. 2 CPU/8Gi、4 CPU/8Giのrunnerをそれぞれ1台起動する。同じソースrevision、空のcache、Gradle workers=2で Runtime CI の全チェックと配布物生成を比較する。
-3. 比較が成功した後、small 2台とmedium 2台を起動する。assets/world-importを2ジョブ、runtimeを1ジョブ、Docker/Nixを1ジョブ同時に実行する。runtimeはworkers=4も確認する。
-4. GitHub Actionsの結果、各コンテナのCPU・メモリ、PVC・OSディスク使用量、既存ノードとサービスの状態を記録する。
-5. 終了後に試験 Job、Secret、PVC、GitHub runner登録を回収し、既存サービスの状態を確認する。
-
-試験workflowではGHCRへの公開と本番infra更新を実行しない。通常のGitHub-hosted CIは維持する。
-通常のruntimeチェックはPostgreSQL/NATS統合テストと実クライアントハーネスを含まないため、これらの成功とはみなさない。
-
-## 採用基準
-
-- 対象チェックがすべて成功し、OOM・eviction・DiskPressureが発生しない。
-- 4並列時も各ノードの `MemAvailable` に概ね4Gi以上を残す。
-- CPU throttling、OSディスクの消費、既存サービスのエラー・応答時間に継続的な悪化がない。
-- 4 CPUで実行時間が改善する場合だけmediumを4 CPUで維持する。差が小さければ2 CPU/8Giへ縮小する。
-
-常設化では専用GitHub AppとARCのscale setを使い、待機数0・small最大2・medium最大2を起点とする。
-試験用のローカルJIT発行スクリプトは無人の常設autoscalerではない。
-
-## 試験結果
-
-実行後に対象revision、Actions URL、測定値、判定を記録する。
+ARC試験: https://github.com/Lepinoid/lepinoid/actions/runs/41782904976
+詳細な運用手順と測定結果は `Lepinoid/infra` の `arc/README.md` に記載する。

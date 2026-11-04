@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lepinoid-helm
+  namespace: lepinoid
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lepinoid-helm-admin
+  namespace: lepinoid
+subjects:
+  - kind: ServiceAccount
+    name: lepinoid-helm
+    namespace: lepinoid
+roleRef:
+  kind: ClusterRole
+  name: admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lepinoid-arc-api
+  namespace: lepinoid
+rules:
+  - apiGroups: [actions.github.com]
+    resources:
+      - autoscalinglisteners
+      - autoscalingrunnersets
+      - ephemeralrunners
+      - ephemeralrunnersets
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [actions.github.com]
+    resources:
+      - autoscalinglisteners/status
+      - autoscalingrunnersets/status
+      - ephemeralrunners/status
+      - ephemeralrunnersets/status
+    verbs: [get, update, patch]
+  - apiGroups: [actions.github.com]
+    resources:
+      - autoscalinglisteners/finalizers
+      - autoscalingrunnersets/finalizers
+      - ephemeralrunners/finalizers
+      - ephemeralrunnersets/finalizers
+    verbs: [update, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lepinoid-arc-api
+  namespace: lepinoid
+subjects:
+  - kind: ServiceAccount
+    name: lepinoid-helm
+    namespace: lepinoid
+  - kind: ServiceAccount
+    name: lepinoid-deployer
+    namespace: flux-system
+roleRef:
+  kind: Role
+  name: lepinoid-arc-api
+  apiGroup: rbac.authorization.k8s.io
