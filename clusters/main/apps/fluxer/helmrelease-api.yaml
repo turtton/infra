@@ -84,7 +84,7 @@ spec:
       api:
         image:
           name: fluxer-api
-          digest: sha256:d0bd57f724e386437c24687492d8aa40b63593a28b569763c7f8f0f08b42699b
+          digest: sha256:03e3f4cffcc38b0f15a3a8929da5e581e52d02c3213d7ac240dd587266ace54d
         replicas: 1
         minReadySeconds: 15
         terminationGracePeriodSeconds: 90
