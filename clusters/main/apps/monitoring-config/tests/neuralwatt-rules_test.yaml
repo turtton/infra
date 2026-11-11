@@ -19,7 +19,8 @@
 # time() は評価時刻の秒数 (評価時刻 360m = 21600 秒 = 6 時間)。
 # exp_annotations は promtool が annotations の一致も検査するために必要。説明文は query テンプレートで実際の指標から
 # 計算する (turtton/infra#197)。期待値は、入力の数値から実装とは独立に組み立てた文言で、計算結果 (比率・USD・時刻・
-# 経過時間) と、指標が無いときの「不明」の表示を検証する。
+# 経過時間) と、指標が無いときの「不明」の表示を検証する。query が同じ namespace・pod・instance の系列だけを引くこと、
+# 名前のないキー (key_name=""。ラベル無しで出る) の表示も検証する。
 rule_files:
   - neuralwatt-rules.yaml
 
@@ -812,3 +813,288 @@ tests:
         values: "0x600"
     alert_rule_test:
       - {eval_time: 30m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
+
+  # 名前のないキー (exporter は key_name="" = ラベル無しで出す)、blocked=1、上限あり、402 は増えていない: 402 の文言にならず、キーの上限・使用 (10.00 / 10.00 USD) と「(名前なし)」が出る。Low は blocked==0 の条件で発火しない
+  - name: key-blocked-unnamed-key
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_key_allowance_limit_usd{period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
+      - series: 'neuralwatt_key_allowance_blocked{period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1x600"
+      - series: 'neuralwatt_exporter_fetches_total{result="payment_required", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+    alert_rule_test:
+      - eval_time: 0m
+        alertname: NeuralwattKeyBlocked
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
+              description: "API キー (名前なし) (monthly) が上限に達してブロックされている (使用 10.00 USD / 上限 10.00 USD)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
+      - {eval_time: 30m, alertname: NeuralwattKeyAllowanceLow, exp_alerts: []}
+
+  # 名前のないキーの上限の残りが 20% 未満 (1.99/10): summary・description は「(名前なし)」と表示し、残り・上限は key_name="" の系列から引く
+  - name: key-allowance-low-unnamed-key
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_key_allowance_limit_usd{period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1.99x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "8.01x600"
+      - series: 'neuralwatt_key_allowance_blocked{period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: NeuralwattKeyAllowanceLow
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyAllowanceLow", severity: "warning", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キー ((名前なし)) の上限の残りが 20% 未満"
+              description: "API キー (名前なし) (monthly) の上限の残りは 19.9% (20% 未満)。\n残り 1.99 USD / 上限 10.00 USD。上限に達するとキーが止まる (402)。"
+      - {eval_time: 30m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
+
+  # 名前付きのキーが blocked=1 で、かつ 402 も増えている: 2 経路のそれぞれが自分の文言で 1 件ずつ発火する (key の経路は使用・上限、402 の経路は 402 の文言)
+  - name: key-blocked-both-paths
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1x600"
+      - series: 'neuralwatt_exporter_fetches_total{result="payment_required", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x2 1x600"
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: NeuralwattKeyBlocked
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
+              description: "API キー my-production-key (monthly) が上限に達してブロックされている (使用 10.00 USD / 上限 10.00 USD)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
+          - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", result: "payment_required", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
+              description: "Neuralwatt が 402 (payment_required) を返した (直近 10 分)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
+
+  # 同じ pod ラベルで instance または namespace が違う購入総額の系列 (100・7・55) があっても、説明文は alert と同じ namespace・pod・instance の系列 (31) を引く。残高 1.5 → 比率 4.84%
+  - name: credits-conflicting-series
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1.5x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "31x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.9:8080"}'
+        values: "7x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="other", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "55x600"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: NeuralwattCreditsCritical
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCreditsCritical", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高が残りわずか (1.50 USD)"
+              description: "Neuralwatt のクレジット残高は 1.50 USD で、2 USD を下回っている。\n購入総額: 31.00 USD、残高の比率: 4.84%。\n残高が尽きると API が止まる (402)。至急、追加購入または利用の停止を判断すること。"
+
+  # 同じ pod ラベルで instance または namespace が違う費用・予算の系列 (予算 100・5・50、費用は予算の 1〜4% で発火しない) があっても、説明文は alert と同じ系列 (費用 10 / 予算 20) を引く
+  - name: budget-conflicting-series
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "20x600"
+      - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
+      - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "1x600"
+      - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.9:8080"}'
+        values: "5x600"
+      - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.9:8080"}'
+        values: "0.1x600"
+      - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="other", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "50x600"
+      - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="other", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "2x600"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: NeuralwattMonthlyBudgetUsage
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "info", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の当月の費用が予算の 50% に到達 (50%)"
+              description: "当月の費用は 10.00 USD で、月の予算 20.00 USD の 50% (50% 以上 80% 未満)。\nこの段の下限 (予算の 50%): 10.00 USD。見直しの目安。"
+
+  # 同じ pod ラベルで instance または namespace が違うキーの系列 (残り 50/上限 100 など。20% 以上で発火しない) があっても、説明文は alert と同じ系列 (残り 1.99 / 上限 10) を引く
+  - name: key-conflicting-series
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1.99x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "8.01x600"
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "50x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "50x600"
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.9:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.9:8080"}'
+        values: "60x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.9:8080"}'
+        values: "40x600"
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.9:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="other", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="other", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "70x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="other", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "30x600"
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="other", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: NeuralwattKeyAllowanceLow
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyAllowanceLow", severity: "warning", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キー (my-production-key) の上限の残りが 20% 未満"
+              description: "API キー my-production-key (monthly) の上限の残りは 19.9% (20% 未満)。\n残り 1.99 USD / 上限 10.00 USD。上限に達するとキーが止まる (402)。"
+
+  # 同じ pod ラベルで instance が違う last_success の系列 (5000・2000 秒) があっても、説明文は alert と同じ系列 (1000 秒) の時刻を出す
+  - name: fetch-failing-conflicting-series
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_exporter_fetch_success{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_exporter_last_success_timestamp_seconds{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1000x600"
+      - series: 'neuralwatt_exporter_last_success_timestamp_seconds{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "5000x600"
+      - series: 'neuralwatt_exporter_last_success_timestamp_seconds{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.9:8080"}'
+        values: "2000x600"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NeuralwattQuotaFetchFailing
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattQuotaFetchFailing", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高・使用量の取得が失敗し続けている (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に 15 分以上失敗している (up は 1 のまま)。\n最後に成功した取得: 1970-01-01 00:16:40 +0000 UTC。\n失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
+
+  # 同じ pod・instance でも key_name または period が違うキーの系列 (other-key の 50/100、daily の 60/100。20% 以上で発火しない) があっても、説明文は alert と同じキーの系列 (残り 1.99 / 上限 10) を引く
+  - name: key-conflicting-key-name-and-period
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1.99x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "8.01x600"
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="other-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{key_name="other-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "50x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="other-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "50x600"
+      - series: 'neuralwatt_key_allowance_blocked{key_name="other-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="daily", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="daily", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "60x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="daily", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "40x600"
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="daily", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: NeuralwattKeyAllowanceLow
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyAllowanceLow", severity: "warning", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キー (my-production-key) の上限の残りが 20% 未満"
+              description: "API キー my-production-key (monthly) の上限の残りは 19.9% (20% 未満)。\n残り 1.99 USD / 上限 10.00 USD。上限に達するとキーが止まる (402)。"
+
+  # 購入総額の系列が alert と別の instance・namespace にしか無い (100・55): 他の系列を引かず「不明」と表示する
+  - name: credits-total-only-on-other-series
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1.5x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="other", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "55x600"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: NeuralwattCreditsCritical
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCreditsCritical", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高が残りわずか (1.50 USD)"
+              description: "Neuralwatt のクレジット残高は 1.50 USD で、2 USD を下回っている。\n購入総額: 不明、残高の比率: 不明。\n残高が尽きると API が止まる (402)。至急、追加購入または利用の停止を判断すること。"
+
+  # last_success の系列が alert と別の instance にしか無い (5000 秒): 他の系列を引かず「一度も取得に成功していない」と表示する
+  - name: fetch-failing-last-success-only-on-other-series
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_exporter_fetch_success{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_exporter_last_success_timestamp_seconds{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "5000x600"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NeuralwattQuotaFetchFailing
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattQuotaFetchFailing", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高・使用量の取得が失敗し続けている (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に 15 分以上失敗している (up は 1 のまま)。\n一度も取得に成功していない。\n失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
+
+  # 上限・使用の系列が alert と別の instance・key_name にしか無い: 他の系列を引かず「不明」と表示する
+  - name: key-blocked-limit-only-on-other-series
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1x600"
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.0:8080"}'
+        values: "100x600"
+      - series: 'neuralwatt_key_allowance_limit_usd{key_name="other-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "50x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="other-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "50x600"
+    alert_rule_test:
+      - eval_time: 0m
+        alertname: NeuralwattKeyBlocked
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
+              description: "API キー my-production-key (monthly) が上限に達してブロックされている (使用 不明 USD / 上限 不明 USD)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"

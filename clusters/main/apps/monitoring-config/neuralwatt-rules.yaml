@@ -14,8 +14,10 @@
 #
 # annotations (turtton/infra#197):
 # - 購入総額・予算・費用・残高などの値と比率は、固定の数値を書かず、`$value` と `query` で実際の指標から計算して表示する
-#   (query は alert と同じ pod の系列を引く)。指標が無いとき (neuralwatt_credits_total_usd が出ない等) は
+#   (query は alert と同じ namespace・pod・instance の系列を引く。キーの系列は key_name・period も合わせる)。指標が無いとき (neuralwatt_credits_total_usd が出ない等) は
 #   `with ... else` で「不明」と表示し、テンプレートをエラーにしない。
+# - 名前の無いキーは exporter が key_name="" (= ラベル無し) で出す。文言は「(名前なし)」と表示する。KeyBlocked の
+#   402 の経路かどうかは key_name ではなく result="payment_required" の有無で区別する。
 # - 文言に書く閾値 (5 USD・2 USD・50%・80%・20%・2 USD/時・6 時間・for の分数) は、同じ規則の expr / for と同じ値。
 #   expr を変えるときは文言も合わせる (tests/neuralwatt-rules_test.yaml の exp_annotations が食い違いを検出する)。
 #
@@ -62,8 +64,9 @@ spec:
           annotations:
             summary: "Neuralwatt の残高・使用量の取得が失敗し続けている ({{ $labels.pod }})"
             description: |-
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
               exporter が Neuralwatt の /v1/quota の取得に 15 分以上失敗している (up は 1 のまま)。
-              {{ with query (printf `neuralwatt_exporter_last_success_timestamp_seconds{pod=%q} > 0` $labels.pod) }}最後に成功した取得: {{ . | first | value | humanizeTimestamp }}{{ else }}一度も取得に成功していない{{ end }}。
+              {{ with query (printf `neuralwatt_exporter_last_success_timestamp_seconds{%s} > 0` $sel) }}最後に成功した取得: {{ . | first | value | humanizeTimestamp }}{{ else }}一度も取得に成功していない{{ end }}。
               失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。
         - alert: NeuralwattQuotaStale
           # 1) 成功したことがある (last_success > 0) が、最後の成功から 6 時間を超えた。
@@ -80,8 +83,9 @@ spec:
           annotations:
             summary: "Neuralwatt の残高・使用量が 6 時間以上更新されていない ({{ $labels.pod }})"
             description: |-
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
               exporter が Neuralwatt の /v1/quota の取得に成功しないまま 6 時間を超えた。
-              {{ with query (printf `neuralwatt_exporter_last_success_timestamp_seconds{pod=%q} > 0` $labels.pod) }}最後の成功: {{ . | first | value | humanizeTimestamp }} ({{ with query (printf `time() - neuralwatt_exporter_last_success_timestamp_seconds{pod=%q}` $labels.pod) }}{{ . | first | value | humanizeDuration }}前{{ else }}経過時間は不明{{ end }}){{ else }}一度も成功していない (exporter の起動から {{ with query (printf `time() - process_start_time_seconds{pod=%q}` $labels.pod) }}{{ . | first | value | humanizeDuration }}{{ else }}不明{{ end }}){{ end }}。
+              {{ with query (printf `neuralwatt_exporter_last_success_timestamp_seconds{%s} > 0` $sel) }}最後の成功: {{ . | first | value | humanizeTimestamp }} ({{ with query (printf `time() - neuralwatt_exporter_last_success_timestamp_seconds{%s}` $sel) }}{{ . | first | value | humanizeDuration }}前{{ else }}経過時間は不明{{ end }}){{ else }}一度も成功していない (exporter の起動から {{ with query (printf `time() - process_start_time_seconds{%s}` $sel) }}{{ . | first | value | humanizeDuration }}{{ else }}不明{{ end }}){{ end }}。
               ダッシュボードとほかのアラートは古い値で動いているため、残高・費用の判断に使わないこと。API キーと Neuralwatt 側の状態を確認する。
         - alert: NeuralwattCreditsLow
           expr: neuralwatt_credits_remaining_usd < 5 and neuralwatt_credits_remaining_usd >= 2
@@ -91,8 +95,9 @@ spec:
           annotations:
             summary: "Neuralwatt の残高が少ない (残り {{ $value | printf \"%.2f\" }} USD)"
             description: |-
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
               Neuralwatt のクレジット残高は {{ $value | printf "%.2f" }} USD で、5 USD を下回っている。
-              購入総額: {{ with query (printf `neuralwatt_credits_total_usd{pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }} USD{{ else }}不明{{ end }}、残高の比率: {{ with query (printf `100 * neuralwatt_credits_remaining_usd{pod=%q} / (neuralwatt_credits_total_usd{pod=%q} > 0)` $labels.pod $labels.pod) }}{{ . | first | value | printf "%.2f" }}%{{ else }}不明{{ end }}。
+              購入総額: {{ with query (printf `neuralwatt_credits_total_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }} USD{{ else }}不明{{ end }}、残高の比率: {{ with query (printf `100 * neuralwatt_credits_remaining_usd{%s} / (neuralwatt_credits_total_usd{%s} > 0)` $sel $sel) }}{{ . | first | value | printf "%.2f" }}%{{ else }}不明{{ end }}。
               追加購入または利用の抑制を検討すること。
         - alert: NeuralwattCreditsCritical
           expr: neuralwatt_credits_remaining_usd < 2
@@ -102,8 +107,9 @@ spec:
           annotations:
             summary: "Neuralwatt の残高が残りわずか ({{ $value | printf \"%.2f\" }} USD)"
             description: |-
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
               Neuralwatt のクレジット残高は {{ $value | printf "%.2f" }} USD で、2 USD を下回っている。
-              購入総額: {{ with query (printf `neuralwatt_credits_total_usd{pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }} USD{{ else }}不明{{ end }}、残高の比率: {{ with query (printf `100 * neuralwatt_credits_remaining_usd{pod=%q} / (neuralwatt_credits_total_usd{pod=%q} > 0)` $labels.pod $labels.pod) }}{{ . | first | value | printf "%.2f" }}%{{ else }}不明{{ end }}。
+              購入総額: {{ with query (printf `neuralwatt_credits_total_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }} USD{{ else }}不明{{ end }}、残高の比率: {{ with query (printf `100 * neuralwatt_credits_remaining_usd{%s} / (neuralwatt_credits_total_usd{%s} > 0)` $sel $sel) }}{{ . | first | value | printf "%.2f" }}%{{ else }}不明{{ end }}。
               残高が尽きると API が止まる (402)。至急、追加購入または利用の停止を判断すること。
         # 月の費用 / 月の予算。3 段は同じ alertname で、比の範囲が排他なので同時には発火しない
         # (予算 20 ドルなら 10・16・20 ドル。16 ドルは段階 2 の「任意項目を止める」線、20 ドルは停止線)。
@@ -119,8 +125,9 @@ spec:
           annotations:
             summary: "Neuralwatt の当月の費用が予算の 50% に到達 ({{ $value | humanizePercentage }})"
             description: |-
-              当月の費用は {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD で、月の予算 {{ with query (printf `neuralwatt_monthly_budget_usd{pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD の {{ $value | humanizePercentage }} (50% 以上 80% 未満)。
-              この段の下限 (予算の 50%): {{ with query (printf `neuralwatt_monthly_budget_usd{pod=%q} * 0.5` $labels.pod) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD。見直しの目安。
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
+              当月の費用は {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD で、月の予算 {{ with query (printf `neuralwatt_monthly_budget_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD の {{ $value | humanizePercentage }} (50% 以上 80% 未満)。
+              この段の下限 (予算の 50%): {{ with query (printf `neuralwatt_monthly_budget_usd{%s} * 0.5` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD。見直しの目安。
         - alert: NeuralwattMonthlyBudgetUsage
           expr: |
             (neuralwatt_usage_cost_usd_total{window="current_month"} / ignoring(window) neuralwatt_monthly_budget_usd) >= 0.8
@@ -132,8 +139,9 @@ spec:
           annotations:
             summary: "Neuralwatt の当月の費用が予算の 80% に到達 ({{ $value | humanizePercentage }})"
             description: |-
-              当月の費用は {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD で、月の予算 {{ with query (printf `neuralwatt_monthly_budget_usd{pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD の {{ $value | humanizePercentage }} (80% 以上 100% 未満)。
-              この段の下限 (予算の 80%): {{ with query (printf `neuralwatt_monthly_budget_usd{pod=%q} * 0.8` $labels.pod) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD。段階 2 の運用では任意項目を止める線。
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
+              当月の費用は {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD で、月の予算 {{ with query (printf `neuralwatt_monthly_budget_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD の {{ $value | humanizePercentage }} (80% 以上 100% 未満)。
+              この段の下限 (予算の 80%): {{ with query (printf `neuralwatt_monthly_budget_usd{%s} * 0.8` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD。段階 2 の運用では任意項目を止める線。
         - alert: NeuralwattMonthlyBudgetUsage
           expr: (neuralwatt_usage_cost_usd_total{window="current_month"} / ignoring(window) neuralwatt_monthly_budget_usd) >= 1
           for: 10m
@@ -142,7 +150,8 @@ spec:
           annotations:
             summary: "Neuralwatt の当月の費用が予算に到達 ({{ $value | humanizePercentage }})"
             description: |-
-              当月の費用は {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD で、月の予算 {{ with query (printf `neuralwatt_monthly_budget_usd{pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD の {{ $value | humanizePercentage }} (100% 以上)。
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
+              当月の費用は {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD で、月の予算 {{ with query (printf `neuralwatt_monthly_budget_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD の {{ $value | humanizePercentage }} (100% 以上)。
               段階 2 の運用では停止線。利用の停止または予算の見直しを判断すること。
         - alert: NeuralwattCostBurnRateHigh
           expr: increase(neuralwatt_usage_cost_usd_total{window="current_month"}[1h]) > 2
@@ -152,8 +161,9 @@ spec:
           annotations:
             summary: "Neuralwatt の費用が急増 (直近 1 時間で {{ $value | printf \"%.2f\" }} USD)"
             description: |-
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
               Neuralwatt の費用が直近 1 時間で {{ $value | printf "%.2f" }} USD 増えた (閾値 2 USD)。
-              当月の累計: {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",pod=%q}` $labels.pod) }}{{ . | first | value | printf "%.2f" }} USD{{ else }}不明{{ end }}、月の予算に対する割合: {{ with query (printf `100 * neuralwatt_usage_cost_usd_total{window="current_month",pod=%q} / ignoring(window) neuralwatt_monthly_budget_usd{pod=%q}` $labels.pod $labels.pod) }}{{ . | first | value | printf "%.1f" }}%{{ else }}不明 (予算が未設定){{ end }}。
+              当月の累計: {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",%s}` $sel) }}{{ . | first | value | printf "%.2f" }} USD{{ else }}不明{{ end }}、月の予算に対する割合: {{ with query (printf `100 * neuralwatt_usage_cost_usd_total{window="current_month",%s} / ignoring(window) neuralwatt_monthly_budget_usd{%s}` $sel $sel) }}{{ . | first | value | printf "%.1f" }}%{{ else }}不明 (予算が未設定){{ end }}。
               エージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。
         - alert: NeuralwattKeyAllowanceLow
           expr: neuralwatt_key_allowance_remaining_usd / neuralwatt_key_allowance_limit_usd < 0.2 and neuralwatt_key_allowance_blocked == 0
@@ -161,10 +171,11 @@ spec:
           labels:
             severity: warning
           annotations:
-            summary: "Neuralwatt の API キー ({{ $labels.key_name }}) の上限の残りが 20% 未満"
+            summary: "Neuralwatt の API キー ({{ if $labels.key_name }}{{ $labels.key_name }}{{ else }}(名前なし){{ end }}) の上限の残りが 20% 未満"
             description: |-
-              API キー {{ $labels.key_name }} ({{ $labels.period }}) の上限の残りは {{ $value | humanizePercentage }} (20% 未満)。
-              残り {{ with query (printf `neuralwatt_key_allowance_remaining_usd{pod=%q,key_name=%q,period=%q}` $labels.pod $labels.key_name $labels.period) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD / 上限 {{ with query (printf `neuralwatt_key_allowance_limit_usd{pod=%q,key_name=%q,period=%q}` $labels.pod $labels.key_name $labels.period) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD。上限に達するとキーが止まる (402)。
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q,key_name=%q,period=%q` $labels.namespace $labels.pod $labels.instance $labels.key_name $labels.period -}}
+              API キー {{ if $labels.key_name }}{{ $labels.key_name }}{{ else }}(名前なし){{ end }} ({{ $labels.period }}) の上限の残りは {{ $value | humanizePercentage }} (20% 未満)。
+              残り {{ with query (printf `neuralwatt_key_allowance_remaining_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD / 上限 {{ with query (printf `neuralwatt_key_allowance_limit_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD。上限に達するとキーが止まる (402)。
         - alert: NeuralwattKeyBlocked
           expr: neuralwatt_key_allowance_blocked == 1 or increase(neuralwatt_exporter_fetches_total{result="payment_required"}[10m]) > 0
           for: 0m
@@ -173,5 +184,6 @@ spec:
           annotations:
             summary: "Neuralwatt の API キーが上限で止まっている ({{ $labels.pod }})"
             description: |-
-              {{ if $labels.key_name }}API キー {{ $labels.key_name }} ({{ $labels.period }}) が上限に達してブロックされている (使用 {{ with query (printf `neuralwatt_key_allowance_spent_usd{pod=%q,key_name=%q,period=%q}` $labels.pod $labels.key_name $labels.period) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD / 上限 {{ with query (printf `neuralwatt_key_allowance_limit_usd{pod=%q,key_name=%q,period=%q}` $labels.pod $labels.key_name $labels.period) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD)。{{ else }}Neuralwatt が 402 (payment_required) を返した (直近 10 分)。{{ end }}
+              {{- $sel := printf `namespace=%q,pod=%q,instance=%q,key_name=%q,period=%q` $labels.namespace $labels.pod $labels.instance $labels.key_name $labels.period -}}
+              {{ if eq $labels.result "payment_required" }}Neuralwatt が 402 (payment_required) を返した (直近 10 分)。{{ else }}API キー {{ if $labels.key_name }}{{ $labels.key_name }}{{ else }}(名前なし){{ end }} ({{ $labels.period }}) が上限に達してブロックされている (使用 {{ with query (printf `neuralwatt_key_allowance_spent_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD / 上限 {{ with query (printf `neuralwatt_key_allowance_limit_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD)。{{ end }}
               Neuralwatt のポータルでキーの上限・残高を確認すること。
