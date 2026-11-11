@@ -17,7 +17,9 @@
 # deployment.yaml) どおり。PodMonitor が付ける job・namespace・pod・instance も入れている。
 # 評価間隔・系列の間隔は 1m。アラートは、条件を満たした最初の評価から for の時間が経った評価で発火する。
 # time() は評価時刻の秒数 (評価時刻 360m = 21600 秒 = 6 時間)。
-# exp_annotations は promtool が annotations の一致も検査するために必要 (テンプレートの展開結果も確かめる)。
+# exp_annotations は promtool が annotations の一致も検査するために必要。説明文は query テンプレートで実際の指標から
+# 計算する (turtton/infra#197)。期待値は、入力の数値から実装とは独立に組み立てた文言で、計算結果 (比率・USD・時刻・
+# 経過時間) と、指標が無いときの「不明」の表示を検証する。
 rule_files:
   - neuralwatt-rules.yaml
 
@@ -38,6 +40,8 @@ tests:
         values: "0x600"
       - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "32.6774x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "52.34x600"
       - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "20x600"
       - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
@@ -80,7 +84,7 @@ tests:
           - exp_labels: {alertname: "NeuralwattExporterDown", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "neuralwatt-exporter の scrape に失敗 (nw-a)"
-              description: "Prometheus が neuralwatt-exporter (nw-a) の scrape に10分以上失敗している。Pod の状態 (kubectl -n lepinoid get pods -l app.kubernetes.io/name=neuralwatt-exporter) と NetworkPolicy を確認すること。"
+              description: "Prometheus が neuralwatt-exporter (nw-a, 10.0.0.1:8080) の scrape に 10 分以上失敗している。\nPod の状態 (kubectl -n lepinoid get pods -l app.kubernetes.io/name=neuralwatt-exporter) と NetworkPolicy を確認すること。"
       - {eval_time: 30m, alertname: NeuralwattExporterAbsent, exp_alerts: []}
 
   # up=1 なら Down は発火しない
@@ -107,9 +111,9 @@ tests:
           - exp_labels: {alertname: "NeuralwattExporterAbsent", severity: "warning", job: "neuralwatt-exporter"}
             exp_annotations:
               summary: "neuralwatt-exporter の target が存在しない"
-              description: "job=neuralwatt-exporter の target が15分以上存在しない。exporter の Pod が無い、または PodMonitor (monitoring/neuralwatt-exporter) のラベル・ポート名が Deployment と食い違っている可能性。"
+              description: "job=neuralwatt-exporter の target が 15 分以上存在しない。\nexporter の Pod が無い、または PodMonitor (monitoring/neuralwatt-exporter) のラベル・ポート名が Deployment と食い違っている可能性。"
 
-  # 取得の失敗 (fetch_success=0、up=1 のまま): 15 分続くと発火、14 分では発火しない。Down は発火しない
+  # 取得の失敗 (fetch_success=0、up=1 のまま、一度も成功していない): 15 分続くと発火、14 分では発火しない。Down は発火しない。説明文は「一度も取得に成功していない」
   - name: fetch-failing
     interval: 1m
     input_series:
@@ -129,8 +133,40 @@ tests:
           - exp_labels: {alertname: "NeuralwattQuotaFetchFailing", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の残高・使用量の取得が失敗し続けている (nw-a)"
-              description: "exporter が Neuralwatt の /v1/quota の取得に15分以上失敗している (up は 1 のまま)。neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で原因を確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
+              description: "exporter が Neuralwatt の /v1/quota の取得に 15 分以上失敗している (up は 1 のまま)。\n一度も取得に成功していない。\n失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
       - {eval_time: 30m, alertname: NeuralwattExporterDown, exp_alerts: []}
+
+  # 取得に失敗しているが成功したことがある (last_success=1000 秒): 説明文に最後の成功の時刻 (1970-01-01 00:16:40 UTC) が出る
+  - name: fetch-failing-after-success
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_exporter_fetch_success{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+      - series: 'neuralwatt_exporter_last_success_timestamp_seconds{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1000x600"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NeuralwattQuotaFetchFailing
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattQuotaFetchFailing", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高・使用量の取得が失敗し続けている (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に 15 分以上失敗している (up は 1 のまま)。\n最後に成功した取得: 1970-01-01 00:16:40 +0000 UTC。\n失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
+
+  # last_success の系列が無くても説明文はエラーにならず「一度も取得に成功していない」(query が空 → else)
+  - name: fetch-failing-no-last-success-series
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_exporter_fetch_success{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NeuralwattQuotaFetchFailing
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattQuotaFetchFailing", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高・使用量の取得が失敗し続けている (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に 15 分以上失敗している (up は 1 のまま)。\n一度も取得に成功していない。\n失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
 
   # 取得が回復 (fetch_success が 9 分後に 1 へ) すれば発火しない
   - name: fetch-failing-recovers
@@ -160,9 +196,9 @@ tests:
           - exp_labels: {alertname: "NeuralwattQuotaFetchFailing", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の残高・使用量の取得が失敗し続けている (nw-a)"
-              description: "exporter が Neuralwatt の /v1/quota の取得に15分以上失敗している (up は 1 のまま)。neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で原因を確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
+              description: "exporter が Neuralwatt の /v1/quota の取得に 15 分以上失敗している (up は 1 のまま)。\n一度も取得に成功していない。\n失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
 
-  # (b) 0 のまま起動から 6 時間: ちょうど 6 時間 (360m) では発火せず、超えると (361m) 発火する (for 0m)
+  # (b) 0 のまま起動から 6 時間: ちょうど 6 時間 (360m) では発火せず、超えると (361m) 発火する (for 0m)。説明文は起動からの経過 6h 1m 0s
   - name: stale-b-never-succeeded-6h
     interval: 1m
     input_series:
@@ -179,10 +215,10 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattQuotaStale", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の残高・使用量が6時間以上更新されていない (nw-a)"
-              description: "exporter が Neuralwatt の /v1/quota の取得に成功しないまま6時間を超えた (最後の成功からの経過、または一度も成功しないまま起動から6時間)。ダッシュボードとほかのアラートは古い値で動いているため、残高・費用の判断に使わないこと。API キーと Neuralwatt 側の状態を確認する。"
+              summary: "Neuralwatt の残高・使用量が 6 時間以上更新されていない (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に成功しないまま 6 時間を超えた。\n一度も成功していない (exporter の起動から 6h 1m 0s)。\nダッシュボードとほかのアラートは古い値で動いているため、残高・費用の判断に使わないこと。API キーと Neuralwatt 側の状態を確認する。"
 
-  # (b) 猶予は起動時刻から数える (起動 10000 秒): 起動から 6 時間ちょうど (31600 秒 = 526m40s の直前の 526m) では発火せず、527m に発火する
+  # (b) 猶予は起動時刻から数える (起動 10000 秒): 起動から 6 時間ちょうど以前 (526m) では発火せず、527m に発火する。説明文の経過は 6h 0m 20s
   - name: stale-b-never-succeeded-later-start
     interval: 1m
     input_series:
@@ -200,10 +236,10 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattQuotaStale", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の残高・使用量が6時間以上更新されていない (nw-a)"
-              description: "exporter が Neuralwatt の /v1/quota の取得に成功しないまま6時間を超えた (最後の成功からの経過、または一度も成功しないまま起動から6時間)。ダッシュボードとほかのアラートは古い値で動いているため、残高・費用の判断に使わないこと。API キーと Neuralwatt 側の状態を確認する。"
+              summary: "Neuralwatt の残高・使用量が 6 時間以上更新されていない (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に成功しないまま 6 時間を超えた。\n一度も成功していない (exporter の起動から 6h 0m 20s)。\nダッシュボードとほかのアラートは古い値で動いているため、残高・費用の判断に使わないこと。API キーと Neuralwatt 側の状態を確認する。"
 
-  # (c) 最後の成功が 6 時間前ちょうど (成功 3600 秒、評価 420m=25200 秒) では発火せず、1 分後 (421m) に発火する。process_start が古くても成功時刻で判断する
+  # (c) 最後の成功が 6 時間前ちょうど (成功 3600 秒、評価 420m=25200 秒) では発火せず、1 分後 (421m) に発火する。process_start が古くても成功時刻で判断する。説明文は最後の成功の時刻と経過 6h 1m 0s
   - name: stale-c-succeeded-before
     interval: 1m
     input_series:
@@ -221,8 +257,8 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattQuotaStale", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の残高・使用量が6時間以上更新されていない (nw-a)"
-              description: "exporter が Neuralwatt の /v1/quota の取得に成功しないまま6時間を超えた (最後の成功からの経過、または一度も成功しないまま起動から6時間)。ダッシュボードとほかのアラートは古い値で動いているため、残高・費用の判断に使わないこと。API キーと Neuralwatt 側の状態を確認する。"
+              summary: "Neuralwatt の残高・使用量が 6 時間以上更新されていない (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に成功しないまま 6 時間を超えた。\n最後の成功: 1970-01-01 01:00:00 +0000 UTC (6h 1m 0s前)。\nダッシュボードとほかのアラートは古い値で動いているため、残高・費用の判断に使わないこと。API キーと Neuralwatt 側の状態を確認する。"
 
   # 成功が最近 (経過 100 秒) なら、プロセスの起動が古くても Stale は発火しない (last_success が 0 でない)
   - name: stale-d-recent-success-old-process
@@ -235,22 +271,26 @@ tests:
     alert_rule_test:
       - {eval_time: 500m, alertname: NeuralwattQuotaStale, exp_alerts: []}
 
-  # 残高 5.00 (購入額の約 25%): 境界。Low は < 5 なので発火しない
+  # 残高 5.00: 境界。Low は < 5 なので発火しない
   - name: credits-5.00-none
     interval: 1m
     input_series:
       - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "5x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "31x600"
     alert_rule_test:
       - {eval_time: 30m, alertname: NeuralwattCreditsLow, exp_alerts: []}
       - {eval_time: 30m, alertname: NeuralwattCreditsCritical, exp_alerts: []}
 
-  # 残高 4.99: Low のみ発火 (10 分後。9 分では発火しない)
+  # 残高 4.99 (購入総額 31): Low のみ発火 (10 分後。9 分では発火しない)。比率 4.99/31 = 16.10%
   - name: credits-4.99-low
     interval: 1m
     input_series:
       - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "4.99x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "31x600"
     alert_rule_test:
       - {eval_time: 9m, alertname: NeuralwattCreditsLow, exp_alerts: []}
       - eval_time: 10m
@@ -258,16 +298,18 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCreditsLow", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の残高が少ない (4.99 USD)"
-              description: "Neuralwatt のクレジット残高が 5 USD を下回った (残り 4.99 USD)。購入額の約 25% 以下。追加購入または利用の抑制を検討すること。"
+              summary: "Neuralwatt の残高が少ない (残り 4.99 USD)"
+              description: "Neuralwatt のクレジット残高は 4.99 USD で、5 USD を下回っている。\n購入総額: 31.00 USD、残高の比率: 16.10%。\n追加購入または利用の抑制を検討すること。"
       - {eval_time: 30m, alertname: NeuralwattCreditsCritical, exp_alerts: []}
 
-  # 残高 2.00: 境界。Low (>= 2) のみ発火、Critical (< 2) は発火しない
+  # 残高 2.00: 境界。Low (>= 2) のみ発火、Critical (< 2) は発火しない。比率 6.45%
   - name: credits-2.00-low
     interval: 1m
     input_series:
       - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "2x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "31x600"
     alert_rule_test:
       - {eval_time: 9m, alertname: NeuralwattCreditsLow, exp_alerts: []}
       - eval_time: 10m
@@ -275,16 +317,18 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCreditsLow", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の残高が少ない (2.00 USD)"
-              description: "Neuralwatt のクレジット残高が 5 USD を下回った (残り 2.00 USD)。購入額の約 25% 以下。追加購入または利用の抑制を検討すること。"
+              summary: "Neuralwatt の残高が少ない (残り 2.00 USD)"
+              description: "Neuralwatt のクレジット残高は 2.00 USD で、5 USD を下回っている。\n購入総額: 31.00 USD、残高の比率: 6.45%。\n追加購入または利用の抑制を検討すること。"
       - {eval_time: 30m, alertname: NeuralwattCreditsCritical, exp_alerts: []}
 
-  # 残高 1.99: Critical のみ発火 (Low は発火しない)
+  # 残高 1.99: Critical のみ発火 (Low は発火しない)。比率 6.42%
   - name: credits-1.99-critical
     interval: 1m
     input_series:
       - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "1.99x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "31x600"
     alert_rule_test:
       - {eval_time: 30m, alertname: NeuralwattCreditsLow, exp_alerts: []}
       - {eval_time: 9m, alertname: NeuralwattCreditsCritical, exp_alerts: []}
@@ -294,7 +338,62 @@ tests:
           - exp_labels: {alertname: "NeuralwattCreditsCritical", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の残高が残りわずか (1.99 USD)"
-              description: "Neuralwatt のクレジット残高が 2 USD を下回った (残り 1.99 USD)。購入額の約 10% 以下。残高が尽きると API が止まる (402)。至急、追加購入または利用の停止を判断すること。"
+              description: "Neuralwatt のクレジット残高は 1.99 USD で、2 USD を下回っている。\n購入総額: 31.00 USD、残高の比率: 6.42%。\n残高が尽きると API が止まる (402)。至急、追加購入または利用の停止を判断すること。"
+
+  # 実測に近い値: 残高 0.15・購入総額 31 → 残高の比率は 0.48% (固定の「約 10%」ではなく計算した値)
+  - name: credits-critical-0.15
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0.15x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "31x600"
+    alert_rule_test:
+      - {eval_time: 30m, alertname: NeuralwattCreditsLow, exp_alerts: []}
+      - {eval_time: 9m, alertname: NeuralwattCreditsCritical, exp_alerts: []}
+      - eval_time: 10m
+        alertname: NeuralwattCreditsCritical
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCreditsCritical", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高が残りわずか (0.15 USD)"
+              description: "Neuralwatt のクレジット残高は 0.15 USD で、2 USD を下回っている。\n購入総額: 31.00 USD、残高の比率: 0.48%。\n残高が尽きると API が止まる (402)。至急、追加購入または利用の停止を判断すること。"
+
+  # 購入総額の系列が無い: 説明文はエラーにならず「購入総額: 不明、残高の比率: 不明」
+  - name: credits-critical-no-total
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1.5x600"
+    alert_rule_test:
+      - {eval_time: 30m, alertname: NeuralwattCreditsLow, exp_alerts: []}
+      - {eval_time: 9m, alertname: NeuralwattCreditsCritical, exp_alerts: []}
+      - eval_time: 10m
+        alertname: NeuralwattCreditsCritical
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCreditsCritical", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高が残りわずか (1.50 USD)"
+              description: "Neuralwatt のクレジット残高は 1.50 USD で、2 USD を下回っている。\n購入総額: 不明、残高の比率: 不明。\n残高が尽きると API が止まる (402)。至急、追加購入または利用の停止を判断すること。"
+
+  # 購入総額が 0: 比率はゼロ除算にせず「不明」(購入総額は 0.00 USD)
+  - name: credits-low-total-zero
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_credits_remaining_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "3x600"
+      - series: 'neuralwatt_credits_total_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x600"
+    alert_rule_test:
+      - {eval_time: 9m, alertname: NeuralwattCreditsLow, exp_alerts: []}
+      - eval_time: 10m
+        alertname: NeuralwattCreditsLow
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCreditsLow", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高が少ない (残り 3.00 USD)"
+              description: "Neuralwatt のクレジット残高は 3.00 USD で、5 USD を下回っている。\n購入総額: 0.00 USD、残高の比率: 不明。\n追加購入または利用の抑制を検討すること。"
+      - {eval_time: 30m, alertname: NeuralwattCreditsCritical, exp_alerts: []}
 
   # 残高の系列が無い (まだ一度も成功していない): 0 扱いにせず Low・Critical は発火しない
   - name: credits-absent-none
@@ -320,7 +419,7 @@ tests:
       - {eval_time: 9m, alertname: NeuralwattMonthlyBudgetUsage, exp_alerts: []}
       - {eval_time: 30m, alertname: NeuralwattMonthlyBudgetUsage, exp_alerts: []}
 
-  # 10 ドル (50%): info のみ。10 分後に発火、9 分では発火しない。3 段は同じ alertname だが同時には発火しない (exp_alerts は info の 1 件だけ)
+  # 10 ドル (50%): info のみ。10 分後に発火、9 分では発火しない。3 段は同じ alertname だが同時には発火しない (exp_alerts は info の 1 件だけ)。下限 10.00 USD は予算から計算
   - name: budget-10
     interval: 1m
     input_series:
@@ -338,7 +437,7 @@ tests:
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "info", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算の 50% に到達 (50%)"
-              description: "Neuralwatt の当月の費用が月の予算の 50% に達した (50% 以上 80% 未満)。累計 10 ドルでの見直しの目安。"
+              description: "当月の費用は 10.00 USD で、月の予算 20.00 USD の 50% (50% 以上 80% 未満)。\nこの段の下限 (予算の 50%): 10.00 USD。見直しの目安。"
 
   # 15.99 ドル (79.95%): info のみ
   - name: budget-15.99
@@ -358,9 +457,9 @@ tests:
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "info", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算の 50% に到達 (79.95%)"
-              description: "Neuralwatt の当月の費用が月の予算の 79.95% に達した (50% 以上 80% 未満)。累計 10 ドルでの見直しの目安。"
+              description: "当月の費用は 15.99 USD で、月の予算 20.00 USD の 79.95% (50% 以上 80% 未満)。\nこの段の下限 (予算の 50%): 10.00 USD。見直しの目安。"
 
-  # 16 ドル (80%): warning のみ (info は消える)
+  # 16 ドル (80%): warning のみ (info は消える)。下限 16.00 USD は予算から計算
   - name: budget-16
     interval: 1m
     input_series:
@@ -378,7 +477,7 @@ tests:
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算の 80% に到達 (80%)"
-              description: "Neuralwatt の当月の費用が月の予算の 80% に達した (80% 以上 100% 未満)。段階 2 の運用では任意項目を止める線 (16 ドル)。"
+              description: "当月の費用は 16.00 USD で、月の予算 20.00 USD の 80% (80% 以上 100% 未満)。\nこの段の下限 (予算の 80%): 16.00 USD。段階 2 の運用では任意項目を止める線。"
 
   # 19.99 ドル (99.95%): warning のみ
   - name: budget-19.99
@@ -398,7 +497,7 @@ tests:
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算の 80% に到達 (99.95%)"
-              description: "Neuralwatt の当月の費用が月の予算の 99.95% に達した (80% 以上 100% 未満)。段階 2 の運用では任意項目を止める線 (16 ドル)。"
+              description: "当月の費用は 19.99 USD で、月の予算 20.00 USD の 99.95% (80% 以上 100% 未満)。\nこの段の下限 (予算の 80%): 16.00 USD。段階 2 の運用では任意項目を止める線。"
 
   # 20 ドル (100%): critical のみ
   - name: budget-20
@@ -418,7 +517,7 @@ tests:
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算に到達 (100%)"
-              description: "Neuralwatt の当月の費用が月の予算の 100% に達した (100% 以上)。段階 2 の停止線 (20 ドル)。利用の停止または予算の見直しを判断すること。"
+              description: "当月の費用は 20.00 USD で、月の予算 20.00 USD の 100% (100% 以上)。\n段階 2 の運用では停止線。利用の停止または予算の見直しを判断すること。"
 
   # 25 ドル (125%): critical のみ
   - name: budget-25
@@ -438,7 +537,7 @@ tests:
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算に到達 (125%)"
-              description: "Neuralwatt の当月の費用が月の予算の 125% に達した (100% 以上)。段階 2 の停止線 (20 ドル)。利用の停止または予算の見直しを判断すること。"
+              description: "当月の費用は 25.00 USD で、月の予算 20.00 USD の 125% (100% 以上)。\n段階 2 の運用では停止線。利用の停止または予算の見直しを判断すること。"
 
   # 予算の系列が無い (NEURALWATT_MONTHLY_BUDGET_USD 未設定): 費用が大きくても 0 扱いにせず発火しない
   - name: budget-not-configured
@@ -449,7 +548,7 @@ tests:
     alert_rule_test:
       - {eval_time: 30m, alertname: NeuralwattMonthlyBudgetUsage, exp_alerts: []}
 
-  # ローリングアップデート中の新旧 2 つの target (pod ラベルが違う): ignoring(window) で target ごとに 1 対 1 に照合され評価エラーにならず、target ごとに 1 件ずつ発火する (旧 10 ドル=info、新 16 ドル=warning)
+  # ローリングアップデート中の新旧 2 つの target (pod ラベルが違う): ignoring(window) で target ごとに 1 対 1 に照合され評価エラーにならず、target ごとに 1 件ずつ発火する。説明文の費用・予算は alert と同じ pod の系列 (旧: 10/20 ドル=info、新: 24/30 ドル=warning で予算も違う)
   - name: budget-two-targets
     interval: 1m
     input_series:
@@ -460,9 +559,9 @@ tests:
       - series: 'neuralwatt_usage_cost_usd_total{window="lifetime", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "243.9145x600"
       - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-b", instance="10.0.0.2:8080"}'
-        values: "20x600"
+        values: "30x600"
       - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-b", instance="10.0.0.2:8080"}'
-        values: "16x600"
+        values: "24x600"
       - series: 'neuralwatt_usage_cost_usd_total{window="lifetime", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-b", instance="10.0.0.2:8080"}'
         values: "243.9145x600"
     alert_rule_test:
@@ -472,11 +571,11 @@ tests:
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "info", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算の 50% に到達 (50%)"
-              description: "Neuralwatt の当月の費用が月の予算の 50% に達した (50% 以上 80% 未満)。累計 10 ドルでの見直しの目安。"
+              description: "当月の費用は 10.00 USD で、月の予算 20.00 USD の 50% (50% 以上 80% 未満)。\nこの段の下限 (予算の 50%): 10.00 USD。見直しの目安。"
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-b", instance: "10.0.0.2:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算の 80% に到達 (80%)"
-              description: "Neuralwatt の当月の費用が月の予算の 80% に達した (80% 以上 100% 未満)。段階 2 の運用では任意項目を止める線 (16 ドル)。"
+              description: "当月の費用は 24.00 USD で、月の予算 30.00 USD の 80% (80% 以上 100% 未満)。\nこの段の下限 (予算の 80%): 24.00 USD。段階 2 の運用では任意項目を止める線。"
 
   # 新旧 2 つの target が同じ段 (どちらも 20 ドル=critical) なら target ごとに 1 件ずつ、計 2 件
   - name: budget-two-targets-same-tier
@@ -501,18 +600,20 @@ tests:
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算に到達 (100%)"
-              description: "Neuralwatt の当月の費用が月の予算の 100% に達した (100% 以上)。段階 2 の停止線 (20 ドル)。利用の停止または予算の見直しを判断すること。"
+              description: "当月の費用は 20.00 USD で、月の予算 20.00 USD の 100% (100% 以上)。\n段階 2 の運用では停止線。利用の停止または予算の見直しを判断すること。"
           - exp_labels: {alertname: "NeuralwattMonthlyBudgetUsage", severity: "critical", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-b", instance: "10.0.0.2:8080"}
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算に到達 (100%)"
-              description: "Neuralwatt の当月の費用が月の予算の 100% に達した (100% 以上)。段階 2 の停止線 (20 ドル)。利用の停止または予算の見直しを判断すること。"
+              description: "当月の費用は 20.00 USD で、月の予算 20.00 USD の 100% (100% 以上)。\n段階 2 の運用では停止線。利用の停止または予算の見直しを判断すること。"
 
-  # 1 時間に約 2.2 ドル (0.037 ドル/分) の増加: 発火する (for 0m)
+  # 1 時間に 2.4 ドル (0.04 ドル/分) の増加: 発火する (for 0m)。90m の累計 3.60 ドル、予算 20 ドルに対し 18.0%
   - name: burn-rate-high
     interval: 1m
     input_series:
       - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
-        values: "0+0.037x600"
+        values: "0+0.04x600"
+      - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "20x600"
     alert_rule_test:
       - {eval_time: 30m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
       - eval_time: 90m
@@ -520,8 +621,23 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.22 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.22 USD 増えた (閾値 2 USD)。エージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.40 USD)"
+              description: "Neuralwatt の費用が直近 1 時間で 2.40 USD 増えた (閾値 2 USD)。\n当月の累計: 3.60 USD、月の予算に対する割合: 18.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+
+  # 予算の系列が無くても説明文はエラーにならず、割合は「不明 (予算が未設定)」
+  - name: burn-rate-high-no-budget
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0+0.04x600"
+    alert_rule_test:
+      - eval_time: 90m
+        alertname: NeuralwattCostBurnRateHigh
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.40 USD)"
+              description: "Neuralwatt の費用が直近 1 時間で 2.40 USD 増えた (閾値 2 USD)。\n当月の累計: 3.60 USD、月の予算に対する割合: 不明 (予算が未設定)。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
 
   # 1 時間に約 1.9 ドル (0.032 ドル/分) の増加: 閾値 2 ドルの手前で発火しない
   - name: burn-rate-below
@@ -530,7 +646,6 @@ tests:
       - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "0+0.032x600"
     alert_rule_test:
-      - {eval_time: 30m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
       - {eval_time: 90m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
 
   # lifetime の系列の急増は対象外 (current_month のみ)
@@ -552,13 +667,15 @@ tests:
         values: "10x600"
       - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "2x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "8x600"
       - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "0x600"
     alert_rule_test:
       - {eval_time: 30m, alertname: NeuralwattKeyAllowanceLow, exp_alerts: []}
       - {eval_time: 30m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
 
-  # キーの残り 1.99/10: 10 分後に発火 (9 分では発火しない)
+  # キーの残り 1.99/10: 10 分後に発火 (9 分では発火しない)。説明文の残り 1.99 / 上限 10.00 USD と 19.9%
   - name: key-allowance-below-20pct
     interval: 1m
     input_series:
@@ -566,6 +683,8 @@ tests:
         values: "10x600"
       - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "1.99x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "8.01x600"
       - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "0x600"
     alert_rule_test:
@@ -576,10 +695,10 @@ tests:
           - exp_labels: {alertname: "NeuralwattKeyAllowanceLow", severity: "warning", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の API キー (my-production-key) の上限の残りが 20% 未満"
-              description: "API キー my-production-key (monthly) の上限の残りが 19.9% になった。上限に達するとキーが止まる (402)。"
+              description: "API キー my-production-key (monthly) の上限の残りは 19.9% (20% 未満)。\n残り 1.99 USD / 上限 10.00 USD。上限に達するとキーが止まる (402)。"
       - {eval_time: 30m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
 
-  # キーが止まっている (blocked=1、残り 0): KeyBlocked が即発火 (for 0m)。Low は blocked==0 の条件で発火しない
+  # キーが止まっている (blocked=1、残り 0、使用 10): KeyBlocked が即発火 (for 0m)。説明文は使用 10.00 / 上限 10.00 USD。Low は blocked==0 の条件で発火しない
   - name: key-blocked
     interval: 1m
     input_series:
@@ -587,6 +706,8 @@ tests:
         values: "10x600"
       - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "0x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "10x600"
       - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "1x600"
     alert_rule_test:
@@ -596,8 +717,23 @@ tests:
           - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
-              description: "API キーが上限に達してブロックされている (neuralwatt_key_allowance_blocked=1)、または Neuralwatt が 402 (payment_required) を返した。Neuralwatt のポータルでキーの上限・残高を確認すること。"
+              description: "API キー my-production-key (monthly) が上限に達してブロックされている (使用 10.00 USD / 上限 10.00 USD)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
       - {eval_time: 30m, alertname: NeuralwattKeyAllowanceLow, exp_alerts: []}
+
+  # blocked=1 だけで使用・上限の系列が無い: 説明文はエラーにならず「使用 不明 USD / 上限 不明 USD」
+  - name: key-blocked-no-spent-limit
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1x600"
+    alert_rule_test:
+      - eval_time: 0m
+        alertname: NeuralwattKeyBlocked
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
+              description: "API キー my-production-key (monthly) が上限に達してブロックされている (使用 不明 USD / 上限 不明 USD)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
 
   # キーの上限の系列が無い (上限なし): 0 扱いにせず Low・Blocked は発火しない
   - name: key-absent
@@ -609,7 +745,7 @@ tests:
       - {eval_time: 30m, alertname: NeuralwattKeyAllowanceLow, exp_alerts: []}
       - {eval_time: 30m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
 
-  # 新旧 2 つの target (pod ラベルが違う) でキーの割り算が 1 対 1 に照合され評価エラーにならず、target ごとに 1 件ずつ発火する (残り 1/10)
+  # 新旧 2 つの target (pod ラベルが違う) でキーの割り算が 1 対 1 に照合され評価エラーにならず、target ごとに 1 件ずつ発火する。説明文の残り・上限は alert と同じ pod の系列 (旧: 1/10、新: 3/20 ドルで上限も違う)
   - name: key-two-targets
     interval: 1m
     input_series:
@@ -617,12 +753,16 @@ tests:
         values: "10x600"
       - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "1x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "9x600"
       - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
         values: "0x600"
       - series: 'neuralwatt_key_allowance_limit_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-b", instance="10.0.0.2:8080"}'
-        values: "10x600"
+        values: "20x600"
       - series: 'neuralwatt_key_allowance_remaining_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-b", instance="10.0.0.2:8080"}'
-        values: "1x600"
+        values: "3x600"
+      - series: 'neuralwatt_key_allowance_spent_usd{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-b", instance="10.0.0.2:8080"}'
+        values: "17x600"
       - series: 'neuralwatt_key_allowance_blocked{key_name="my-production-key", period="monthly", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-b", instance="10.0.0.2:8080"}'
         values: "0x600"
     alert_rule_test:
@@ -632,13 +772,13 @@ tests:
           - exp_labels: {alertname: "NeuralwattKeyAllowanceLow", severity: "warning", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の API キー (my-production-key) の上限の残りが 20% 未満"
-              description: "API キー my-production-key (monthly) の上限の残りが 10% になった。上限に達するとキーが止まる (402)。"
+              description: "API キー my-production-key (monthly) の上限の残りは 10% (20% 未満)。\n残り 1.00 USD / 上限 10.00 USD。上限に達するとキーが止まる (402)。"
           - exp_labels: {alertname: "NeuralwattKeyAllowanceLow", severity: "warning", key_name: "my-production-key", period: "monthly", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-b", instance: "10.0.0.2:8080"}
             exp_annotations:
               summary: "Neuralwatt の API キー (my-production-key) の上限の残りが 20% 未満"
-              description: "API キー my-production-key (monthly) の上限の残りが 10% になった。上限に達するとキーが止まる (402)。"
+              description: "API キー my-production-key (monthly) の上限の残りは 15% (20% 未満)。\n残り 3.00 USD / 上限 20.00 USD。上限に達するとキーが止まる (402)。"
 
-  # 402 (payment_required) の増加: 増えた直後 (3m) から、増加が 10 分の窓に入る間 (11m) は発火する。窓を外れる (13m) と発火しない
+  # 402 (payment_required) の増加: 増えた直後 (3m) から、増加が 10 分の窓に入る間 (11m) は発火する。窓を外れる (13m) と発火しない。説明文は 402 を返した旨
   - name: payment-required-increase
     interval: 1m
     input_series:
@@ -652,14 +792,14 @@ tests:
           - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", result: "payment_required", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
-              description: "API キーが上限に達してブロックされている (neuralwatt_key_allowance_blocked=1)、または Neuralwatt が 402 (payment_required) を返した。Neuralwatt のポータルでキーの上限・残高を確認すること。"
+              description: "Neuralwatt が 402 (payment_required) を返した (直近 10 分)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
       - eval_time: 11m
         alertname: NeuralwattKeyBlocked
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", result: "payment_required", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
               summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
-              description: "API キーが上限に達してブロックされている (neuralwatt_key_allowance_blocked=1)、または Neuralwatt が 402 (payment_required) を返した。Neuralwatt のポータルでキーの上限・残高を確認すること。"
+              description: "Neuralwatt が 402 (payment_required) を返した (直近 10 分)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
       - {eval_time: 13m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
 
   # payment_required 以外の取得エラー (unauthorized) が増えても KeyBlocked は発火しない (FetchFailing の範囲)

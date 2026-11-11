@@ -22,6 +22,22 @@ spec:
           - name: alertname
             matchType: "="
             value: Watchdog
+      # Neuralwatt のアラートは severity (critical / warning / info) に関わらず、専用の webhook (discord-neuralwatt) と
+      # 既定の discord の両方へ送る (turtton/infra#197)。
+      # continue: true の route に合った alert は root の receiver では扱われない。info は次の severity の route にも
+      # 合わないため、既定の discord への route を明示する (これが無いと info が既定のチャンネルに届かなくなる)。
+      # 次の severity の route より前に置くこと。
+      - receiver: discord-neuralwatt
+        continue: true
+        matchers:
+          - name: alertname
+            matchType: "=~"
+            value: "Neuralwatt.*"
+      - receiver: discord
+        matchers:
+          - name: alertname
+            matchType: "=~"
+            value: "Neuralwatt.*"
       - receiver: discord
         matchers:
           - name: severity
@@ -33,6 +49,14 @@ spec:
       discordConfigs:
         - apiURL:
             name: alertmanager-discord-webhook
+            key: webhook-url
+          sendResolved: true
+    # Secret alertmanager-neuralwatt-discord-webhook は apps/monitoring/ に置く (SOPS。ユーザーが作成)。
+    # 未作成のままこの設定を適用すると、prometheus-operator が Alertmanager の設定を生成できない。
+    - name: discord-neuralwatt
+      discordConfigs:
+        - apiURL:
+            name: alertmanager-neuralwatt-discord-webhook
             key: webhook-url
           sendResolved: true
   inhibitRules:
