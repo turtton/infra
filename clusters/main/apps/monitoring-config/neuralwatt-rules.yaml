@@ -9,6 +9,15 @@
 # - キーの上限・予算・サブスクリプションの系列は値が無いとき出ない。そのため該当するアラートは評価対象がなく鳴らない
 #   (absent で 0 扱いにしない)。サブスクリプションの kWh のアラートは作らない。
 # - 閾値は予算 月 20 ドルの初期値。実測で調整する。
+# - exporter は /v1/quota を 15 分に 1 回だけ取得する (Lepinoid/infra neuralwatt-exporter/deployment.yaml の
+#   NEURALWATT_POLL_INTERVAL=15m、Lepinoid/infra PR #90)。値・fetch_success・402 のカウンタは 15 分ごとにしか動かず、scrape (60 秒)・
+#   評価 (30 秒) とは独立。取得間隔を変えるときは、次の for・窓を見直すこと。
+#   - NeuralwattQuotaFetchFailing: 1 回の失敗で fetch_success は約 15 分 0 のままなので、for は取得間隔より十分長い 40 分
+#     (1 回 ≒ 15 分・2 回 ≒ 30 分 (最大約 31 分 20 秒) では発火せず、3 回 ≒ 45 分 (最小約 42 分 50 秒) で発火する)。
+#   - NeuralwattKeyBlocked: 402 の増加の窓は取得間隔の 2 倍 + 5 分の 35 分 (1 回抜けても途切れない)。
+#   - NeuralwattCostBurnRateHigh: 15 分の階段状の費用に合わせ、1 時間の増加の 15 分間の最大を使う。
+#   - 残高・予算・キーの上限 (for: 10m)・NeuralwattQuotaStale (6 時間)・NeuralwattExporterDown/Absent (up) は水準・scrape の条件で、
+#     取得間隔では揺れない (取得値 1 回で for に届く。検知は最大 15 分遅れる)。
 # - 費用の比・キーの割り算は同じ target の系列どうしを 1 対 1 で照合する (ローリングアップデート中に新旧 2 つの
 #   target があっても many-to-many にならない)。比の分母 (予算) は window ラベルを持たないので ignoring(window)。
 #
@@ -57,15 +66,17 @@ spec:
               job=neuralwatt-exporter の target が 15 分以上存在しない。
               exporter の Pod が無い、または PodMonitor (monitoring/neuralwatt-exporter) のラベル・ポート名が Deployment と食い違っている可能性。
         - alert: NeuralwattQuotaFetchFailing
+          # exporter の取得間隔 (15 分) より長い 40 分。1 回の失敗では fetch_success が約 15 分、2 回連続で約 30 分 0 のままなので
+          # 発火せず、3 回連続 (約 45 分) で発火する。
           expr: neuralwatt_exporter_fetch_success == 0
-          for: 15m
+          for: 40m
           labels:
             severity: warning
           annotations:
             summary: "Neuralwatt の残高・使用量の取得が失敗し続けている ({{ $labels.pod }})"
             description: |-
               {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
-              exporter が Neuralwatt の /v1/quota の取得に 15 分以上失敗している (up は 1 のまま)。
+              exporter が Neuralwatt の /v1/quota の取得に 40 分以上失敗している (up は 1 のまま)。
               {{ with query (printf `neuralwatt_exporter_last_success_timestamp_seconds{%s} > 0` $sel) }}最後に成功した取得: {{ . | first | value | humanizeTimestamp }}{{ else }}一度も取得に成功していない{{ end }}。
               失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。
         - alert: NeuralwattQuotaStale
@@ -154,7 +165,9 @@ spec:
               当月の費用は {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD で、月の予算 {{ with query (printf `neuralwatt_monthly_budget_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD の {{ $value | humanizePercentage }} (100% 以上)。
               段階 2 の運用では停止線。利用の停止または予算の見直しを判断すること。
         - alert: NeuralwattCostBurnRateHigh
-          expr: increase(neuralwatt_usage_cost_usd_total{window="current_month"}[1h]) > 2
+          # 費用は 15 分ごとの階段状 (取得間隔)。1 時間の窓に入る更新は 4 回だが、15 分に 1 分だけ 3 回になって増加が 3/4 に落ちる
+          # (2〜2.67 USD/時で解消・再発火を繰り返す)。15 分の窓で最大を取り、この谷を消す。
+          expr: max_over_time(increase(neuralwatt_usage_cost_usd_total{window="current_month"}[1h])[15m:1m]) > 2
           for: 0m
           labels:
             severity: warning
@@ -177,7 +190,9 @@ spec:
               API キー {{ if $labels.key_name }}{{ $labels.key_name }}{{ else }}(名前なし){{ end }} ({{ $labels.period }}) の上限の残りは {{ $value | humanizePercentage }} (20% 未満)。
               残り {{ with query (printf `neuralwatt_key_allowance_remaining_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD / 上限 {{ with query (printf `neuralwatt_key_allowance_limit_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD。上限に達するとキーが止まる (402)。
         - alert: NeuralwattKeyBlocked
-          expr: neuralwatt_key_allowance_blocked == 1 or increase(neuralwatt_exporter_fetches_total{result="payment_required"}[10m]) > 0
+          # 402 の増加は取得 (15 分) のたびに 1 ずつ。窓は取得間隔の 2 倍 + 5 分の 35 分にして、402 が続く間は途切れず、
+          # 間の取得が 1 回別のエラーで抜けても (増加の間隔が約 30 分) 解消しない。
+          expr: neuralwatt_key_allowance_blocked == 1 or increase(neuralwatt_exporter_fetches_total{result="payment_required"}[35m]) > 0
           for: 0m
           labels:
             severity: critical
@@ -185,5 +200,5 @@ spec:
             summary: "Neuralwatt の API キーが上限で止まっている ({{ $labels.pod }})"
             description: |-
               {{- $sel := printf `namespace=%q,pod=%q,instance=%q,key_name=%q,period=%q` $labels.namespace $labels.pod $labels.instance $labels.key_name $labels.period -}}
-              {{ if eq $labels.result "payment_required" }}Neuralwatt が 402 (payment_required) を返した (直近 10 分)。{{ else }}API キー {{ if $labels.key_name }}{{ $labels.key_name }}{{ else }}(名前なし){{ end }} ({{ $labels.period }}) が上限に達してブロックされている (使用 {{ with query (printf `neuralwatt_key_allowance_spent_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD / 上限 {{ with query (printf `neuralwatt_key_allowance_limit_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD)。{{ end }}
+              {{ if eq $labels.result "payment_required" }}Neuralwatt が 402 (payment_required) を返した (直近 35 分)。{{ else }}API キー {{ if $labels.key_name }}{{ $labels.key_name }}{{ else }}(名前なし){{ end }} ({{ $labels.period }}) が上限に達してブロックされている (使用 {{ with query (printf `neuralwatt_key_allowance_spent_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD / 上限 {{ with query (printf `neuralwatt_key_allowance_limit_usd{%s}` $sel) }}{{ . | first | value | printf "%.2f" }}{{ else }}不明{{ end }} USD)。{{ end }}
               Neuralwatt のポータルでキーの上限・残高を確認すること。
