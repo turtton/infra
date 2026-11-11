@@ -1,0 +1,140 @@
+---
+# Neuralwatt (dsh-agent の LLM API) の残高・当月の費用・キーの上限・取得の失敗を監視する。
+# 指標は Lepinoid/infra の neuralwatt-exporter が出す (契約は turtton/infra#195 と Lepinoid/infra#84)。
+#
+# - exporter は Neuralwatt の API の取得に失敗しても HTTP 200 を返し up=1 のままになる (pve-rules.yaml と同じ事情)。
+#   取得の失敗は up ではなく neuralwatt_exporter_fetch_success / last_success_timestamp_seconds で検知する。
+# - 初回の成功の前は last_success_timestamp_seconds が 0、データ系列は出ない。取得に失敗した後は最後に成功した値が
+#   残り続けるため、古さは last_success_timestamp_seconds で判断する。
+# - キーの上限・予算・サブスクリプションの系列は値が無いとき出ない。そのため該当するアラートは評価対象がなく鳴らない
+#   (absent で 0 扱いにしない)。サブスクリプションの kWh のアラートは作らない。
+# - 閾値は予算 月 20 ドルの初期値。実測で調整する。
+# - 費用の比・キーの割り算は同じ target の系列どうしを 1 対 1 で照合する (ローリングアップデート中に新旧 2 つの
+#   target があっても many-to-many にならない)。比の分母 (予算) は window ラベルを持たないので ignoring(window)。
+#
+# テスト: tests/neuralwatt-rules_test.yaml (promtool test rules。Flux の対象外。手順はテストファイルの冒頭)。
+# 規則を変えたら、テストも合わせて更新すること。
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: neuralwatt
+  namespace: monitoring
+  labels:
+    # kube-prometheus-stack の prometheus.prometheusSpec.ruleSelector は
+    # release=kube-prometheus-stack を見ているため必ず付ける
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: neuralwatt.rules
+      rules:
+        - alert: NeuralwattExporterDown
+          expr: up{job="neuralwatt-exporter"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "neuralwatt-exporter の scrape に失敗 ({{ $labels.pod }})"
+            description: "Prometheus が neuralwatt-exporter ({{ $labels.pod }}) の scrape に10分以上失敗している。Pod の状態 (kubectl -n lepinoid get pods -l app.kubernetes.io/name=neuralwatt-exporter) と NetworkPolicy を確認すること。"
+        - alert: NeuralwattExporterAbsent
+          expr: absent(up{job="neuralwatt-exporter"})
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "neuralwatt-exporter の target が存在しない"
+            description: "job=neuralwatt-exporter の target が15分以上存在しない。exporter の Pod が無い、または PodMonitor (monitoring/neuralwatt-exporter) のラベル・ポート名が Deployment と食い違っている可能性。"
+        - alert: NeuralwattQuotaFetchFailing
+          expr: neuralwatt_exporter_fetch_success == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Neuralwatt の残高・使用量の取得が失敗し続けている ({{ $labels.pod }})"
+            description: "exporter が Neuralwatt の /v1/quota の取得に15分以上失敗している (up は 1 のまま)。neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で原因を確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
+        - alert: NeuralwattQuotaStale
+          # 1) 成功したことがある (last_success > 0) が、最後の成功から 6 時間を超えた。
+          # 2) 一度も成功していない (last_success == 0) まま、exporter の起動から 6 時間を超えた。
+          #    0 を time()-0 として扱わず、起動直後の失敗で即発火しないよう起動時刻から猶予を置く。
+          #    起動直後〜6 時間の失敗は NeuralwattQuotaFetchFailing (warning) が知らせる。
+          expr: |
+            (time() - neuralwatt_exporter_last_success_timestamp_seconds > 6*3600 and neuralwatt_exporter_last_success_timestamp_seconds > 0)
+            or
+            (neuralwatt_exporter_last_success_timestamp_seconds == 0 and on(namespace, pod) (time() - process_start_time_seconds > 6*3600))
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Neuralwatt の残高・使用量が6時間以上更新されていない ({{ $labels.pod }})"
+            description: "exporter が Neuralwatt の /v1/quota の取得に成功しないまま6時間を超えた (最後の成功からの経過、または一度も成功しないまま起動から6時間)。ダッシュボードとほかのアラートは古い値で動いているため、残高・費用の判断に使わないこと。API キーと Neuralwatt 側の状態を確認する。"
+        - alert: NeuralwattCreditsLow
+          expr: neuralwatt_credits_remaining_usd < 5 and neuralwatt_credits_remaining_usd >= 2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Neuralwatt の残高が少ない ({{ $value | printf \"%.2f\" }} USD)"
+            description: "Neuralwatt のクレジット残高が 5 USD を下回った (残り {{ $value | printf \"%.2f\" }} USD)。購入額の約 25% 以下。追加購入または利用の抑制を検討すること。"
+        - alert: NeuralwattCreditsCritical
+          expr: neuralwatt_credits_remaining_usd < 2
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Neuralwatt の残高が残りわずか ({{ $value | printf \"%.2f\" }} USD)"
+            description: "Neuralwatt のクレジット残高が 2 USD を下回った (残り {{ $value | printf \"%.2f\" }} USD)。購入額の約 10% 以下。残高が尽きると API が止まる (402)。至急、追加購入または利用の停止を判断すること。"
+        # 月の費用 / 月の予算。3 段は同じ alertname で、比の範囲が排他なので同時には発火しない
+        # (10・16・20 ドル = 予算 20 ドルの 50%・80%・100%。16 ドルは段階 2 の「任意項目を止める」線、20 ドルは停止線)。
+        - alert: NeuralwattMonthlyBudgetUsage
+          expr: |
+            (neuralwatt_usage_cost_usd_total{window="current_month"} / ignoring(window) neuralwatt_monthly_budget_usd) >= 0.5
+            and
+            (neuralwatt_usage_cost_usd_total{window="current_month"} / ignoring(window) neuralwatt_monthly_budget_usd) < 0.8
+          for: 10m
+          labels:
+            severity: info
+          annotations:
+            summary: "Neuralwatt の当月の費用が予算の 50% に到達 ({{ $value | humanizePercentage }})"
+            description: "Neuralwatt の当月の費用が月の予算の {{ $value | humanizePercentage }} に達した (50% 以上 80% 未満)。累計 10 ドルでの見直しの目安。"
+        - alert: NeuralwattMonthlyBudgetUsage
+          expr: |
+            (neuralwatt_usage_cost_usd_total{window="current_month"} / ignoring(window) neuralwatt_monthly_budget_usd) >= 0.8
+            and
+            (neuralwatt_usage_cost_usd_total{window="current_month"} / ignoring(window) neuralwatt_monthly_budget_usd) < 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Neuralwatt の当月の費用が予算の 80% に到達 ({{ $value | humanizePercentage }})"
+            description: "Neuralwatt の当月の費用が月の予算の {{ $value | humanizePercentage }} に達した (80% 以上 100% 未満)。段階 2 の運用では任意項目を止める線 (16 ドル)。"
+        - alert: NeuralwattMonthlyBudgetUsage
+          expr: (neuralwatt_usage_cost_usd_total{window="current_month"} / ignoring(window) neuralwatt_monthly_budget_usd) >= 1
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Neuralwatt の当月の費用が予算に到達 ({{ $value | humanizePercentage }})"
+            description: "Neuralwatt の当月の費用が月の予算の {{ $value | humanizePercentage }} に達した (100% 以上)。段階 2 の停止線 (20 ドル)。利用の停止または予算の見直しを判断すること。"
+        - alert: NeuralwattCostBurnRateHigh
+          expr: increase(neuralwatt_usage_cost_usd_total{window="current_month"}[1h]) > 2
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Neuralwatt の費用が急増 (直近 1 時間で {{ $value | printf \"%.2f\" }} USD)"
+            description: "Neuralwatt の費用が直近 1 時間で {{ $value | printf \"%.2f\" }} USD 増えた (閾値 2 USD)。エージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+        - alert: NeuralwattKeyAllowanceLow
+          expr: neuralwatt_key_allowance_remaining_usd / neuralwatt_key_allowance_limit_usd < 0.2 and neuralwatt_key_allowance_blocked == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Neuralwatt の API キー ({{ $labels.key_name }}) の上限の残りが 20% 未満"
+            description: "API キー {{ $labels.key_name }} ({{ $labels.period }}) の上限の残りが {{ $value | humanizePercentage }} になった。上限に達するとキーが止まる (402)。"
+        - alert: NeuralwattKeyBlocked
+          expr: neuralwatt_key_allowance_blocked == 1 or increase(neuralwatt_exporter_fetches_total{result="payment_required"}[10m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Neuralwatt の API キーが上限で止まっている ({{ $labels.pod }})"
+            description: "API キーが上限に達してブロックされている (neuralwatt_key_allowance_blocked=1)、または Neuralwatt が 402 (payment_required) を返した。Neuralwatt のポータルでキーの上限・残高を確認すること。"

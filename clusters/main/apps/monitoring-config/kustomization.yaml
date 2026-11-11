@@ -7,3 +7,5 @@ resources:
   - pve-rules.yaml
   - longhorn-rules.yaml
   - restart-rules.yaml
+  - neuralwatt-podmonitor.yaml
+  - neuralwatt-rules.yaml

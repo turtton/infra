@@ -1,0 +1,28 @@
+---
+# Neuralwatt の残高・使用量の exporter (Lepinoid/infra neuralwatt-exporter, lepinoid namespace) を scrape する。
+# lepinoid-deployer は monitoring.coreos.com を作れないため、restart-rules.yaml と同じくこの repo の
+# monitoring-config に置く。Service は無く Pod を直接 scrape する。
+# Pod のラベル・ポート名は Lepinoid/infra neuralwatt-exporter/deployment.yaml の契約
+# (app.kubernetes.io/name: neuralwatt-exporter、ポート名 metrics)。変えるときは両方を合わせる。
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: neuralwatt-exporter
+  namespace: monitoring
+  labels:
+    # kube-prometheus-stack の podMonitorSelector は release=kube-prometheus-stack を見ているため必ず付ける
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - lepinoid
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: neuralwatt-exporter
+  # job ラベルは Pod の app.kubernetes.io/name ラベルの値 (neuralwatt-exporter) になる。
+  jobLabel: app.kubernetes.io/name
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 60s
+      scrapeTimeout: 10s
