@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: alertmanager-neuralwatt-discord-webhook
+    namespace: monitoring
+type: Opaque
+stringData:
+    webhook-url: ENC[AES256_GCM,data:pY+Aj7l40gh4YczZiM98rYBtZIpXMPGb8e6MGkPjyAjUS8CE/RxL6Kv+o9TJ5VBaJdlIPwu4Zepxv+vwJt/xQwFFAcGB8qVX/TrFDggPc3mqZuIsEsN/BmaPci3x7djyuSPOb2Bb7L16xaYtZDLROLkcufrSlfkToQ==,iv:OrryRVTvCnJHQul0Zzv/zHr9oBs8ySHetFaaretINVI=,tag:yvhHuIXcMm32ZbslBPn7ig==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBiVVJVVUlncGZOUzRLWEdW
+            WWFrSTJsL3RZNUY1anREK0RiazNCN0F4T0VJClVCczZiOEdtR2VPbHJZajFxRE1B
+            S2Q0djdlRXYrL3ord0txSWFOb3c1UGsKLS0tIHpIdmZZL2JtZllkS21PLytFYjBl
+            R29ncnJmUk9ZSTV4N1V5bThucmZWZ2cKgAkd+23bUKqretY+nxExBlh0HdvXiunC
+            tX4BiezQ8IYnJQaZRR66uqpojK87bFt4bgDYvLfhn0xltNEJZ2IRVw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-11T12:20:18Z"
+    mac: ENC[AES256_GCM,data:m9t6qAMK+SVln5ZqO5weMpXKxWLBG67E7LBafgS/Prb/thLT1PzuObpFO0YvPIKeyJxFOd/BsrTRxJQEK04lwOcbPgKabrOhBLw4UORrEfyw0dqLRHWMKNQyvcFGh9j7AFKvxDKAUBK051nPbQY4tDjNjVLXJR1QcMWmSCdZIm8=,iv:C9BM5MZoWrD+bBGzlIrcx/2P2GzsCTB2G4RMIVNtwkA=,tag:hbRyWg73Jo+Ft8YiAicDPA==,type:str]
+    version: 3.13.3
