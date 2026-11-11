@@ -25,7 +25,7 @@
 rule_files:
   - neuralwatt-rules.yaml
 
-evaluation_interval: 1m
+evaluation_interval: 30s
 
 tests:
   # 取得できているとき: どのアラートも発火しない (last_success は評価時刻 500m=30000 秒の 100 秒前)
@@ -2188,113 +2188,113 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 121m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 122m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 123m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 124m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 125m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 126m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 127m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 128m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 129m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 130m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 131m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 132m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 133m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 134m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 135m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 6.00 USD、月の予算に対する割合: 30.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 6.00 USD、月の予算に対する割合: 30.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
 
   # 取得 15 分間隔: 費用が 15 分ごとに 0.6 ドル (2.4 ドル/時) の階段状に増える (最初の更新は 7m)。1 時間の窓に入る更新が 15 分に 1 分だけ 3 回になり、素の increase[1h] は 1.83 に落ちるが、15 分の最大を取るので 15 分間の毎分連続して発火する (解消・再発火しない)。予算 20 ドルに対する割合も表示
   - name: burn-rate-poll15-steady-2.4-phase7
@@ -2310,113 +2310,113 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 121m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 122m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 123m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 124m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 125m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 126m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 4.80 USD、月の予算に対する割合: 24.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 127m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 128m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 129m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 130m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 131m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 132m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 133m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 134m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
       - eval_time: 135m
         alertname: NeuralwattCostBurnRateHigh
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 27.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
 
   # 取得 15 分間隔: 費用が 15 分ごとに 0.45 ドル (1.8 ドル/時) の階段状に増える: 閾値 2 ドル/時の手前なので発火しない (15 分間・毎分)
   - name: burn-rate-poll15-below
@@ -2454,8 +2454,8 @@ tests:
         exp_alerts:
           - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
             exp_annotations:
-              summary: "Neuralwatt の費用が急増 (直近 1 時間で 2.44 USD)"
-              description: "Neuralwatt の費用が直近 1 時間で 2.44 USD 増えた (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 不明 (予算が未設定)。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.44 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.44 USD になった (閾値 2 USD)。\n当月の累計: 5.40 USD、月の予算に対する割合: 不明 (予算が未設定)。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
 
   # 取得 15 分間隔: 残高が 5 → 4.99 に 15m の取得で変わる: その 1 回の取得値で 10 分後 (25m) に発火し、24m までは発火しない (購入総額 31)
   - name: credits-poll15-single-reading
@@ -2492,3 +2492,159 @@ tests:
             exp_annotations:
               summary: "Neuralwatt の当月の費用が予算の 50% に到達 (50%)"
               description: "当月の費用は 10.00 USD で、月の予算 20.00 USD の 50% (50% 以上 80% 未満)。\nこの段の下限 (予算の 50%): 10.00 USD。見直しの目安。"
+
+  # 閾値付近: 費用が 15 分ごとに 0.5 ドル (2.0 ドル/時ちょうど) の階段状: 素の increase が窓の端への外挿で 2.0339 (60/59 倍) になるので閾値 2 を超えて発火する (120m・127m・134m)
+  - name: burn-rate-poll15-near-threshold-fires
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 3.5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4.5 4.5 4.5 4.5 4.5 4.5 4.5 4.5 4.5 4.5 4.5 4.5 4.5 4.5 4.5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 5.5 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7.5 7.5 7.5 7.5 7.5 7.5 7.5 7.5 7.5 7.5 7.5 7.5 7.5 7.5 7.5 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8.5 8.5 8.5 8.5 8.5 8.5 8.5 8.5 8.5 8.5 8.5 8.5 8.5 8.5 8.5 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9.5 9.5 9.5 9.5 9.5 9.5 9.5 9.5 9.5 9.5 9.5 9.5 9.5 9.5 9.5 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10"
+      - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "20x300"
+    alert_rule_test:
+      - eval_time: 120m
+        alertname: NeuralwattCostBurnRateHigh
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.03 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.03 USD になった (閾値 2 USD)。\n当月の累計: 4.50 USD、月の予算に対する割合: 22.5%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+      - eval_time: 127m
+        alertname: NeuralwattCostBurnRateHigh
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.03 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.03 USD になった (閾値 2 USD)。\n当月の累計: 4.50 USD、月の予算に対する割合: 22.5%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+      - eval_time: 134m
+        alertname: NeuralwattCostBurnRateHigh
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 2.03 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 2.03 USD になった (閾値 2 USD)。\n当月の累計: 4.50 USD、月の予算に対する割合: 22.5%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+
+  # 閾値付近: 費用が 15 分ごとに 0.49 ドル (1.96 ドル/時) の階段状: 外挿しても 1.993 で閾値 2 の手前なので発火しない (谷を含む 120m〜135m の毎分)
+  - name: burn-rate-poll15-near-threshold-below
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.49 0.98 0.98 0.98 0.98 0.98 0.98 0.98 0.98 0.98 0.98 0.98 0.98 0.98 0.98 0.98 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.47 1.96 1.96 1.96 1.96 1.96 1.96 1.96 1.96 1.96 1.96 1.96 1.96 1.96 1.96 1.96 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.45 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 2.94 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.43 3.92 3.92 3.92 3.92 3.92 3.92 3.92 3.92 3.92 3.92 3.92 3.92 3.92 3.92 3.92 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.41 4.9 4.9 4.9 4.9 4.9 4.9 4.9 4.9 4.9 4.9 4.9 4.9 4.9 4.9 4.9 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.39 5.88 5.88 5.88 5.88 5.88 5.88 5.88 5.88 5.88 5.88 5.88 5.88 5.88 5.88 5.88 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.37 6.86 6.86 6.86 6.86 6.86 6.86 6.86 6.86 6.86 6.86 6.86 6.86 6.86 6.86 6.86 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.35 7.84 7.84 7.84 7.84 7.84 7.84 7.84 7.84 7.84 7.84 7.84 7.84 7.84 7.84 7.84 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.33 8.82 8.82 8.82 8.82 8.82 8.82 8.82 8.82 8.82 8.82 8.82 8.82 8.82 8.82 8.82 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.31 9.8 9.8 9.8 9.8 9.8 9.8 9.8 9.8 9.8 9.8 9.8 9.8 9.8 9.8 9.8"
+      - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "20x300"
+    alert_rule_test:
+      - {eval_time: 120m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 121m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 122m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 123m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 124m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 125m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 126m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 127m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 128m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 129m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 130m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 131m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 132m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 133m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 134m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+      - {eval_time: 135m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+
+  # 急増して止まる: 20m の取得で費用が 3 ドル増え、以後は増えない。1 時間の増加が窓から外れる 78m まで増加 3.00 ドル (カウンタが 0 から始まるので窓の端へは外挿されない) が続き、15 分の最大を取るので 92m (評価位相 30 秒の 92m30s も) まで発火し、93m に解消する
+  - name: burn-rate-poll15-burst-then-stop
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_usage_cost_usd_total{window="current_month", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x19 3x200"
+      - series: 'neuralwatt_monthly_budget_usd{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "20x300"
+    alert_rule_test:
+      - eval_time: 78m
+        alertname: NeuralwattCostBurnRateHigh
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 3.00 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 3.00 USD になった (閾値 2 USD)。\n当月の累計: 3.00 USD、月の予算に対する割合: 15.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+      - eval_time: 92m
+        alertname: NeuralwattCostBurnRateHigh
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 3.00 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 3.00 USD になった (閾値 2 USD)。\n当月の累計: 3.00 USD、月の予算に対する割合: 15.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+      - eval_time: 92m30s
+        alertname: NeuralwattCostBurnRateHigh
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattCostBurnRateHigh", severity: "warning", window: "current_month", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 3.00 USD)"
+              description: "Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が 3.00 USD になった (閾値 2 USD)。\n当月の累計: 3.00 USD、月の予算に対する割合: 15.0%。\nエージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。"
+      - {eval_time: 93m, alertname: NeuralwattCostBurnRateHigh, exp_alerts: []}
+
+  # 評価位相 30 秒 (評価間隔 30s): 3 回連続の失敗 (0 が 10m〜55m) は 50m に発火し、その 30 秒前 (49m30s) では発火せず、30 秒後 (50m30s) も発火している。for の境界が 30 秒刻みでも変わらない
+  - name: fetch-failing-poll15-eval-phase-30s
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_exporter_fetch_success{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1x9 0x45 1x200"
+      - series: 'neuralwatt_exporter_last_success_timestamp_seconds{job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1000x300"
+    alert_rule_test:
+      - {eval_time: 49m30s, alertname: NeuralwattQuotaFetchFailing, exp_alerts: []}
+      - eval_time: 50m
+        alertname: NeuralwattQuotaFetchFailing
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattQuotaFetchFailing", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高・使用量の取得が失敗し続けている (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に 40 分以上失敗している (up は 1 のまま)。\n最後に成功した取得: 1970-01-01 00:16:40 +0000 UTC。\n失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
+      - eval_time: 50m30s
+        alertname: NeuralwattQuotaFetchFailing
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattQuotaFetchFailing", severity: "warning", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の残高・使用量の取得が失敗し続けている (nw-a)"
+              description: "exporter が Neuralwatt の /v1/quota の取得に 40 分以上失敗している (up は 1 のまま)。\n最後に成功した取得: 1970-01-01 00:16:40 +0000 UTC。\n失敗の内訳は neuralwatt_exporter_fetches_total の result ラベル (unauthorized・payment_required・rate_limited など) で確認すること。この間、残高・費用の指標は最後に成功した値のまま。"
+
+  # 評価位相 30 秒 (評価間隔 30s): 1 回だけの 402 (3m に増加) は 36m・36m30s まで発火し、37m・37m30s には解消している
+  - name: payment-required-poll15-eval-phase-30s
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_exporter_fetches_total{result="payment_required", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "0x2 1x200"
+    alert_rule_test:
+      - eval_time: 36m
+        alertname: NeuralwattKeyBlocked
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", result: "payment_required", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
+              description: "Neuralwatt が 402 (payment_required) を返した (直近 35 分)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
+      - eval_time: 36m30s
+        alertname: NeuralwattKeyBlocked
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", result: "payment_required", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
+              description: "Neuralwatt が 402 (payment_required) を返した (直近 35 分)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"
+      - {eval_time: 37m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
+      - {eval_time: 37m30s, alertname: NeuralwattKeyBlocked, exp_alerts: []}
+
+  # 初回の scrape の時点で 402 のカウンタがすでに 1 (Pod の起動直後の最初の取得が 402): increase は 1 サンプルだけでは 0 なので、この 1 回目の 402 では発火しない (既知の制約。FetchFailing が 40 分後に知らせ、取得 15 分後の 2 回目の 402 (カウンタ 2) で発火する)
+  - name: payment-required-poll15-counter-already-1-at-first-scrape
+    interval: 1m
+    input_series:
+      - series: 'neuralwatt_exporter_fetches_total{result="payment_required", job="neuralwatt-exporter", namespace="lepinoid", pod="nw-a", instance="10.0.0.1:8080"}'
+        values: "1x14 2x200"
+    alert_rule_test:
+      - {eval_time: 5m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
+      - {eval_time: 14m, alertname: NeuralwattKeyBlocked, exp_alerts: []}
+      - {eval_time: 14m30s, alertname: NeuralwattKeyBlocked, exp_alerts: []}
+      - eval_time: 15m
+        alertname: NeuralwattKeyBlocked
+        exp_alerts:
+          - exp_labels: {alertname: "NeuralwattKeyBlocked", severity: "critical", result: "payment_required", job: "neuralwatt-exporter", namespace: "lepinoid", pod: "nw-a", instance: "10.0.0.1:8080"}
+            exp_annotations:
+              summary: "Neuralwatt の API キーが上限で止まっている (nw-a)"
+              description: "Neuralwatt が 402 (payment_required) を返した (直近 35 分)。\nNeuralwatt のポータルでキーの上限・残高を確認すること。"

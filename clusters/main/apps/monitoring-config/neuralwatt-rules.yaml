@@ -12,7 +12,8 @@
 # - exporter は /v1/quota を 15 分に 1 回だけ取得する (Lepinoid/infra neuralwatt-exporter/deployment.yaml の
 #   NEURALWATT_POLL_INTERVAL=15m、Lepinoid/infra PR #90)。値・fetch_success・402 のカウンタは 15 分ごとにしか動かず、scrape (60 秒)・
 #   評価 (30 秒) とは独立。取得間隔を変えるときは、次の for・窓を見直すこと。
-#   - NeuralwattQuotaFetchFailing: 1 回の失敗で fetch_success は約 15 分 0 のままなので、for は取得間隔より十分長い 40 分
+#   - NeuralwattQuotaFetchFailing: (429 の Retry-After が取得間隔より長いと、次の取得までその時間 0 のままなので、40 分を超える Retry-After の 429 は
+#     1 回でも発火する。長いレート制限は知らせるべき状態) 1 回の失敗で fetch_success は約 15 分 0 のままなので、for は取得間隔より十分長い 40 分
 #     (1 回 ≒ 15 分・2 回 ≒ 30 分 (最大約 31 分 20 秒) では発火せず、3 回 ≒ 45 分 (最小約 42 分 50 秒) で発火する)。
 #   - NeuralwattKeyBlocked: 402 の増加の窓は取得間隔の 2 倍 + 5 分の 35 分 (1 回抜けても途切れない)。
 #   - NeuralwattCostBurnRateHigh: 15 分の階段状の費用に合わせ、1 時間の増加の 15 分間の最大を使う。
@@ -172,10 +173,10 @@ spec:
           labels:
             severity: warning
           annotations:
-            summary: "Neuralwatt の費用が急増 (直近 1 時間で {{ $value | printf \"%.2f\" }} USD)"
+            summary: "Neuralwatt の費用が急増 (1 時間の増加が最大 {{ $value | printf \"%.2f\" }} USD)"
             description: |-
               {{- $sel := printf `namespace=%q,pod=%q,instance=%q` $labels.namespace $labels.pod $labels.instance -}}
-              Neuralwatt の費用が直近 1 時間で {{ $value | printf "%.2f" }} USD 増えた (閾値 2 USD)。
+              Neuralwatt の費用の 1 時間あたりの増加量 (直近 15 分間の推定最大値) が {{ $value | printf "%.2f" }} USD になった (閾値 2 USD)。
               当月の累計: {{ with query (printf `neuralwatt_usage_cost_usd_total{window="current_month",%s}` $sel) }}{{ . | first | value | printf "%.2f" }} USD{{ else }}不明{{ end }}、月の予算に対する割合: {{ with query (printf `100 * neuralwatt_usage_cost_usd_total{window="current_month",%s} / ignoring(window) neuralwatt_monthly_budget_usd{%s}` $sel $sel) }}{{ . | first | value | printf "%.1f" }}%{{ else }}不明 (予算が未設定){{ end }}。
               エージェントの暴走・ループの可能性。dsh-agent の状態を確認すること。
         - alert: NeuralwattKeyAllowanceLow
