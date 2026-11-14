@@ -1,0 +1,251 @@
+# job-rules.yaml (PrometheusRule `job-failure-watch`) の promtool ルールテスト。
+# Flux の対象外 (monitoring-config/kustomization.yaml の resources に含めない)。CI (flux-check.yml) は
+# このテストを実行しない。規則を変えたらローカルで実行して通すこと。
+#
+# promtool は CRD の YAML を読めないため、本番 YAML の .spec を一時ディレクトリに同名ファイルで抽出し、
+# このファイルと同じディレクトリに置いて実行する (rule_files はその同名ファイルを指す)。
+#
+#   cd clusters/main/apps/monitoring-config
+#   tmpdir=$(mktemp -d)
+#   yq '.spec' job-rules.yaml > "$tmpdir/job-rules.yaml"
+#   cp tests/job-rules_test.yaml "$tmpdir/"
+#   promtool test rules "$tmpdir/job-rules_test.yaml"
+#   # promtool が無ければ: nix run nixpkgs#prometheus.cli -- test rules ... (または nix build nixpkgs#prometheus.cli)
+#   #   docker なら: docker run --rm -v "$tmpdir:/work:ro" -w /work --entrypoint promtool \
+#   #   prom/prometheus:v3.5.0 test rules job-rules_test.yaml
+#
+# 入力の系列は kube-state-metrics の契約どおり。時刻の値 (開始時刻・最終成功・最終スケジュール) は
+# エポック秒で、評価時刻 (eval_time) とは独立した適当な値を使う (規則は値どうしの大小だけを見る)。
+# 評価間隔・系列の間隔は 1m。アラートは、条件を満たした最初の評価から for の時間が経った評価で発火する。
+# JobFailedUnrecovered は for 15m、CronJobNotSucceeding は for 12h (= 720m)。
+# kube_job_failed は失敗した Job にだけ系列がある (value 1, condition="true")。
+# exp_annotations は promtool が annotations の一致も検査するために必要 (テンプレートの展開結果も確かめる)。
+rule_files:
+  - job-rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # 失敗した Job が、その CronJob の後続の成功で回復済み (開始時刻 100 < 最終成功 400): 発火しない
+  - name: failed-job-recovered-by-later-success
+    interval: 1m
+    input_series:
+      - series: 'kube_job_failed{condition="true", job="kube-state-metrics", namespace="ops", job_name="backup-100"}'
+        values: "1x100"
+      - series: 'kube_job_status_start_time{job="kube-state-metrics", namespace="ops", job_name="backup-100"}'
+        values: "100x100"
+      - series: 'kube_job_owner{job="kube-state-metrics", namespace="ops", job_name="backup-100", owner_kind="CronJob", owner_name="backup", owner_is_controller="true"}'
+        values: "1x100"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="backup"}'
+        values: "400x100"
+    alert_rule_test:
+      - {eval_time: 15m, alertname: JobFailedUnrecovered, exp_alerts: []}
+      - {eval_time: 60m, alertname: JobFailedUnrecovered, exp_alerts: []}
+
+  # 最後の成功より後に開始した Job が失敗している: 14m は pending、15m で発火。
+  # 同じ CronJob の古い失敗 (backup-100, 回復済み) は発火しない
+  - name: failed-job-after-last-success-fires
+    interval: 1m
+    input_series:
+      - series: 'kube_job_failed{condition="true", job="kube-state-metrics", namespace="ops", job_name="backup-100"}'
+        values: "1x100"
+      - series: 'kube_job_status_start_time{job="kube-state-metrics", namespace="ops", job_name="backup-100"}'
+        values: "100x100"
+      - series: 'kube_job_owner{job="kube-state-metrics", namespace="ops", job_name="backup-100", owner_kind="CronJob", owner_name="backup", owner_is_controller="true"}'
+        values: "1x100"
+      - series: 'kube_job_failed{condition="true", job="kube-state-metrics", namespace="ops", job_name="backup-200"}'
+        values: "1x100"
+      - series: 'kube_job_status_start_time{job="kube-state-metrics", namespace="ops", job_name="backup-200"}'
+        values: "3600x100"
+      - series: 'kube_job_owner{job="kube-state-metrics", namespace="ops", job_name="backup-200", owner_kind="CronJob", owner_name="backup", owner_is_controller="true"}'
+        values: "1x100"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="backup"}'
+        values: "400x100"
+    alert_rule_test:
+      - {eval_time: 14m, alertname: JobFailedUnrecovered, exp_alerts: []}
+      - eval_time: 15m
+        alertname: JobFailedUnrecovered
+        exp_alerts:
+          - exp_labels: {alertname: "JobFailedUnrecovered", severity: "warning", condition: "true", job: "kube-state-metrics", namespace: "ops", job_name: "backup-200"}
+            exp_annotations:
+              summary: "Job が失敗したまま (ops/backup-200)"
+              description: "Job ops/backup-200 が失敗している。CronJob 由来の場合は、この Job より後に同じ CronJob の実行が成功していない。原因を調べ、確認後に失敗 Job を削除するか、後続の実行が成功すれば自動で解消する。"
+
+  # 後続の実行が成功すると自動で解消する: 失敗 Job の開始 600、最終成功は 500 (失敗より前) から 60m で 7200 に進む
+  - name: failed-job-resolves-when-later-run-succeeds
+    interval: 1m
+    input_series:
+      - series: 'kube_job_failed{condition="true", job="kube-state-metrics", namespace="ops", job_name="backup-300"}'
+        values: "1x200"
+      - series: 'kube_job_status_start_time{job="kube-state-metrics", namespace="ops", job_name="backup-300"}'
+        values: "600x200"
+      - series: 'kube_job_owner{job="kube-state-metrics", namespace="ops", job_name="backup-300", owner_kind="CronJob", owner_name="backup", owner_is_controller="true"}'
+        values: "1x200"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="backup"}'
+        values: "500x59 7200x140"
+    alert_rule_test:
+      - eval_time: 59m
+        alertname: JobFailedUnrecovered
+        exp_alerts:
+          - exp_labels: {alertname: "JobFailedUnrecovered", severity: "warning", condition: "true", job: "kube-state-metrics", namespace: "ops", job_name: "backup-300"}
+            exp_annotations:
+              summary: "Job が失敗したまま (ops/backup-300)"
+              description: "Job ops/backup-300 が失敗している。CronJob 由来の場合は、この Job より後に同じ CronJob の実行が成功していない。原因を調べ、確認後に失敗 Job を削除するか、後続の実行が成功すれば自動で解消する。"
+      - {eval_time: 60m, alertname: JobFailedUnrecovered, exp_alerts: []}
+      - {eval_time: 120m, alertname: JobFailedUnrecovered, exp_alerts: []}
+
+  # 一度も成功していない CronJob (kube_cronjob_status_last_successful_time の系列が無い) の失敗 Job も発火する。
+  # 別の namespace に同名の CronJob があり成功していても、ここの失敗は打ち消されない (namespace で照合する)
+  - name: failed-job-of-never-succeeded-cronjob-fires
+    interval: 1m
+    input_series:
+      - series: 'kube_job_failed{condition="true", job="kube-state-metrics", namespace="ops", job_name="fresh-100"}'
+        values: "1x100"
+      - series: 'kube_job_status_start_time{job="kube-state-metrics", namespace="ops", job_name="fresh-100"}'
+        values: "100x100"
+      - series: 'kube_job_owner{job="kube-state-metrics", namespace="ops", job_name="fresh-100", owner_kind="CronJob", owner_name="fresh", owner_is_controller="true"}'
+        values: "1x100"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="other", cronjob="fresh"}'
+        values: "99999x100"
+    alert_rule_test:
+      - {eval_time: 14m, alertname: JobFailedUnrecovered, exp_alerts: []}
+      - eval_time: 15m
+        alertname: JobFailedUnrecovered
+        exp_alerts:
+          - exp_labels: {alertname: "JobFailedUnrecovered", severity: "warning", condition: "true", job: "kube-state-metrics", namespace: "ops", job_name: "fresh-100"}
+            exp_annotations:
+              summary: "Job が失敗したまま (ops/fresh-100)"
+              description: "Job ops/fresh-100 が失敗している。CronJob 由来の場合は、この Job より後に同じ CronJob の実行が成功していない。原因を調べ、確認後に失敗 Job を削除するか、後続の実行が成功すれば自動で解消する。"
+
+  # CronJob 由来でない Job の失敗は従来の KubeJobFailed 相当 (kube_job_failed > 0) で発火する。
+  # owner が無い Job (kube-state-metrics は owner_kind="<none>" の系列を出す)・kube_job_owner の系列自体が無い Job・
+  # CronJob 以外の owner の Job のいずれも発火する。condition="false" の系列 (value 0) は発火しない。
+  # CronJob の最終成功が新しくても、非 CronJob の Job は打ち消されない
+  - name: failed-job-without-cronjob-owner-fires
+    interval: 1m
+    input_series:
+      - series: 'kube_job_failed{condition="true", job="kube-state-metrics", namespace="ops", job_name="migrate-none"}'
+        values: "1x100"
+      - series: 'kube_job_status_start_time{job="kube-state-metrics", namespace="ops", job_name="migrate-none"}'
+        values: "100x100"
+      - series: 'kube_job_owner{job="kube-state-metrics", namespace="ops", job_name="migrate-none", owner_kind="<none>", owner_name="<none>", owner_is_controller="<none>"}'
+        values: "1x100"
+      - series: 'kube_job_failed{condition="true", job="kube-state-metrics", namespace="ops", job_name="migrate-noowner"}'
+        values: "1x100"
+      - series: 'kube_job_failed{condition="true", job="kube-state-metrics", namespace="ops", job_name="migrate-foo"}'
+        values: "1x100"
+      - series: 'kube_job_status_start_time{job="kube-state-metrics", namespace="ops", job_name="migrate-foo"}'
+        values: "100x100"
+      - series: 'kube_job_owner{job="kube-state-metrics", namespace="ops", job_name="migrate-foo", owner_kind="Foo", owner_name="backup", owner_is_controller="true"}'
+        values: "1x100"
+      - series: 'kube_job_failed{condition="false", job="kube-state-metrics", namespace="ops", job_name="migrate-ok"}'
+        values: "0x100"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="backup"}'
+        values: "99999x100"
+    alert_rule_test:
+      - {eval_time: 14m, alertname: JobFailedUnrecovered, exp_alerts: []}
+      - eval_time: 15m
+        alertname: JobFailedUnrecovered
+        exp_alerts:
+          - exp_labels: {alertname: "JobFailedUnrecovered", severity: "warning", condition: "true", job: "kube-state-metrics", namespace: "ops", job_name: "migrate-none"}
+            exp_annotations:
+              summary: "Job が失敗したまま (ops/migrate-none)"
+              description: "Job ops/migrate-none が失敗している。CronJob 由来の場合は、この Job より後に同じ CronJob の実行が成功していない。原因を調べ、確認後に失敗 Job を削除するか、後続の実行が成功すれば自動で解消する。"
+          - exp_labels: {alertname: "JobFailedUnrecovered", severity: "warning", condition: "true", job: "kube-state-metrics", namespace: "ops", job_name: "migrate-noowner"}
+            exp_annotations:
+              summary: "Job が失敗したまま (ops/migrate-noowner)"
+              description: "Job ops/migrate-noowner が失敗している。CronJob 由来の場合は、この Job より後に同じ CronJob の実行が成功していない。原因を調べ、確認後に失敗 Job を削除するか、後続の実行が成功すれば自動で解消する。"
+          - exp_labels: {alertname: "JobFailedUnrecovered", severity: "warning", condition: "true", job: "kube-state-metrics", namespace: "ops", job_name: "migrate-foo"}
+            exp_annotations:
+              summary: "Job が失敗したまま (ops/migrate-foo)"
+              description: "Job ops/migrate-foo が失敗している。CronJob 由来の場合は、この Job より後に同じ CronJob の実行が成功していない。原因を調べ、確認後に失敗 Job を削除するか、後続の実行が成功すれば自動で解消する。"
+
+  # 鮮度: 失敗が続く CronJob は 12h (720m) で発火し、719m ではまだ pending。
+  # - monthly: 最終成功 50000 < 最終スケジュール 100000 のまま。失敗した Job が消えていても (kube_job_* の系列なしでも) 発火する
+  # - never: 一度も成功していない (kube_cronjob_status_last_successful_time の系列なし)。スケジュール済みなので発火する
+  # - paused: 上と同じ失敗状態だが suspend=1 なので発火しない
+  # - healthy: 最終成功がスケジュールより新しい。発火しない
+  # - unscheduled: まだ一度も起動していない (last_schedule_time なし)。発火しない
+  # 周期の違い (月次 monthly と 5 分毎 frequent) でも同じ式・同じ for で動く。
+  # frequent: 5 分毎に失敗が続き、last_schedule_time が 5 分ごとに進んでも、最終成功より新しい状態が続くので 720m で発火する
+  - name: cronjob-not-succeeding-fires-after-12h
+    interval: 1m
+    input_series:
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="monthly"}'
+        values: "100000x1000"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="monthly"}'
+        values: "50000x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="monthly"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="never"}'
+        values: "100000x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="never"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="paused"}'
+        values: "100000x1000"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="paused"}'
+        values: "50000x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="paused"}'
+        values: "1x1000"
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="healthy"}'
+        values: "100000x1000"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="healthy"}'
+        values: "100030x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="healthy"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="unscheduled"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="frequent"}'
+        values: "100000+300x1000"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="frequent"}'
+        values: "50000x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="frequent"}'
+        values: "0x1000"
+    alert_rule_test:
+      - {eval_time: 719m, alertname: CronJobNotSucceeding, exp_alerts: []}
+      - eval_time: 720m
+        alertname: CronJobNotSucceeding
+        exp_alerts:
+          - exp_labels: {alertname: "CronJobNotSucceeding", severity: "warning", namespace: "ops", cronjob: "monthly"}
+            exp_annotations:
+              summary: "CronJob の最後の実行が成功していない (ops/monthly)"
+              description: "CronJob ops/monthly は、最後に起動した実行 (1970-01-02 03:46:40 +0000 UTC) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
+          - exp_labels: {alertname: "CronJobNotSucceeding", severity: "warning", namespace: "ops", cronjob: "never"}
+            exp_annotations:
+              summary: "CronJob の最後の実行が成功していない (ops/never)"
+              description: "CronJob ops/never は、最後に起動した実行 (1970-01-02 03:46:40 +0000 UTC) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
+          - exp_labels: {alertname: "CronJobNotSucceeding", severity: "warning", namespace: "ops", cronjob: "frequent"}
+            exp_annotations:
+              summary: "CronJob の最後の実行が成功していない (ops/frequent)"
+              description: "CronJob ops/frequent は、最後に起動した実行 (1970-01-04 15:46:40 +0000 UTC) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
+
+  # 鮮度: 実行が長引いても、12h 以内に成功すれば発火しない (last_schedule_time > last_successful_time が 6h だけ続く)。
+  # 失敗が続いて発火した後は、次の成功で解消する (900m に最終成功が最終スケジュールより新しくなる)
+  - name: cronjob-not-succeeding-slow-run-and-recovery
+    interval: 1m
+    input_series:
+      # slow: 開始 (last_schedule 1000) から 360m 後に成功 (last_success 2000)
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="slow"}'
+        values: "1000x1500"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="slow"}'
+        values: "500x359 2000x1140"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="slow"}'
+        values: "0x1500"
+      # recovering: 失敗が続き 720m で発火し、900m の成功で解消
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="recovering"}'
+        values: "1000x1500"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="recovering"}'
+        values: "500x899 2000x600"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="recovering"}'
+        values: "0x1500"
+    alert_rule_test:
+      - {eval_time: 359m, alertname: CronJobNotSucceeding, exp_alerts: []}
+      - eval_time: 720m
+        alertname: CronJobNotSucceeding
+        exp_alerts:
+          - exp_labels: {alertname: "CronJobNotSucceeding", severity: "warning", namespace: "ops", cronjob: "recovering"}
+            exp_annotations:
+              summary: "CronJob の最後の実行が成功していない (ops/recovering)"
+              description: "CronJob ops/recovering は、最後に起動した実行 (1970-01-01 00:16:40 +0000 UTC) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
+      - {eval_time: 900m, alertname: CronJobNotSucceeding, exp_alerts: []}
+      - {eval_time: 1400m, alertname: CronJobNotSucceeding, exp_alerts: []}

@@ -1,0 +1,75 @@
+# kube-prometheus-stack 既定の KubeJobFailed (kube_job_failed > 0) の置き換えと、CronJob の鮮度アラート。
+#
+# 既定の KubeJobFailed は、CronJob が後続の実行で回復しても、失敗した Job が履歴に残る限り鳴り続ける
+# (failedJobsHistoryLimit までは Job が残る)。そのため monitoring の HelmRelease で
+# defaultRules.disabled.KubeJobFailed=true として無効化し、同じ目的のアラートをここで自前定義する。
+#
+# JobFailedUnrecovered (失敗した Job を拾う):
+# - CronJob 由来の Job は「その CronJob の最後の成功より後に開始した Job が失敗している」場合だけ鳴る。
+#   後続が成功すると kube_cronjob_status_last_successful_time が進み、失敗 Job の開始時刻以降になるので自動で解消する。
+# - 一度も成功していない CronJob (kube_cronjob_status_last_successful_time の系列が無い) の失敗 Job も鳴る。
+# - CronJob 由来でない Job (owner なし・Job 以外の owner) は従来どおり kube_job_failed > 0 で鳴る。
+# - 実装は「失敗している Job」から「CronJob 由来で、開始時刻が owner の最終成功以前の Job (= 後続の成功で回復済み)」を引く。
+#   引く側に入らない Job (非 CronJob・未成功の CronJob・開始時刻が無い Job) は残るので、判定が不明なときは鳴る側に倒れる。
+#
+# CronJobNotSucceeding (CronJob の最終成功が古い):
+# - 失敗した Job が TTL や履歴上限で消えると JobFailedUnrecovered は鳴らなくなるが、CronJob 側の
+#   last_schedule_time > last_successful_time (最後に起動した実行がまだ成功していない) 状態は残る。それを拾う。
+# - 判定は「実行の成否」だけで CronJob の周期に依存しないので、週次・月次・5 分毎が混在しても同じ式で動く
+#   (周期から閾値を作ると、月次の閾値では 5 分毎の CronJob が、5 分毎の閾値では月次が誤検知する)。
+#   Job が成功するまで last_schedule_time > last_successful_time が続くので、後の周期の実行が失敗しても継続して鳴る。
+# - 実行中も成立するため for で猶予を置く。12h は現在の最長の実行 (longhorn monthly-backup 約 5.6h) の約 2 倍。
+#   これより長く走る CronJob を足したら for を見直すこと。
+# - 一度も成功していない CronJob (last_successful_time が無い) でも、起動済み (last_schedule_time がある) なら鳴る。
+# - suspend 中の CronJob は対象外。まだ一度も起動していない CronJob は last_schedule_time が無いので対象外。
+# - 起動そのものが止まる (スケジュールの取りこぼし) は検知しない。
+#
+# テスト: tests/job-rules_test.yaml (promtool test rules。Flux の対象外。手順はテストファイルの冒頭)。
+# 規則を変えたら、テストも合わせて更新すること。
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: job-failure-watch
+  namespace: monitoring
+  labels:
+    # kube-prometheus-stack の prometheus.prometheusSpec.ruleSelector は
+    # release=kube-prometheus-stack を見ているため必ず付ける
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: job-failures
+      rules:
+        - alert: JobFailedUnrecovered
+          expr: |
+            (kube_job_failed{condition="true"} > 0)
+            unless on(namespace, job_name)
+            (
+              (kube_job_status_start_time * on(namespace, job_name) group_left(owner_name) kube_job_owner{owner_kind="CronJob"})
+              <= on(namespace, owner_name) group_left()
+              label_replace(kube_cronjob_status_last_successful_time, "owner_name", "$1", "cronjob", "(.*)")
+            )
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Job が失敗したまま ({{ $labels.namespace }}/{{ $labels.job_name }})"
+            description: "Job {{ $labels.namespace }}/{{ $labels.job_name }} が失敗している。CronJob 由来の場合は、この Job より後に同じ CronJob の実行が成功していない。原因を調べ、確認後に失敗 Job を削除するか、後続の実行が成功すれば自動で解消する。"
+    - name: cronjob-freshness
+      rules:
+        - alert: CronJobNotSucceeding
+          expr: |
+            max by (namespace, cronjob) (
+              (
+                (kube_cronjob_status_last_schedule_time > on(namespace, cronjob) kube_cronjob_status_last_successful_time)
+                or
+                (kube_cronjob_status_last_schedule_time unless on(namespace, cronjob) kube_cronjob_status_last_successful_time)
+              )
+              unless on(namespace, cronjob)
+              (kube_cronjob_spec_suspend == 1)
+            )
+          for: 12h
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob の最後の実行が成功していない ({{ $labels.namespace }}/{{ $labels.cronjob }})"
+            description: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} は、最後に起動した実行 ({{ $value | humanizeTimestamp }}) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
