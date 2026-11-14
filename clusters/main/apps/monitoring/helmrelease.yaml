@@ -173,6 +173,11 @@ spec:
           global:
             resolveTimeout: 5m
 
+    defaultRules:
+      disabled:
+        # CronJob の回復後も鳴り続けるため、monitoring-config/job-rules.yaml の JobFailedUnrecovered に置き換える
+        KubeJobFailed: true
+
     kubeProxy:
       enabled: false
     kubeControllerManager:

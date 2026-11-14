@@ -9,3 +9,4 @@ resources:
   - restart-rules.yaml
   - neuralwatt-podmonitor.yaml
   - neuralwatt-rules.yaml
+  - job-rules.yaml
