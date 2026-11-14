@@ -21,8 +21,21 @@
 # - 実行中も成立するため for で猶予を置く。12h は現在の最長の実行 (longhorn monthly-backup 約 5.6h) の約 2 倍。
 #   これより長く走る CronJob を足したら for を見直すこと。
 # - 一度も成功していない CronJob (last_successful_time が無い) でも、起動済み (last_schedule_time がある) なら鳴る。
-# - suspend 中の CronJob は対象外。まだ一度も起動していない CronJob は last_schedule_time が無いので対象外。
-# - 起動そのものが止まる (スケジュールの取りこぼし) は検知しない。
+# - 成功が継続している CronJob の誤検知を避けるため、「最終成功から 1h 超」も条件に加える。実行時間が周期にほぼ等しい
+#   CronJob (例: 5 分毎で約 299 秒) は、成功し続けていても last_schedule_time > last_successful_time が
+#   scrape 間隔の都合でほぼ常に観測され、for だけでは 12h 続いて誤発火する。最終成功が 1h 以内に更新されている間は
+#   条件が崩れるので、成功が続く限りどの周期でも発火しない (1h は scrape 間隔・評価間隔より十分長く、実行時間とも無関係)。
+#   一度も成功していない CronJob はこの条件の対象外 (最終成功が無く、成功し続けている状態ではないため)。
+# - suspend 中の CronJob は対象外。
+#
+# CronJobNotScheduled (予定時刻を過ぎても起動されない):
+# - 一度成功した後に次の起動そのものが止まる (コントローラの停止・スケジュールの取りこぼしなど) と、
+#   last_schedule_time は更新されず last_successful_time より古いままなので CronJobNotSucceeding は鳴らない。
+#   kube_cronjob_next_schedule_time (kube-state-metrics が最終スケジュール (無ければ作成時刻) とスケジュール式から
+#   計算する次の予定時刻、timeZone も反映) が 2h 以上過ぎても起動されない状態を拾う。
+# - 予定時刻との差だけを見るので周期に依存しない。5 分毎は起動のたびに予定時刻が進み、月次は予定時刻が先なので、
+#   正常なら週次・月次を含めどの周期でも成立しない。コントローラの遅延は秒単位なので 2h は十分な猶予。
+# - まだ一度も起動していない CronJob は作成時刻から計算した予定時刻で拾う。suspend 中は対象外。
 #
 # テスト: tests/job-rules_test.yaml (promtool test rules。Flux の対象外。手順はテストファイルの冒頭)。
 # 規則を変えたら、テストも合わせて更新すること。
@@ -60,7 +73,11 @@ spec:
           expr: |
             max by (namespace, cronjob) (
               (
-                (kube_cronjob_status_last_schedule_time > on(namespace, cronjob) kube_cronjob_status_last_successful_time)
+                (
+                  (kube_cronjob_status_last_schedule_time > on(namespace, cronjob) kube_cronjob_status_last_successful_time)
+                  and on(namespace, cronjob)
+                  (time() - kube_cronjob_status_last_successful_time > 3600)
+                )
                 or
                 (kube_cronjob_status_last_schedule_time unless on(namespace, cronjob) kube_cronjob_status_last_successful_time)
               )
@@ -73,3 +90,16 @@ spec:
           annotations:
             summary: "CronJob の最後の実行が成功していない ({{ $labels.namespace }}/{{ $labels.cronjob }})"
             description: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} は、最後に起動した実行 ({{ $value | humanizeTimestamp }}) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
+        - alert: CronJobNotScheduled
+          expr: |
+            max by (namespace, cronjob) (
+              (kube_cronjob_next_schedule_time < time())
+              unless on(namespace, cronjob)
+              (kube_cronjob_spec_suspend == 1)
+            )
+          for: 2h
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob が予定時刻を過ぎても起動されない ({{ $labels.namespace }}/{{ $labels.cronjob }})"
+            description: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} の次の予定時刻 ({{ $value | humanizeTimestamp }}) から 2 時間以上経っても起動されていない。kube-controller-manager の cronjob controller の停止・スケジュールの取りこぼし (startingDeadlineSeconds) などで起動が止まっている可能性。起動されるまで、または suspend するまで鳴り続ける。"

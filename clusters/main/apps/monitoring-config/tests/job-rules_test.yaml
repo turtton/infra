@@ -17,7 +17,7 @@
 # 入力の系列は kube-state-metrics の契約どおり。時刻の値 (開始時刻・最終成功・最終スケジュール) は
 # エポック秒で、評価時刻 (eval_time) とは独立した適当な値を使う (規則は値どうしの大小だけを見る)。
 # 評価間隔・系列の間隔は 1m。アラートは、条件を満たした最初の評価から for の時間が経った評価で発火する。
-# JobFailedUnrecovered は for 15m、CronJobNotSucceeding は for 12h (= 720m)。
+# JobFailedUnrecovered は for 15m、CronJobNotSucceeding は for 12h (= 720m) かつ最終成功から 1h 超、CronJobNotScheduled は for 2h。
 # kube_job_failed は失敗した Job にだけ系列がある (value 1, condition="true")。
 # exp_annotations は promtool が annotations の一致も検査するために必要 (テンプレートの展開結果も確かめる)。
 rule_files:
@@ -160,21 +160,21 @@ tests:
               summary: "Job が失敗したまま (ops/migrate-foo)"
               description: "Job ops/migrate-foo が失敗している。CronJob 由来の場合は、この Job より後に同じ CronJob の実行が成功していない。原因を調べ、確認後に失敗 Job を削除するか、後続の実行が成功すれば自動で解消する。"
 
-  # 鮮度: 失敗が続く CronJob は 12h (720m) で発火し、719m ではまだ pending。
-  # - monthly: 最終成功 50000 < 最終スケジュール 100000 のまま。失敗した Job が消えていても (kube_job_* の系列なしでも) 発火する
+  # 鮮度: 失敗が続く CronJob は発火する。最終成功が 1h 超前 (最終成功 1000 から 4600 秒後 = 77m 以降) の条件が 12h (720m) 続いた 797m で発火する。
+  # - monthly: 最終成功 1000 < 最終スケジュール 100000 のまま。失敗した Job が消えていても (kube_job_* の系列なしでも) 発火する
   # - never: 一度も成功していない (kube_cronjob_status_last_successful_time の系列なし)。スケジュール済みなので発火する
   # - paused: 上と同じ失敗状態だが suspend=1 なので発火しない
   # - healthy: 最終成功がスケジュールより新しい。発火しない
   # - unscheduled: まだ一度も起動していない (last_schedule_time なし)。発火しない
   # 周期の違い (月次 monthly と 5 分毎 frequent) でも同じ式・同じ for で動く。
-  # frequent: 5 分毎に失敗が続き、last_schedule_time が 5 分ごとに進んでも、最終成功より新しい状態が続くので 720m で発火する
+  # frequent: 5 分毎に失敗が続き、last_schedule_time が 5 分ごとに進んでも、最終成功より新しい状態が続くので 797m で発火する
   - name: cronjob-not-succeeding-fires-after-12h
     interval: 1m
     input_series:
       - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="monthly"}'
         values: "100000x1000"
       - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="monthly"}'
-        values: "50000x1000"
+        values: "1000x1000"
       - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="monthly"}'
         values: "0x1000"
       - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="never"}'
@@ -184,7 +184,7 @@ tests:
       - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="paused"}'
         values: "100000x1000"
       - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="paused"}'
-        values: "50000x1000"
+        values: "1000x1000"
       - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="paused"}'
         values: "1x1000"
       - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="healthy"}'
@@ -198,12 +198,20 @@ tests:
       - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="frequent"}'
         values: "100000+300x1000"
       - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="frequent"}'
-        values: "50000x1000"
+        values: "1000x1000"
       - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="frequent"}'
         values: "0x1000"
     alert_rule_test:
       - {eval_time: 719m, alertname: CronJobNotSucceeding, exp_alerts: []}
-      - eval_time: 720m
+      # 796m: never だけが発火 (最終成功が無く 0m から条件が成立し 720m で発火済み)。monthly・frequent はまだ pending
+      - eval_time: 796m
+        alertname: CronJobNotSucceeding
+        exp_alerts:
+          - exp_labels: {alertname: "CronJobNotSucceeding", severity: "warning", namespace: "ops", cronjob: "never"}
+            exp_annotations:
+              summary: "CronJob の最後の実行が成功していない (ops/never)"
+              description: "CronJob ops/never は、最後に起動した実行 (1970-01-02 03:46:40 +0000 UTC) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
+      - eval_time: 797m
         alertname: CronJobNotSucceeding
         exp_alerts:
           - exp_labels: {alertname: "CronJobNotSucceeding", severity: "warning", namespace: "ops", cronjob: "monthly"}
@@ -217,9 +225,9 @@ tests:
           - exp_labels: {alertname: "CronJobNotSucceeding", severity: "warning", namespace: "ops", cronjob: "frequent"}
             exp_annotations:
               summary: "CronJob の最後の実行が成功していない (ops/frequent)"
-              description: "CronJob ops/frequent は、最後に起動した実行 (1970-01-04 15:46:40 +0000 UTC) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
+              description: "CronJob ops/frequent は、最後に起動した実行 (1970-01-04 22:11:40 +0000 UTC) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
 
-  # 鮮度: 実行が長引いても、12h 以内に成功すれば発火しない (last_schedule_time > last_successful_time が 6h だけ続く)。
+  # 鮮度: 実行が長引いても、12h 以内に成功すれば (最終成功が 1h 超前でも)発火しない (last_schedule_time > last_successful_time が 6h だけ続く)。
   # 失敗が続いて発火した後は、次の成功で解消する (900m に最終成功が最終スケジュールより新しくなる)
   - name: cronjob-not-succeeding-slow-run-and-recovery
     interval: 1m
@@ -231,7 +239,7 @@ tests:
         values: "500x359 2000x1140"
       - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="slow"}'
         values: "0x1500"
-      # recovering: 失敗が続き 720m で発火し、900m の成功で解消
+      # recovering: 失敗が続き 789m で発火し、900m の成功で解消 (最終成功 500 から 1h 超 = 69m 以降が 12h 続いた時点)
       - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="recovering"}'
         values: "1000x1500"
       - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="recovering"}'
@@ -240,7 +248,7 @@ tests:
         values: "0x1500"
     alert_rule_test:
       - {eval_time: 359m, alertname: CronJobNotSucceeding, exp_alerts: []}
-      - eval_time: 720m
+      - eval_time: 800m
         alertname: CronJobNotSucceeding
         exp_alerts:
           - exp_labels: {alertname: "CronJobNotSucceeding", severity: "warning", namespace: "ops", cronjob: "recovering"}
@@ -249,3 +257,73 @@ tests:
               description: "CronJob ops/recovering は、最後に起動した実行 (1970-01-01 00:16:40 +0000 UTC) 以降、成功した実行がないまま 12 時間以上経った。実行が失敗した、または終わらない。失敗した Job が既に削除されていても、成功するまで鳴り続ける。"
       - {eval_time: 900m, alertname: CronJobNotSucceeding, exp_alerts: []}
       - {eval_time: 1400m, alertname: CronJobNotSucceeding, exp_alerts: []}
+
+  # 鮮度の誤検知防止: 5 分毎で実行が約 299 秒の CronJob のように、成功し続けていても
+  # last_schedule_time > last_successful_time が常に観測される場合 (scrape 間隔の都合で成功直後の 1 秒を拾えない)。
+  # 最終成功は常に評価時刻の 300 秒前 (<1h)、最終スケジュールはその 1 秒後 (成功より新しい)。1500m (25h) でも発火しない
+  - name: cronjob-continuously-succeeding-never-fires
+    interval: 1m
+    input_series:
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="tight"}'
+        values: "-300+60x1600"
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="tight"}'
+        values: "-299+60x1600"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="tight"}'
+        values: "0x1600"
+      - series: 'kube_cronjob_next_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="tight"}'
+        values: "300+60x1600"
+    alert_rule_test:
+      - {eval_time: 800m, alertname: CronJobNotSucceeding, exp_alerts: []}
+      - {eval_time: 1500m, alertname: CronJobNotSucceeding, exp_alerts: []}
+      - {eval_time: 1500m, alertname: CronJobNotScheduled, exp_alerts: []}
+
+  # 起動そのものが止まる (一度成功した後に予定時刻を過ぎても起動されない): 最終スケジュール 900 < 最終成功 1000 のまま
+  # CronJobNotSucceeding は鳴らず (last_schedule_time が last_successful_time より古い)、CronJobNotScheduled が鳴る。
+  # 予定時刻 3600 を過ぎた最初の評価 (61m) から 2h 後の 181m で発火し、180m では pending。
+  # - stalled: 上のとおり起動が止まった (月次を想定。予定時刻だけが過ぎる)
+  # - weekly: 予定時刻がまだ先 (10000000)。発火しない
+  # - frequent: 5 分毎で予定時刻が常に直近の先にある。発火しない
+  # - paused: 予定時刻を過ぎているが suspend=1。発火しない
+  # - unstarted: 一度も起動していない (last_schedule_time・last_successful_time なし)。作成時刻から計算した予定時刻 3600 を過ぎている。発火する
+  - name: cronjob-not-scheduled-after-schedule-stalls
+    interval: 1m
+    input_series:
+      - series: 'kube_cronjob_status_last_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="stalled"}'
+        values: "900x1000"
+      - series: 'kube_cronjob_status_last_successful_time{job="kube-state-metrics", namespace="ops", cronjob="stalled"}'
+        values: "1000x1000"
+      - series: 'kube_cronjob_next_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="stalled"}'
+        values: "3600x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="stalled"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_next_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="weekly"}'
+        values: "10000000x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="weekly"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_next_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="frequent"}'
+        values: "300+60x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="frequent"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_next_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="paused"}'
+        values: "3600x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="paused"}'
+        values: "1x1000"
+      - series: 'kube_cronjob_next_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="unstarted"}'
+        values: "3600x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="unstarted"}'
+        values: "0x1000"
+    alert_rule_test:
+      - {eval_time: 180m, alertname: CronJobNotScheduled, exp_alerts: []}
+      - eval_time: 181m
+        alertname: CronJobNotScheduled
+        exp_alerts:
+          - exp_labels: {alertname: "CronJobNotScheduled", severity: "warning", namespace: "ops", cronjob: "stalled"}
+            exp_annotations:
+              summary: "CronJob が予定時刻を過ぎても起動されない (ops/stalled)"
+              description: "CronJob ops/stalled の次の予定時刻 (1970-01-01 01:00:00 +0000 UTC) から 2 時間以上経っても起動されていない。kube-controller-manager の cronjob controller の停止・スケジュールの取りこぼし (startingDeadlineSeconds) などで起動が止まっている可能性。起動されるまで、または suspend するまで鳴り続ける。"
+          - exp_labels: {alertname: "CronJobNotScheduled", severity: "warning", namespace: "ops", cronjob: "unstarted"}
+            exp_annotations:
+              summary: "CronJob が予定時刻を過ぎても起動されない (ops/unstarted)"
+              description: "CronJob ops/unstarted の次の予定時刻 (1970-01-01 01:00:00 +0000 UTC) から 2 時間以上経っても起動されていない。kube-controller-manager の cronjob controller の停止・スケジュールの取りこぼし (startingDeadlineSeconds) などで起動が止まっている可能性。起動されるまで、または suspend するまで鳴り続ける。"
+      # stalled は last_schedule_time が last_successful_time より古いので CronJobNotSucceeding では拾えない
+      - {eval_time: 1000m, alertname: CronJobNotSucceeding, exp_alerts: []}
