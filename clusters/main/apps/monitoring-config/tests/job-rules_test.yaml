@@ -14,8 +14,11 @@
 #   #   docker なら: docker run --rm -v "$tmpdir:/work:ro" -w /work --entrypoint promtool \
 #   #   prom/prometheus:v3.5.0 test rules job-rules_test.yaml
 #
-# 入力の系列は kube-state-metrics の契約どおり。時刻の値 (開始時刻・最終成功・最終スケジュール) は
-# エポック秒で、評価時刻 (eval_time) とは独立した適当な値を使う (規則は値どうしの大小だけを見る)。
+# 入力の系列は kube-state-metrics の契約どおり。時刻の値 (開始時刻・最終成功・最終スケジュール・次の予定時刻) は
+# エポック秒。JobFailedUnrecovered は値どうしの大小だけを見るので評価時刻とは独立した適当な値でよいが、
+# CronJobNotSucceeding (最終成功から 1h 超) と CronJobNotScheduled (予定時刻 < time()) は time() (= 評価時刻の
+# 秒数) と比べるので、鮮度・未起動のテストでは評価時刻と整合した値 (例: 評価 0m が 0 秒) にしてある。値を変えるときは
+# 条件が成立し始める評価時刻 (各テストのコメント) も合わせて計算し直すこと。
 # 評価間隔・系列の間隔は 1m。アラートは、条件を満たした最初の評価から for の時間が経った評価で発火する。
 # JobFailedUnrecovered は for 15m、CronJobNotSucceeding は for 12h (= 720m) かつ最終成功から 1h 超、CronJobNotScheduled は for 2h。
 # kube_job_failed は失敗した Job にだけ系列がある (value 1, condition="true")。
@@ -327,3 +330,52 @@ tests:
               description: "CronJob ops/unstarted の次の予定時刻 (1970-01-01 01:00:00 +0000 UTC) から 2 時間以上経っても起動されていない。kube-controller-manager の cronjob controller の停止・スケジュールの取りこぼし (startingDeadlineSeconds) などで起動が止まっている可能性。起動されるまで、または suspend するまで鳴り続ける。"
       # stalled は last_schedule_time が last_successful_time より古いので CronJobNotSucceeding では拾えない
       - {eval_time: 1000m, alertname: CronJobNotSucceeding, exp_alerts: []}
+
+  # concurrencyPolicy: Forbid の CronJob で先行 Job が実行中 (active=1, 0〜359m の 6h) は、次回起動が正常にスキップされ
+  # last_schedule_time が更新されず next_schedule_time (3600) が過去に固定されるが、発火しない。
+  # 実行が終わっても (360m 以降 active=0) 起動しないままなら、360m から for 2h 後の 480m で発火し、479m では pending。
+  - name: cronjob-not-scheduled-forbid-skip-while-running
+    interval: 1m
+    input_series:
+      - series: 'kube_cronjob_next_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="long"}'
+        values: "3600x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="long"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_info{job="kube-state-metrics", namespace="ops", cronjob="long", concurrency_policy="Forbid", schedule="*/5 * * * *"}'
+        values: "1x1000"
+      - series: 'kube_cronjob_status_active{job="kube-state-metrics", namespace="ops", cronjob="long"}'
+        values: "1x359 0x700"
+    alert_rule_test:
+      - {eval_time: 181m, alertname: CronJobNotScheduled, exp_alerts: []}
+      - {eval_time: 359m, alertname: CronJobNotScheduled, exp_alerts: []}
+      - {eval_time: 479m, alertname: CronJobNotScheduled, exp_alerts: []}
+      - eval_time: 480m
+        alertname: CronJobNotScheduled
+        exp_alerts:
+          - exp_labels: {alertname: "CronJobNotScheduled", severity: "warning", namespace: "ops", cronjob: "long"}
+            exp_annotations:
+              summary: "CronJob が予定時刻を過ぎても起動されない (ops/long)"
+              description: "CronJob ops/long の次の予定時刻 (1970-01-01 01:00:00 +0000 UTC) から 2 時間以上経っても起動されていない。kube-controller-manager の cronjob controller の停止・スケジュールの取りこぼし (startingDeadlineSeconds) などで起動が止まっている可能性。起動されるまで、または suspend するまで鳴り続ける。"
+
+  # Forbid でない CronJob (Allow) は、実行中 (active=1) でも予定どおり起動するはずなので、予定時刻を過ぎて起動しなければ発火する
+  # (Forbid の除外は active>0 かつ Forbid のときだけ)。予定時刻 3600 を過ぎた最初の評価 (61m) から 2h 後の 181m で発火する
+  - name: cronjob-not-scheduled-allow-running-still-fires
+    interval: 1m
+    input_series:
+      - series: 'kube_cronjob_next_schedule_time{job="kube-state-metrics", namespace="ops", cronjob="allow"}'
+        values: "3600x1000"
+      - series: 'kube_cronjob_spec_suspend{job="kube-state-metrics", namespace="ops", cronjob="allow"}'
+        values: "0x1000"
+      - series: 'kube_cronjob_info{job="kube-state-metrics", namespace="ops", cronjob="allow", concurrency_policy="Allow", schedule="0 0 1 * *"}'
+        values: "1x1000"
+      - series: 'kube_cronjob_status_active{job="kube-state-metrics", namespace="ops", cronjob="allow"}'
+        values: "1x1000"
+    alert_rule_test:
+      - {eval_time: 180m, alertname: CronJobNotScheduled, exp_alerts: []}
+      - eval_time: 181m
+        alertname: CronJobNotScheduled
+        exp_alerts:
+          - exp_labels: {alertname: "CronJobNotScheduled", severity: "warning", namespace: "ops", cronjob: "allow"}
+            exp_annotations:
+              summary: "CronJob が予定時刻を過ぎても起動されない (ops/allow)"
+              description: "CronJob ops/allow の次の予定時刻 (1970-01-01 01:00:00 +0000 UTC) から 2 時間以上経っても起動されていない。kube-controller-manager の cronjob controller の停止・スケジュールの取りこぼし (startingDeadlineSeconds) などで起動が止まっている可能性。起動されるまで、または suspend するまで鳴り続ける。"

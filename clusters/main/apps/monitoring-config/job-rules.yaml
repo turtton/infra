@@ -35,6 +35,10 @@
 #   計算する次の予定時刻、timeZone も反映) が 2h 以上過ぎても起動されない状態を拾う。
 # - 予定時刻との差だけを見るので周期に依存しない。5 分毎は起動のたびに予定時刻が進み、月次は予定時刻が先なので、
 #   正常なら週次・月次を含めどの周期でも成立しない。コントローラの遅延は秒単位なので 2h は十分な猶予。
+# - concurrencyPolicy: Forbid の CronJob は、先行の Job が実行中だと次の起動を正常にスキップし、last_schedule_time が
+#   更新されず next_schedule_time が過去に固定される。実行が予定の周期より長いとこれが続くので、Forbid かつ
+#   kube_cronjob_status_active > 0 (実行中) の間は対象外にする。実行が終わっても起動しなければ、その時点から for が始まって鳴る。
+#   Allow・Replace は実行中でも予定どおり起動するので除外しない。
 # - まだ一度も起動していない CronJob は作成時刻から計算した予定時刻で拾う。suspend 中は対象外。
 #
 # テスト: tests/job-rules_test.yaml (promtool test rules。Flux の対象外。手順はテストファイルの冒頭)。
@@ -96,6 +100,12 @@ spec:
               (kube_cronjob_next_schedule_time < time())
               unless on(namespace, cronjob)
               (kube_cronjob_spec_suspend == 1)
+              unless on(namespace, cronjob)
+              (
+                (kube_cronjob_status_active > 0)
+                and on(namespace, cronjob)
+                kube_cronjob_info{concurrency_policy="Forbid"}
+              )
             )
           for: 2h
           labels:
