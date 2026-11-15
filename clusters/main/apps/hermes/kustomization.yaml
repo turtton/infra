@@ -10,30 +10,20 @@ resources:
   - home-rbac.yaml
   - home-network-policy.yaml
   - home-statefulset.yaml
-  - lepi-serviceaccount.yaml
-  - lepi-rbac.yaml
-  - lepi-network-policy.yaml
-  - lepi-statefulset.yaml
   - home-service.yaml
-  - lepi-service.yaml
   - home-ingress.yaml
-  - lepi-ingress.yaml
   - home-secrets.sops.yaml
-  - lepi-secrets.sops.yaml
 configMapGenerator:
   - name: hermes-home-config
     files:
       - config.yaml=home/config.yaml
-  - name: hermes-lepi-config
-    files:
-      - config.yaml=lepi/config.yaml
   - name: hermes-config-ops-skill
     files:
       - SKILL.md=skills/config-ops/SKILL.md
   - name: hermes-github-ops-skill
     files:
       - SKILL.md=skills/github-ops/SKILL.md
-  # home/lepi 両StatefulSetで共有するGitHub App認証スクリプト
+  # GitHub App認証スクリプト（hermes-lepi 撤去後は home のみが使う）
   - name: hermes-gh-app-script
     files:
       - gh-app-token-refresh.py=gh-app-token-refresh.py
