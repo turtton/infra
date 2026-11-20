@@ -78,7 +78,7 @@ spec:
       media-proxy:
         image:
           name: fluxer-media-proxy
-          digest: sha256:60a4ff231d7b8ad2a4c83cc8265a584189bd95bb86dca9949c8fd8775b1efa0e
+          digest: sha256:86e36bca46f3c2ee890e4e38f1516ed0e48e6b6c9a2621e68cb4c7fb600fe747
         replicas: 1
         minReadySeconds: 10
         terminationGracePeriodSeconds: 60
@@ -145,7 +145,7 @@ spec:
       static-proxy:
         image:
           name: fluxer-media-proxy
-          digest: sha256:60a4ff231d7b8ad2a4c83cc8265a584189bd95bb86dca9949c8fd8775b1efa0e
+          digest: sha256:86e36bca46f3c2ee890e4e38f1516ed0e48e6b6c9a2621e68cb4c7fb600fe747
         replicas: 1
         minReadySeconds: 10
         terminationGracePeriodSeconds: 60
