@@ -264,6 +264,6 @@ spec:
         # Pin the currently running image while changing the chart layout.
         image:
           name: fluxer-users
-          digest: sha256:326dc2e497a154623b361563a05bb2d0ca792b8b09511cc7c7293a654811caef
+          digest: sha256:de0094f6e216048df7007dc53bc27ac18cf3dda4ad877b8cb11078c197954456
         shard:
           env: null
