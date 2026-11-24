@@ -17,18 +17,36 @@
 - name: Add Docker apt signing key
   ansible.builtin.get_url:
     url: https://download.docker.com/linux/debian/gpg
-    dest: /etc/apt/keyrings/docker.gpg
+    dest: /etc/apt/keyrings/docker.asc
     mode: "0644"
+
+- name: Remove legacy Docker apt repository entries
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ item }} signed-by=/etc/apt/keyrings/docker.gpg]
+      https://download.docker.com/linux/debian
+      {{ ansible_facts['distribution_release'] }} stable
+    filename: docker
+    state: absent
+    update_cache: false
+  loop:
+    - x86_64
+    - amd64
 
 - name: Add Docker apt repository
   ansible.builtin.apt_repository:
     repo: >-
-      deb [arch={{ docker_host_deb_arch }} signed-by=/etc/apt/keyrings/docker.gpg]
+      deb [arch={{ docker_host_deb_arch }} signed-by=/etc/apt/keyrings/docker.asc]
       https://download.docker.com/linux/debian
       {{ ansible_facts['distribution_release'] }} stable
     filename: docker
     state: present
     update_cache: true
+
+- name: Remove legacy Docker signing key
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/docker.gpg
+    state: absent
 
 - name: Install Docker and Compose plugin
   ansible.builtin.apt:
