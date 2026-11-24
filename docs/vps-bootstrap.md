@@ -65,9 +65,10 @@ ssh -i /path/to/private-key ansible@133.167.115.94 sudo -n true
 
 1. Open the Sakura console or VNC.
 2. Log in as root (reset the password via console if necessary).
-3. Check `/home/ansible/.ssh/authorized_keys` and permissions.
-4. Check `/etc/sudoers.d/ansible` and permissions.
-5. Re-run the bootstrap playbook.
+3. Check `systemctl status ssh.service` and `journalctl -b -u ssh.service`. If sshd started before `tailscale0` received its address, run `systemctl restart ssh.service` after Tailscale connects.
+4. Check `/home/ansible/.ssh/authorized_keys` and permissions.
+5. Check `/etc/sudoers.d/ansible` and permissions.
+6. Re-run the bootstrap playbook if the account setup is broken.
 
 ### If Tailscale fails
 

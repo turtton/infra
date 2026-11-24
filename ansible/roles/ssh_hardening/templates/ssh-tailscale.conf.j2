@@ -1,0 +1,8 @@
+[Unit]
+Wants=tailscaled.service
+After=tailscaled.service
+
+[Service]
+ExecStartPre=/bin/sh -c '/bin/ip -o -4 addr show dev tailscale0 | /bin/grep -q " inet "'
+Restart=on-failure
+RestartSec=10s
