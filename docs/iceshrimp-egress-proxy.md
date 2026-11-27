@@ -40,7 +40,7 @@ cp-1 (Iceshrimp Pod) -- Tailscale TCP/3128 --> VPS 100.89.111.33:3128 (Squid) --
 |---|---|
 | 待ち受け | `100.89.111.33:3128` のみ。`0.0.0.0` へのフォールバックはしない |
 | 送信元 | `tcp_outgoing_address 133.167.115.94` |
-| 宛先 | ポートは 80/443、CONNECT は 443 のみ。名前解決後の IP で RFC1918、ループバック、リンクローカル、`100.64.0.0/10`、予約帯、IPv6 の内部帯、VPS 自身を拒否。最後は `http_access deny all` |
+| 宛先 | ポートは 80/443。CONNECT も 80/443 だけ (`squid_forward_proxy_connect_ports`、80 と 443 の範囲に限る。それ以外は 8443、25 を含め拒否)。名前解決後の IP で RFC1918、ループバック、リンクローカル、`100.64.0.0/10`、予約帯、IPv6 の内部帯、VPS 自身を拒否する (CONNECT でも同じ)。最後は `http_access deny all` |
 | ヘッダー | `forwarded_for delete`、`via off`、`X-Forwarded-For`/`Forwarded`/`X-Real-IP` 等を除去。TLS bump はしない (CONNECT 内の HTTPS ヘッダーは変更できない) |
 | キャッシュ | 無効 (`cache deny all`、`cache_mem 0 MB`、`cache_dir` なし)、`workers 1`、`memory_pools off` |
 | FD | `max_filedescriptors 4096` と `LimitNOFILE=4096` |
@@ -57,6 +57,18 @@ cp-1 (Iceshrimp Pod) -- Tailscale TCP/3128 --> VPS 100.89.111.33:3128 (Squid) --
 - DNS はプロキシ非対応の経路で Pod 内から CoreDNS 経由で引かれる。上流リゾルバが自宅 IP から再帰問い合わせする構成だと、相手の権威 DNS に自宅 IP が見える。
   受け入れ条件の範囲外だが、PR3 の前に上流リゾルバの構成を確認して本書へ追記する。
 - Tailscale の IP は変更されうる。変更時の手順は「運用」を参照。
+
+### CONNECT:80 の許可
+
+Iceshrimp の独自 agent (hpagent 0.1.2) とグローバル `fetch` (undici) は、http:// の宛先にも `CONNECT host:80` を使う。CONNECT を 443 だけにすると、80 番だけで動くリモートへの接続が 403 になる。
+このため CONNECT の宛先ポートを **外部宛ての 80/443 だけ**に広げた (`squid_forward_proxy_connect_ports: [80, 443]`)。
+
+- 内部アドレス (RFC1918、ループバック、リンクローカル、`100.64.0.0/10`、VPS 自身など) への CONNECT は、ポートによらず宛先 ACL で拒否される。ACL の評価順は変えていない (ポート → 宛先 → 許可送信元 → deny all)。
+- 8443、25 などそれ以外のポートの CONNECT は拒否される。変数に 80/443 以外を入れると適用が失敗する。
+- CONNECT:80 は TLS を伴わない平文のトンネルになる。Squid は内容を見ず (TLS bump なし)、ヘッダーも変更できない。ログも `host:port` と転送量だけを残す。
+- Squid の再起動を伴う。Iceshrimp を Squid へ切り替える PR2 より前に適用する (C-02)。
+
+この変更は、使い捨ての Debian 12 コンテナ (Squid 5.7) にロールのテンプレートで生成した設定を入れて試験した。外部の 80/443 への CONNECT は成功し (80 はトンネル内で HTTP 200 を確認)、内部・VPS 自身の 80/443 (名前解決で内部になる名前を含む)、8443、25、22、8080 は 403 になった。
 
 ## 段階 0: 事前記録
 
@@ -176,6 +188,25 @@ ls /etc/apparmor.d 2>/dev/null | grep -i squid   # プロファイルが追加�
 - 再適用が冪等。
 - 資源停止条件 (後述) に該当しない。
 
+### 2-5. CONNECT:80 を許可する設定変更の適用
+
+設定変更の適用は 2-2 と同じ手順 (専用 playbook の check → 同じ main SHA で apply) で行う。`squid.conf` が変わるため Squid が再起動される。Iceshrimp を切り替える PR2 より前に適用する。
+
+適用後、cp-1 の一時テスト Pod から次を確認する (http:// の URL でも CONNECT を使わせるため、`--proxytunnel` (短縮形は `-p`) を付ける)。
+
+```sh
+# 外部の 80 番へ CONNECT できる (トンネルが張れ、外部 IP が 133.167.115.94 になる)
+curl --fail --max-time 30 --proxytunnel --proxy http://100.89.111.33:3128 http://<IP 確認先>
+# 内部アドレスの 80 番への CONNECT は拒否される (curl は終了コード 56、access.log に TCP_DENIED/403 CONNECT)
+curl --max-time 30 --proxytunnel --proxy http://100.89.111.33:3128 http://10.0.0.1/
+curl --max-time 30 --proxytunnel --proxy http://100.89.111.33:3128 http://100.89.111.33/
+# 8443 と 25 は引き続き拒否される
+curl --max-time 30 --proxytunnel --proxy http://100.89.111.33:3128 https://<外部ホスト>:8443/
+curl --max-time 30 --proxytunnel --proxy http://100.89.111.33:3128 telnet://<外部ホスト>:25
+```
+
+`access.log` で、許可は `TCP_TUNNEL/200 CONNECT …:80`、拒否は `TCP_DENIED/403 CONNECT …` になる。再起動後の `NRestarts`、listener、FD・メモリの実効値も 2-3 に従って確認する。
+
 ### 資源の停止条件
 
 - 導入直前の `MemAvailable` が 192 MiB 未満: 原因と既存負荷を確認するまで導入を保留する (ロールが失敗する)。
@@ -201,7 +232,7 @@ curl --fail --max-time 30 --proxy http://100.89.111.33:3128 https://<利用可�
 - Squid が観測する送信元が、SOPS に入れた cp-1 の `/32` と一致する。不一致なら経路を調査する。**許可範囲を広げて回避しない。**
 - cp-1 ↔ VPS が direct 接続か。VPS 上で `tailscale ping <cp-1 の Tailscale 名>` を使い、DERP 経由のままなら配送遅延の原因になるため記録する (cp-1 の IP は記録に残さない)。
 - TCP 到達可能な許可外のノード/クライアントは Squid で 403 になる。CI など Tailscale ACL で拒否されるものは、Squid の 403 と区別して記録する。
-- RFC1918、ループバック、リンクローカル、Tailnet、VPS 自身、CONNECT:80、CONNECT:8443、SMTP (25) が拒否される。private IP へ解決される名前と、そこへのリダイレクトも拒否される。
+- RFC1918、ループバック、リンクローカル、Tailnet、VPS 自身 (ポート 80/443 を含む。CONNECT も同じ)、CONNECT:8443、SMTP (25) が拒否される。外部宛ての CONNECT:80/443 は許可される。private IP へ解決される名前と、そこへのリダイレクトも拒否される。
 - HTTP の送信元識別ヘッダー (`X-Forwarded-For` 等) が外部へ残らない (HTTP echo で確認)。
 - MSS: VPS の `tailscale0` は MTU 1280 なので、クライアント向け SYN-ACK の MSS は IPv4 で 1240 以下を期待する。`ss -ti` の `advmss` 等で方向を区別して確認する。
   必要なら SYN/SYN-ACK だけの短時間 capture を使う (payload や認証情報は収集しない)。想定外の MSS や再送・途中停止があれば原因を調べる。クラスタ全体の MTU/MSS は場当たり的に変更しない。

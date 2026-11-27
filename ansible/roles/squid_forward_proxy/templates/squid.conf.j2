@@ -40,7 +40,9 @@ httpd_suppress_version_string on
 acl manager_path urlpath_regex ^/squid-internal-mgr/
 acl CONNECT method CONNECT
 acl Safe_ports port 80 443
-acl SSL_ports port 443
+# CONNECT は外部宛ての 80/443 だけ許可する (hpagent と undici は http:// の宛先にも CONNECT を使う)。
+# 内部・予約帯・VPS 自身への CONNECT は、後続の宛先 ACL (名前解決後の IP) で拒否する。
+acl CONNECT_ports port {{ squid_forward_proxy_connect_ports | join(' ') }}
 
 acl allowed_clients src {{ squid_forward_proxy_allowed_sources | join(' ') }}
 
@@ -78,7 +80,7 @@ http_access deny manager
 http_access deny manager_path
 http_access deny !allowed_clients
 http_access deny !Safe_ports
-http_access deny CONNECT !SSL_ports
+http_access deny CONNECT !CONNECT_ports
 http_access deny forbidden_names
 http_access deny forbidden_dst_v4
 http_access deny forbidden_dst_v6

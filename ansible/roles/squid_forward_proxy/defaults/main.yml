@@ -4,6 +4,12 @@ squid_forward_proxy_enabled: false
 
 squid_forward_proxy_port: 3128
 
+# CONNECT を許可する宛先ポート。80 と 443 の範囲に限る (それ以外が含まれると失敗する)。
+# 内部・予約帯・VPS 自身への CONNECT は、ポートによらず宛先 ACL で拒否される。
+squid_forward_proxy_connect_ports:
+  - 80
+  - 443
+
 # Tailscale の IPv4 アドレスだけで待ち受ける。実行時の `tailscale ip -4` と一致しなければ失敗する。
 squid_forward_proxy_expected_tailscale_ipv4: 100.89.111.33
 
