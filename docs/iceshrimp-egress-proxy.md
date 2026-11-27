@@ -192,7 +192,7 @@ ls /etc/apparmor.d 2>/dev/null | grep -i squid   # プロファイルが追加�
 
 設定変更の適用は 2-2 と同じ手順 (専用 playbook の check → 同じ main SHA で apply) で行う。`squid.conf` が変わるため Squid が再起動される。Iceshrimp を切り替える PR2 より前に適用する。
 
-適用後、cp-1 の一時テスト Pod から次を確認する (`curl -p` ではなく、CONNECT を直接使う `curl --proxytunnel` を使う)。
+適用後、cp-1 の一時テスト Pod から次を確認する (http:// の URL でも CONNECT を使わせるため、`--proxytunnel` (短縮形は `-p`) を付ける)。
 
 ```sh
 # 外部の 80 番へ CONNECT できる (トンネルが張れ、外部 IP が 133.167.115.94 になる)
