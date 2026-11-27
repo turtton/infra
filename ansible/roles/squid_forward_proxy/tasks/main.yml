@@ -31,6 +31,14 @@
           An empty list or a wider range is rejected.
         quiet: true
 
+    - name: Require CONNECT ports to stay within 80 and 443
+      ansible.builtin.assert:
+        that:
+          - squid_forward_proxy_connect_ports | length > 0
+          - squid_forward_proxy_connect_ports | map('int') | difference([80, 443]) | length == 0
+        fail_msg: squid_forward_proxy_connect_ports must be a non-empty subset of [80, 443].
+        quiet: true
+
     - name: Read the Tailscale IPv4 address
       ansible.builtin.command: tailscale ip -4
       register: squid_forward_proxy_tailscale_ip
