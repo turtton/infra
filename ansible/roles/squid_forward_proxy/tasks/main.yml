@@ -214,7 +214,7 @@
             that:
               - >-
                 squid_forward_proxy_listeners.stdout_lines
-                | map('regex_replace', '^[^ ]+ +[^ ]+ +[^ ]+ +([^ ]+) .*$', '\1') | unique | list
+                | map('regex_replace', '^[^ ]+ +[^ ]+ +[^ ]+ +([^ ]+) .*$', '\\1') | unique | list
                 == [squid_forward_proxy_expected_tailscale_ipv4 ~ ':' ~ squid_forward_proxy_port]
             fail_msg: Squid must listen on the Tailscale IPv4 address only, never on a wildcard or public address.
             quiet: true
