@@ -8,7 +8,7 @@ kameuo の Iceshrimp Web Pod が行う外部 HTTP(S) 通信を、さくら VPS (
 | PR | 内容 | 状態 |
 |---|---|---|
 | PR1 基盤 | Tailscale grant/tests、Squid ロール、専用 playbook、CI の許可リスト、SOPS host vars、本書 | マージ・適用済み (#209、#210) |
-| PR2 経路変更 | Iceshrimp の ConfigMap (`proxy`・許可 `/32`)、Reloader annotation。Node の環境変数は **マージ前ゲート不合格のため含めない** (「PR2」を参照) | この PR |
+| PR2 経路変更 | Iceshrimp の ConfigMap (`proxy`・許可 `/32`)、Reloader annotation、Node の環境変数と `SUMMALY_ALLOW_PRIVATE_IP` (案 A。「PR2」を参照) | この PR |
 | PR3 egress 制限 | NetworkPolicy `iceshrimp-web-egress` | 未着手 (段階 4 の必須ゲート合格後) |
 
 PR2・PR3 の手順は、それぞれの PR で本書へ追記する。**各段階の必須ゲートを満たすまで次へ進まない。**
@@ -229,50 +229,85 @@ Iceshrimp 本体は起動していない。試験は `NODE_USE_ENV_PROXY=1` と 
 | 独自 agent の bypass 用 `CheckedHttpAgent`/`CheckedHttpsAgent` | `NODE_USE_ENV_PROXY` を無視して直通 (自宅 IP)。`proxyBypassHosts` と `objectStorageUseProxy=false` のときだけ使われ、どちらも本構成では使わない |
 | プロキシ到達不能時 | `config.proxy` が不達でも、環境変数が不達でも、全クライアント (独自 agent・S3 を含む) が `ECONNREFUSED` で失敗し、直通へフォールバックしない |
 | `NO_PROXY` | `127.0.0.1`、`localhost`、Pod 名は直接接続 (Squid にログなし)。`NO_PROXY` に無い Pod IP はプロキシへ送られ 403 |
-| `@iceshrimp/summaly` | **不合格。** `summaly.default(url, {followRedirects: false, …})` は https の GET 自体は CONNECT 経由で成功するが、`Private IP rejected 100.89.111.33` で失敗する (下記) |
+| `@iceshrimp/summaly` | **`SUMMALY_ALLOW_PRIVATE_IP` なしでは不合格。** `summaly.default(url, {followRedirects: false, …})` は https の GET 自体は CONNECT 経由で成功するが、`Private IP rejected 100.89.111.33` で失敗する (下記) |
 
 #### summaly が失敗する理由
 
 summaly は内部の got (agent 指定なし) で取得し、応答の `response.ip` を `private-ip` で検査する。環境変数プロキシでは `response.ip` がプロキシの `100.89.111.33` になり、`100.64.0.0/10` は private 扱いのため拒否される。
 Iceshrimp の `allowedPrivateNetworks` は Iceshrimp 自身の agent の検査にしか効かず、summaly には効かない。
 回避は summaly の環境変数 `SUMMALY_ALLOW_PRIVATE_IP=true` (「テスト用」と書かれた検査の無効化) しかない。これを設定すると、https の GET、アイコン取得、`downloadUrl` による OG 画像 (41 KB) 取得がすべてプロキシ経由で成功した。
-検査を弱める設定なので、**ユーザーの判断なしには採用しない** (計画 §6.3)。Squid は名前解決後の宛先 IP を拒否するが、summaly 側の検査は弱まる。
+検査を弱める設定なので自動では採用せず、判断を求めた。lead の判断で案 A として採用した (次節)。
 
 なお、本番の `url-preview.ts` は `followRedirects: false` で呼ぶため、summaly の redirect 追跡 (グローバル `fetch` の HEAD) は使われない。http:// の URL は直通でも 301 を追わずに失敗する (環境変数の有無によらない)。
 
-### この PR の内容と、環境変数を含めない理由
+### この PR の内容と、案 A を採用した理由
 
-常に入れるもの:
+入れるもの:
 
 - `configmap.yaml` の `default.yml` に `proxy: http://100.89.111.33:3128`。
 - `allowedPrivateNetworks` に `100.89.111.33/32` **だけ**を追加 (`100.64.0.0/10` 全体は許可しない。既存の許可は削除しない)。`proxyBypassHosts` に外部宛先は追加しない。`objectStorageUseProxy` と DB は変更しない。
 - `deployment.yaml` に Reloader の `configmap.reloader.stakater.com/reload: "iceshrimp-config"`。
+- `deployment.yaml` の web コンテナに環境変数を追加する。
 
-**Web コンテナの環境変数 (`NODE_USE_ENV_PROXY`、`HTTP_PROXY`、`HTTPS_PROXY`、`NO_PROXY`) は、ゲート不合格のため追加していない。** このため `config.proxy` を使わない次の経路は、この PR のマージ後も **直通のまま**である。
-
-| 直通のまま残る経路 | 理由・影響 |
+| 環境変数 | 値 |
 |---|---|
-| URL プレビュー (`@iceshrimp/summaly`) | got に agent 指定なし。プレビュー先に自宅 IP が見える。環境変数を入れるとプレビュー自体が失敗する |
-| 未キャッシュのリモートユーザーの followers/following 件数 (`person.ts` の node-fetch、agent なし) | プロキシ経由にならない。環境変数でなら経由する (試験済み) |
-| 管理画面の latest-version / release 確認 (グローバル `fetch`) | 環境変数でなら https は経由する (試験済み) |
-| Web Push (`web-push` のデフォルト agent) | 未試験。仕組みは `https.get` と同じなので環境変数で経由すると見られる |
-| SMTP (`nodemailer`) | HTTP プロキシの対象外。本計画の範囲外 |
+| `NODE_USE_ENV_PROXY` | `1` |
+| `HTTP_PROXY` / `HTTPS_PROXY` | `http://100.89.111.33:3128` |
+| `NO_PROXY` | `localhost,127.0.0.1,::1,iceshrimp-db-rw,iceshrimp-valkey` と、それぞれの `.iceshrimp.svc`、`.iceshrimp.svc.cluster.local` 付きの名前 |
+| `SUMMALY_ALLOW_PRIVATE_IP` | `true` |
 
-これらは **PR3 (NetworkPolicy) で遮断すると失敗する**。外部への直通許可は足さない (C-11)。ユーザー判断が要る選択肢:
+#### 案 A を選んだ理由
 
-| 選択肢 | 内容 | 影響 |
+マージ前ゲートで `@iceshrimp/summaly` だけが不合格だったため (上記)、選択肢を比べて**案 A (環境変数を入れ、summaly の private IP 検査を無効化する)** を採用した。
+
+| 選択肢 | 内容 | 判断 |
 |---|---|---|
-| A. 環境変数を入れ、summaly の検査を無効化 | 環境変数 + `SUMMALY_ALLOW_PRIVATE_IP=true`。全 HTTP(S) 経路がプロキシ経由になる | summaly の private IP 検査が無効になる (SSRF 防御は Squid の宛先 ACL に一本化)。PR3 後も全機能が動く見込み |
-| B. 環境変数を入れず、URL プレビューを含む上記を直通のまま残す | この PR のまま | 自宅 IP が URL プレビュー先などに見える。PR3 の egress 制限を入れると該当機能が壊れる |
-| C. 環境変数を入れ、URL プレビューは諦める | summaly を使わない (外部の `summalyProxy` サービスは新規常設サービスになり本計画の範囲外) | URL プレビューが失敗する。その他は経由する |
+| A. 環境変数 + `SUMMALY_ALLOW_PRIVATE_IP=true` | 全 HTTP(S) 経路がプロキシ経由になる | **採用。** 外部への直通が残らず、PR3 で egress を遮断しても全機能が動く見込み。代償は summaly の private IP 検査が無効になること |
+| B. 環境変数を入れず、直通のまま残す | URL プレビュー、followers/following 件数、管理画面の最新版確認、Web Push が自宅 IP で外へ出る | 不採用。PR3 の egress 制限と両立しない (外部への直通許可は足さない。C-11) |
+| C. 環境変数を入れ、URL プレビューは諦める | summaly を使わない | 不採用。機能を失う。外部の `summalyProxy` サービスは新規の常設サービスになり本計画の範囲外 |
 
-どれを採るかが決まるまで PR3 へは進まない。
+この判断は lane の lead による設計判断で、ユーザーの包括許可の範囲内として採用した。ユーザー本人の個別承認ではない。
+
+#### SSRF 防御を Squid に一本化したこと
+
+summaly の private IP 検査は、環境変数プロキシ下では常にプロキシの IP を見るため、本来の宛先に対しては働かない。`SUMMALY_ALLOW_PRIVATE_IP=true` にすると summaly 自身の検査は行われなくなる。
+Iceshrimp 自身の agent の検査 (`checkConnection`) も、プロキシ越しの接続ではプロキシの IP しか見ない。
+このため、**内部アドレスへの SSRF の防御は、Squid の宛先 ACL (名前解決後の IP で拒否) に一本化される**。Squid の ACL は次のとおり。
+
+- RFC1918、ループバック、リンクローカル、`100.64.0.0/10`、予約帯、IPv6 の内部帯、VPS 自身を、名前解決後の IP で拒否する。
+- 内部 IP を直接指定した URL と、内部アドレスに解決されるホスト名の両方が対象。
+- 許可するのは外部宛ての 80/443 だけ。許可送信元は cp-1 だけ。
+
+Squid の ACL を緩める変更 (宛先の拒否、ポート、許可送信元) は、この防御に直結するため慎重にレビューする。
+
+#### `NO_PROXY` の内容
+
+`NO_PROXY` は内部名とループバックだけで、外部ドメイン、RFC1918 全体、Tailnet 全体、`*` は入れない (C-11)。
+
+- 直通: DB (`iceshrimp-db-rw`)、Valkey (`iceshrimp-valkey`)、それぞれの `.iceshrimp.svc`、`.iceshrimp.svc.cluster.local` 付きの名前、ループバック (`localhost`、`127.0.0.1`、`::1`)。
+- プロキシ経由: 上記以外の外部の名前と IP すべて。
+
+DB と Valkey の接続は生の TCP で、HTTP プロキシの対象ではない。`NO_PROXY` は、将来それらの名前へ HTTP で接続する場合に備えた内部名の除外である。
 
 ### 追加の注意: http:// 宛先の扱い
 
-Iceshrimp の独自 agent (hpagent 0.1.2) は、http:// の宛先にも `CONNECT host:80` を使う。Squid は CONNECT を 443 だけ許可する (C-05) ため、**`config.proxy` を設定すると、Iceshrimp の独自 agent では http:// (80 番) のリモートサーバーに接続できなくなる**。
-これは環境変数の有無に関係せず、この PR の `proxy` 設定だけで起こる。443 の https:// が主流であり、Squid の CONNECT:80 を許すと内部・外部の拒否設計に例外が増えるため、今回は許可しない。
-80 番だけで動くリモートや、配送の失敗が増えた場合は、`access.log` の `TCP_DENIED/403 CONNECT …:80` を確認する。
+Iceshrimp の独自 agent (hpagent 0.1.2) とグローバル `fetch` は、http:// の宛先にも `CONNECT host:80` を使う。Squid は CONNECT を 443 だけ許可していた (C-05) ため、http:// (80 番) のリモートサーバーには接続できなかった (環境変数の有無によらない)。
+この対応として、**Squid で外部宛ての CONNECT:80 も許可する別 PR (`fix/squid-allow-connect-80`) を用意する**。内部アドレスへの拒否と、80/443 以外のポートの拒否はそのまま維持する。
+**この PR の反映前に、その PR の Squid への適用を済ませる** (C-02 の順序: Squid → Iceshrimp 設定)。適用前に反映すると、http:// のリモートとの通信が一時的に 403 になる。
+
+### 段階 4 の確認項目 (PR2 の反映後)
+
+1. readiness/liveness、initContainer、DNS・DB・Valkey。
+2. 検索、フォロー、連合の受信・配送、リモートメディア。
+3. **URL プレビュー (SSRF 防御の確認):** 次の 2 つが Squid に拒否され、プレビューが出ないこと。`access.log` に `TCP_DENIED/403` が残ることも確認する。
+   - 内部アドレスに解決されるホスト名 (例: `10.0.0.1.nip.io`) の URL。
+   - 内部 IP を直接指定した URL (例: `http://10.0.0.1/`、`http://100.89.111.33:3128/`)。
+4. **URL プレビュー (正常系):** 外部の https:// の URL のプレビューが正常に表示される (タイトルと OG 画像)。
+5. 未キャッシュのリモートユーザーの followers/following 件数、管理画面の最新版確認。
+6. 通常の R2 アップロードと表示、大容量の R2 アップロードと取得後のハッシュ一致 (段階 5 の必須ゲート)。
+7. Pod 内の設定と環境変数 (秘密を出力せず)。
+8. Hubble を `--follow` で連続観測し、Squid 以外への外部直通が残っていないこと。
+9. Squid の資源 (FD、メモリ、`MemAvailable`、OOM、再起動) と、cp-1 ↔ VPS が direct 接続であること。
 
 ### 反映手順 (マージ後)
 
