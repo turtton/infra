@@ -228,7 +228,7 @@ Iceshrimp 本体は起動していない。試験は `NODE_USE_ENV_PROXY=1` と 
 | Iceshrimp の独自 agent (`config.proxy` 相当、`getResponse`・`downloadUrl`・S3 `NodeHttpHandler`) | https は `133.167.115.94` で、トンネルは 1 本 (二重 CONNECT なし。`CONNECT 100.89.111.33:3128` の行もない)。`allowedPrivateNetworks` に `100.89.111.33/32` があれば `Blocked address` は出ない。無いと `Blocked address: 100.89.111.33` になる。**http:// は hpagent が `CONNECT host:80` を送り、Squid が 403** (環境変数の有無によらない) |
 | 独自 agent の bypass 用 `CheckedHttpAgent`/`CheckedHttpsAgent` | `NODE_USE_ENV_PROXY` を無視して直通 (自宅 IP)。`proxyBypassHosts` と `objectStorageUseProxy=false` のときだけ使われ、どちらも本構成では使わない |
 | プロキシ到達不能時 | `config.proxy` が不達でも、環境変数が不達でも、全クライアント (独自 agent・S3 を含む) が `ECONNREFUSED` で失敗し、直通へフォールバックしない |
-| `NO_PROXY` | `127.0.0.1`、`localhost`、Pod 名は直接接続 (Squid にログなし)。`NO_PROXY` に無い Pod IP はプロキシへ送られ 403 |
+| `NO_PROXY` の機能 | `NO_PROXY` に入れた `127.0.0.1`、`localhost`、Pod 名は直接接続 (Squid にログなし)。入れていない Pod IP はプロキシへ送られ 403。**ただし本構成では `NO_PROXY` を設定しない** (「`NO_PROXY` を設定しない理由」を参照) |
 | `@iceshrimp/summaly` | **`SUMMALY_ALLOW_PRIVATE_IP` なしでは不合格。** `summaly.default(url, {followRedirects: false, …})` は https の GET 自体は CONNECT 経由で成功するが、`Private IP rejected 100.89.111.33` で失敗する (下記) |
 
 #### summaly が失敗する理由
@@ -253,7 +253,7 @@ Iceshrimp の `allowedPrivateNetworks` は Iceshrimp 自身の agent の検査�
 |---|---|
 | `NODE_USE_ENV_PROXY` | `1` |
 | `HTTP_PROXY` / `HTTPS_PROXY` | `http://100.89.111.33:3128` |
-| `NO_PROXY` | `localhost,127.0.0.1,::1,iceshrimp-db-rw,iceshrimp-valkey` と、それぞれの `.iceshrimp.svc`、`.iceshrimp.svc.cluster.local` 付きの名前 |
+| `NO_PROXY` | **設定しない** (下記) |
 | `SUMMALY_ALLOW_PRIVATE_IP` | `true` |
 
 #### 案 A を選んだ理由
@@ -280,14 +280,22 @@ Iceshrimp 自身の agent の検査 (`checkConnection`) も、プロキシ越し
 
 Squid の ACL を緩める変更 (宛先の拒否、ポート、許可送信元) は、この防御に直結するため慎重にレビューする。
 
-#### `NO_PROXY` の内容
+#### `NO_PROXY` を設定しない理由
 
-`NO_PROXY` は内部名とループバックだけで、外部ドメイン、RFC1918 全体、Tailnet 全体、`*` は入れない (C-11)。
+**`NO_PROXY` は設定しない。HTTP(S) の直通除外を一切置かず、内部名・ループバックへの HTTP も Squid に送り、Squid の宛先 ACL で拒否させる。**
 
-- 直通: DB (`iceshrimp-db-rw`)、Valkey (`iceshrimp-valkey`)、それぞれの `.iceshrimp.svc`、`.iceshrimp.svc.cluster.local` 付きの名前、ループバック (`localhost`、`127.0.0.1`、`::1`)。
-- プロキシ経由: 上記以外の外部の名前と IP すべて。
+当初は内部名とループバック (`localhost`、`127.0.0.1`、`::1`、DB・Valkey の名前) だけを `NO_PROXY` に入れていたが、レビューで次の問題が指摘され、本番 image の一時 Pod で再現した。
 
-DB と Valkey の接続は生の TCP で、HTTP プロキシの対象ではない。`NO_PROXY` は、将来それらの名前へ HTTP で接続する場合に備えた内部名の除外である。
+- `SUMMALY_ALLOW_PRIVATE_IP=true` で summaly 自身の private IP 検査を無効にしたうえで、`NO_PROXY` に `127.0.0.1` と `localhost` があると、URL プレビューの入力 URL がそれらを指すとき、Squid を通らずに直接接続する。
+- 再現結果 (Node 24.9.0、summaly 2.7.3): 旧設定では `http://127.0.0.1/` と `http://localhost/` のプレビューが、内部のテストサーバーのタイトルを返した (Squid への要求はなし)。
+- `NO_PROXY` なしでは、`127.0.0.1`、`localhost`、Pod IP、内部へ解決される名前 (`localtest.me`) はすべて Squid が 403 で拒否し、内部サーバーへの到達は 0 件だった。内部のサービス名 (`iceshrimp-web.iceshrimp.svc`、`.svc.cluster.local`) は、Squid (VPS) が名前を解決できず 502 になり、到達しない。
+
+`NO_PROXY` が不要な理由:
+
+- DB (`iceshrimp-db-rw`) と Valkey (`iceshrimp-valkey`) の接続は生の TCP で、`NODE_USE_ENV_PROXY` や `HTTP_PROXY` の対象外 (Node の `net.connect` はプロキシを使わないことを確認した)。
+- kubelet の probe は Pod の外から入る通信で、環境変数の影響を受けない。
+- Iceshrimp 本体のソース (`packages/backend/src`) に、`localhost`、`127.0.0.1`、`[::1]` を宛先にする HTTP や、自分自身 (`config.url`) への HTTP 呼び出しはない (`config.host` はヘッダーの比較にだけ使われる)。`config.url` 宛て (外部ホスト名) に出る場合は、他の外部宛てと同じく Squid を通る。
+- 内部宛ての HTTP が将来必要になった場合は、summaly (URL プレビュー) には除外が効かず、必ずプロキシへ送られる構成を先に検討する。`NO_PROXY` を安易に足してはならない。
 
 ### 追加の注意: http:// 宛先の扱い
 
@@ -299,9 +307,12 @@ Iceshrimp の独自 agent (hpagent 0.1.2) とグローバル `fetch` は、http:
 
 1. readiness/liveness、initContainer、DNS・DB・Valkey。
 2. 検索、フォロー、連合の受信・配送、リモートメディア。
-3. **URL プレビュー (SSRF 防御の確認):** 次の 2 つが Squid に拒否され、プレビューが出ないこと。`access.log` に `TCP_DENIED/403` が残ることも確認する。
+3. **URL プレビュー (SSRF 防御の確認):** 次がすべて Squid に拒否 (または到達不能) となり、プレビューが出ないこと。`access.log` に `TCP_DENIED/403` が残ることも確認する。
+   - ループバック: `http://127.0.0.1/`、`http://localhost/`。
+   - 内部のサービス名: `http://iceshrimp-web.iceshrimp.svc/`。Squid は名前を解決できず 502 になり、Pod 内のサービスには到達しない。
    - 内部アドレスに解決されるホスト名 (例: `10.0.0.1.nip.io`) の URL。
-   - 内部 IP を直接指定した URL (例: `http://10.0.0.1/`、`http://100.89.111.33:3128/`)。
+   - 内部 IP を直接指定した URL (例: `http://10.0.0.1/`、Pod IP、`http://100.89.111.33:3128/`)。
+   - いずれも Iceshrimp 側のサーバーのログに要求が届いていないこと。
 4. **URL プレビュー (正常系):** 外部の https:// の URL のプレビューが正常に表示される (タイトルと OG 画像)。
 5. 未キャッシュのリモートユーザーの followers/following 件数、管理画面の最新版確認。
 6. 通常の R2 アップロードと表示、大容量の R2 アップロードと取得後のハッシュ一致 (段階 5 の必須ゲート)。

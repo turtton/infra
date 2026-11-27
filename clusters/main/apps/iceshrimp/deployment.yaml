@@ -56,17 +56,18 @@ spec:
           env:
             - name: NODE_ENV
               value: production
-            # 外部 HTTP(S) は Squid 経由。DB・Valkey・ループバックだけ直通 (docs/iceshrimp-egress-proxy.md)
+            # HTTP(S) はすべて Squid 経由。NO_PROXY は意図的に設定しない
+            # (内部名・ループバックへの HTTP も Squid に送り、宛先 ACL で拒否させる)。
+            # DB・Valkey は生の TCP で、これらの環境変数の対象外 (docs/iceshrimp-egress-proxy.md)
             - name: NODE_USE_ENV_PROXY
               value: "1"
             - name: HTTP_PROXY
               value: http://100.89.111.33:3128
             - name: HTTPS_PROXY
               value: http://100.89.111.33:3128
-            - name: NO_PROXY
-              value: localhost,127.0.0.1,::1,iceshrimp-db-rw,iceshrimp-valkey,iceshrimp-db-rw.iceshrimp.svc,iceshrimp-valkey.iceshrimp.svc,iceshrimp-db-rw.iceshrimp.svc.cluster.local,iceshrimp-valkey.iceshrimp.svc.cluster.local
             # summaly はプロキシの IP (100.89.111.33) を private IP として拒否するため無効にする。
-            # 内部宛先への SSRF 防御は Squid の宛先 ACL に一本化している
+            # 内部宛先への SSRF 防御は Squid の宛先 ACL に一本化している。
+            # NO_PROXY を設定すると、この無効化と組み合わさって URL プレビューが内部宛先へ直通する
             - name: SUMMALY_ALLOW_PRIVATE_IP
               value: "true"
           volumeMounts:
