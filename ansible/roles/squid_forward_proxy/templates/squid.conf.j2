@@ -1,0 +1,98 @@
+# Managed by Ansible (squid_forward_proxy). Do not edit by hand.
+# 完全管理の設定。Debian 既定の localhost/localnet 許可やキャッシュ設定は取り込まない。
+
+workers 1
+max_filedescriptors {{ squid_forward_proxy_max_filedescriptors }}
+pid_filename /run/squid.pid
+coredump_dir /var/spool/squid
+visible_hostname forward-proxy
+shutdown_lifetime 5 seconds
+
+# Tailscale の IPv4 だけで待ち受ける。0.0.0.0 へはフォールバックしない。
+http_port {{ squid_forward_proxy_expected_tailscale_ipv4 }}:{{ squid_forward_proxy_port }}
+# 外部へ出る送信元は VPS の公開 IPv4 に固定する。
+tcp_outgoing_address {{ squid_forward_proxy_public_ipv4 }}
+
+pinger_enable off
+icp_port 0
+htcp_port 0
+snmp_port 0
+
+# キャッシュは使わない (ディスクキャッシュなし、メモリキャッシュ最小)。
+cache deny all
+cache_mem 0 MB
+maximum_object_size_in_memory 0 KB
+memory_pools off
+
+# 送信元識別ヘッダーを外へ出さない。TLS bump はしないため CONNECT 内の HTTPS ヘッダーは変更できない。
+forwarded_for delete
+via off
+request_header_access X-Forwarded-For deny all
+request_header_access Forwarded deny all
+request_header_access X-Real-IP deny all
+request_header_access X-Client-IP deny all
+request_header_access Client-IP deny all
+request_header_access True-Client-IP deny all
+request_header_access Via deny all
+httpd_suppress_version_string on
+
+# ACL
+acl manager_path urlpath_regex ^/squid-internal-mgr/
+acl CONNECT method CONNECT
+acl Safe_ports port 80 443
+acl SSL_ports port 443
+
+acl allowed_clients src {{ squid_forward_proxy_allowed_sources | join(' ') }}
+
+# 名前解決後の IP で拒否する (IP リテラルだけでなく、private IP へ解決される名前やリダイレクト先も対象)。
+acl forbidden_dst_v4 dst 0.0.0.0/8
+acl forbidden_dst_v4 dst 10.0.0.0/8
+acl forbidden_dst_v4 dst 100.64.0.0/10
+acl forbidden_dst_v4 dst 127.0.0.0/8
+acl forbidden_dst_v4 dst 169.254.0.0/16
+acl forbidden_dst_v4 dst 172.16.0.0/12
+acl forbidden_dst_v4 dst 192.0.0.0/24
+acl forbidden_dst_v4 dst 192.0.2.0/24
+acl forbidden_dst_v4 dst 192.88.99.0/24
+acl forbidden_dst_v4 dst 192.168.0.0/16
+acl forbidden_dst_v4 dst 198.18.0.0/15
+acl forbidden_dst_v4 dst 198.51.100.0/24
+acl forbidden_dst_v4 dst 203.0.113.0/24
+acl forbidden_dst_v4 dst 224.0.0.0/4
+acl forbidden_dst_v4 dst 240.0.0.0/4
+acl forbidden_dst_v6 dst ::/128
+acl forbidden_dst_v6 dst ::1/128
+acl forbidden_dst_v6 dst 64:ff9b::/96
+acl forbidden_dst_v6 dst 100::/64
+acl forbidden_dst_v6 dst 2001:db8::/32
+acl forbidden_dst_v6 dst 2002::/16
+acl forbidden_dst_v6 dst fc00::/7
+acl forbidden_dst_v6 dst fe80::/10
+acl forbidden_dst_v6 dst fec0::/10
+acl forbidden_dst_v6 dst ff00::/8
+# VPS 自身のアドレス (公開 IPv4 と Tailscale IPv4)。
+acl forbidden_dst_self dst {{ squid_forward_proxy_public_ipv4 }}/32 {{ squid_forward_proxy_expected_tailscale_ipv4 }}/32
+acl forbidden_names dstdomain .localhost
+
+http_access deny manager
+http_access deny manager_path
+http_access deny !allowed_clients
+http_access deny !Safe_ports
+http_access deny CONNECT !SSL_ports
+http_access deny forbidden_names
+http_access deny forbidden_dst_v4
+http_access deny forbidden_dst_v6
+http_access deny forbidden_dst_self
+http_access allow allowed_clients
+http_access deny all
+
+# ログ: 本文・認証情報・URL の path/query は記録せず、host:port と転送量だけを残す。
+# %>st は client から受けた量 (上り)、%<st は client へ返した量 (下り)。
+logformat proxy_min %ts.%03tu %6tr %>a %Ss/%03>Hs %>st %<st %rm %>rd:%>rP %Sh/%<a
+access_log stdio:/var/log/squid/access.log proxy_min
+cache_log /var/log/squid/cache.log
+cache_store_log none
+strip_query_terms on
+debug_options ALL,1
+# ローテートは Debian の logrotate に任せ、Squid 側では回転しない (二重回転の回避)。
+logfile_rotate 0

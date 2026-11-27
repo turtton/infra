@@ -22,6 +22,9 @@ GitHub Actions UIから、`main` のレビュー済み revision を手動実行�
 Fluxer の公開 UDP 経路は `vps-udp-probe.yml` と `probe` モードを選び、
 外部 runner から VPS 公開 UDP/7882 へ送信して公開インターフェースと
 Tailscale 側 UDP/30082 の受信を確認する。詳細は [運用手順](../../docs/fluxer-udp-proxy.md) を参照。
+Iceshrimp の外部通信用 Squid は `vps-squid.yml` (Squid ロールだけ) を `check` → `apply` の順に実行する。
+`check` と `apply` は別の run になるため、両 run の `headSha` が同じことを記録し、間に main が進んだら `check` からやり直す。
+本番の詳細ログは非公開なので、適用後の確認は VPS 上で行う。詳細は [運用手順](../../docs/iceshrimp-egress-proxy.md) を参照。
 
 ### OpenTofu
 

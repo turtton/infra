@@ -1,5 +1,7 @@
 ---
 vps_bootstrap_public_ip: 133.167.115.94
+# Iceshrimp の外部通信用 forward proxy。許可送信元は squid.sops.yml (SOPS) で管理する。
+squid_forward_proxy_enabled: true
 nftables_vps_allowed_udp_ports_public:
   - 41641
   - 7882

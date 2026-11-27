@@ -125,6 +125,25 @@ resource "tailscale_acl" "this" {
         src    = "tag:ci"
         accept = ["tag:mcproxy:22"]
       },
+      {
+        src    = "tag:infra-talos-cluster"
+        proto  = "tcp"
+        accept = ["tag:mcproxy:3128"]
+        deny   = ["tag:mcproxy:22", "tag:mcproxy:80", "tag:mcproxy:443", "tag:mcproxy:3129"]
+      },
+      {
+        src   = "tag:infra-talos-cluster"
+        proto = "udp"
+        deny  = ["tag:mcproxy:3128"]
+      },
+      {
+        src  = "tag:ci"
+        deny = ["tag:mcproxy:3128"]
+      },
+      {
+        src  = "tag:mcserver"
+        deny = ["tag:mcproxy:3128"]
+      },
     ]
 
     nodeAttrs = [
@@ -191,6 +210,11 @@ resource "tailscale_acl" "this" {
         src = ["tag:ci"]
         dst = ["tag:mcproxy"]
         ip  = ["22"]
+      },
+      {
+        src = ["tag:infra-talos-cluster"]
+        dst = ["tag:mcproxy"]
+        ip  = ["tcp:3128"]
       },
     ]
   })

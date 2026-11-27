@@ -1,0 +1,251 @@
+---
+# Squid forward proxy for the Iceshrimp egress path.
+# check mode は未導入のホスト (Squid の binary・unit・/etc/squid がない状態) でも成功する。
+# 読み取りだけの検査は check_mode: false で実行し、書き込みを伴う検証 (parse・listener・実効値) は通常適用時に行う。
+
+- name: Apply Squid forward proxy
+  when: squid_forward_proxy_enabled | bool
+  block:
+    - name: Require a Debian host
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.os_family == 'Debian'
+        fail_msg: squid_forward_proxy supports Debian hosts only.
+        quiet: true
+
+    - name: Check allowed source format without printing the values
+      ansible.builtin.set_fact:
+        squid_forward_proxy_sources_valid: >-
+          {{ (squid_forward_proxy_allowed_sources | length > 0)
+          and (squid_forward_proxy_allowed_sources
+          | reject('match', '^100[.](6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])[.][0-9]{1,3}[.][0-9]{1,3}/32$')
+          | list | length == 0) }}
+      no_log: true
+
+    - name: Require allowed sources to be Tailscale /32 addresses
+      ansible.builtin.assert:
+        that:
+          - squid_forward_proxy_sources_valid | bool
+        fail_msg: >-
+          Set squid_forward_proxy_allowed_sources in the SOPS host inventory to Tailscale (100.64.0.0/10) /32 addresses only.
+          An empty list or a wider range is rejected.
+        quiet: true
+
+    - name: Read the Tailscale IPv4 address
+      ansible.builtin.command: tailscale ip -4
+      register: squid_forward_proxy_tailscale_ip
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Read the tailscale0 IPv4 addresses
+      ansible.builtin.command: ip -o -4 addr show dev tailscale0
+      register: squid_forward_proxy_tailscale_if
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Require the expected Tailscale IPv4 address on this host
+      ansible.builtin.assert:
+        that:
+          - squid_forward_proxy_tailscale_ip.rc == 0
+          - squid_forward_proxy_tailscale_ip.stdout_lines == [squid_forward_proxy_expected_tailscale_ipv4]
+          - squid_forward_proxy_tailscale_if.rc == 0
+          - (' inet ' ~ squid_forward_proxy_expected_tailscale_ipv4 ~ '/') in squid_forward_proxy_tailscale_if.stdout
+        fail_msg: >-
+          Tailscale must be running with exactly the expected IPv4 address on tailscale0.
+          Squid is never started on another address. Update squid_forward_proxy_expected_tailscale_ipv4
+          and every consumer of the address deliberately if the VPS address changed.
+        quiet: true
+
+    - name: Inspect Squid installation before the package task
+      ansible.builtin.stat:
+        path: /usr/sbin/squid
+      register: squid_forward_proxy_binary_before
+
+    - name: Read available memory in MiB
+      ansible.builtin.command: awk '/^MemAvailable:/ {print int($2 / 1024)}' /proc/meminfo
+      register: squid_forward_proxy_mem_available
+      changed_when: false
+      check_mode: false
+      when: not squid_forward_proxy_binary_before.stat.exists
+
+    - name: Hold the installation when memory is short
+      ansible.builtin.assert:
+        that:
+          - (squid_forward_proxy_mem_available.stdout | int) >= squid_forward_proxy_min_mem_available_mib
+        fail_msg: >-
+          MemAvailable is below {{ squid_forward_proxy_min_mem_available_mib }} MiB.
+          Investigate the existing load before installing Squid.
+        quiet: true
+      when: not squid_forward_proxy_binary_before.stat.exists
+
+    - name: Install Squid without starting it
+      ansible.builtin.apt:
+        name: squid
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+        install_recommends: false
+        policy_rc_d: 101
+
+    - name: Inspect Squid installation after the package task
+      ansible.builtin.stat:
+        path: /usr/sbin/squid
+      register: squid_forward_proxy_installed
+
+    - name: Create the Squid systemd drop-in directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/squid.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install the Tailscale address wait script
+      ansible.builtin.template:
+        src: wait-for-tailscale.sh.j2
+        dest: "{{ squid_forward_proxy_wait_script }}"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Configure Squid restart policy, limits and Tailscale ordering
+      ansible.builtin.template:
+        src: squid.service.conf.j2
+        dest: /etc/systemd/system/squid.service.d/10-forward-proxy.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd for Squid forward proxy
+        - Restart Squid forward proxy
+
+    - name: Detect a pending Squid configuration change without writing it
+      ansible.builtin.template:
+        src: squid.conf.j2
+        dest: /etc/squid/squid.conf
+        owner: root
+        group: proxy
+        mode: "0640"
+      check_mode: true
+      diff: false
+      no_log: true
+      register: squid_forward_proxy_conf_pending
+      when:
+        - squid_forward_proxy_installed.stat.exists
+        - not ansible_check_mode
+
+    - name: Parse a candidate Squid configuration before replacing the running one
+      when:
+        - squid_forward_proxy_installed.stat.exists
+        - not ansible_check_mode
+        - squid_forward_proxy_conf_pending.changed
+      block:
+        - name: Render the candidate Squid configuration under /etc/squid
+          ansible.builtin.template:
+            src: squid.conf.j2
+            dest: /etc/squid/squid.conf.candidate
+            owner: root
+            group: proxy
+            mode: "0640"
+          diff: false
+          no_log: true
+
+        - name: Parse the candidate Squid configuration
+          ansible.builtin.command: squid -k parse -f /etc/squid/squid.conf.candidate
+          register: squid_forward_proxy_parse
+          changed_when: false
+          failed_when: false
+          no_log: true
+
+        - name: Stop when the candidate does not parse
+          ansible.builtin.fail:
+            msg: >-
+              Squid rejected the candidate configuration; the running configuration was not replaced.
+              {{ squid_forward_proxy_parse.stderr_lines | select('search', 'ERROR|FATAL')
+              | map('regex_replace', '[0-9]{1,3}([.][0-9]{1,3}){3}(/[0-9]+)?', '<ip>') | list | first
+              | default('no ERROR or FATAL line was reported') }}
+          when: squid_forward_proxy_parse.rc != 0
+      always:
+        - name: Remove the candidate Squid configuration
+          ansible.builtin.file:
+            path: /etc/squid/squid.conf.candidate
+            state: absent
+
+    - name: Configure Squid
+      ansible.builtin.template:
+        src: squid.conf.j2
+        dest: /etc/squid/squid.conf
+        owner: root
+        group: proxy
+        mode: "0640"
+      diff: false
+      no_log: true
+      notify: Restart Squid forward proxy
+      when: squid_forward_proxy_installed.stat.exists
+
+    - name: Apply pending systemd and Squid changes before enabling the service
+      ansible.builtin.meta: flush_handlers
+
+    - name: Enable and start Squid
+      ansible.builtin.systemd:
+        name: squid.service
+        enabled: true
+        state: started
+      when: squid_forward_proxy_installed.stat.exists
+
+    - name: Verify the running Squid
+      when: not ansible_check_mode
+      block:
+        - name: Wait for Squid to listen on the Tailscale address
+          ansible.builtin.wait_for:
+            host: "{{ squid_forward_proxy_expected_tailscale_ipv4 }}"
+            port: "{{ squid_forward_proxy_port }}"
+            timeout: 30
+
+        - name: Read Squid listening sockets
+          ansible.builtin.command: "ss -H -ltn 'sport = :{{ squid_forward_proxy_port }}'"
+          register: squid_forward_proxy_listeners
+          changed_when: false
+
+        - name: Require the Tailscale address to be the only listener
+          ansible.builtin.assert:
+            that:
+              - >-
+                squid_forward_proxy_listeners.stdout_lines
+                | map('regex_replace', '^[^ ]+ +[^ ]+ +[^ ]+ +([^ ]+) .*$', '\1') | unique | list
+                == [squid_forward_proxy_expected_tailscale_ipv4 ~ ':' ~ squid_forward_proxy_port]
+            fail_msg: Squid must listen on the Tailscale IPv4 address only, never on a wildcard or public address.
+            quiet: true
+
+        - name: Read effective Squid unit settings
+          ansible.builtin.systemd:
+            name: squid.service
+          register: squid_forward_proxy_unit
+
+        - name: Require the effective unit settings
+          ansible.builtin.assert:
+            that:
+              - squid_forward_proxy_unit.status.Restart == 'on-failure'
+              - squid_forward_proxy_unit.status.RestartUSec == (squid_forward_proxy_restart_sec ~ 's')
+              - squid_forward_proxy_unit.status.LimitNOFILE == (squid_forward_proxy_max_filedescriptors | string)
+              - squid_forward_proxy_unit.status.LimitNOFILESoft == (squid_forward_proxy_max_filedescriptors | string)
+              - squid_forward_proxy_unit.status.MemoryHigh == ((squid_forward_proxy_memory_high_mib * 1048576) | string)
+              - squid_forward_proxy_unit.status.MemoryMax == ((squid_forward_proxy_memory_max_mib * 1048576) | string)
+              - "'tailscaled' not in (squid_forward_proxy_unit.status.Requires | default(''))"
+            fail_msg: The effective squid.service settings differ from the role (restart policy, FD limit, memory limit or Requires).
+            quiet: true
+
+- name: Stop Squid forward proxy when it is disabled
+  when: not (squid_forward_proxy_enabled | bool)
+  block:
+    - name: Collect service facts
+      ansible.builtin.service_facts:
+
+    - name: Stop and disable an installed Squid
+      ansible.builtin.systemd:
+        name: squid.service
+        enabled: false
+        state: stopped
+      when: "'squid.service' in ansible_facts.services"

@@ -1,0 +1,40 @@
+#!/bin/sh
+# Managed by Ansible (squid_forward_proxy).
+#
+# Wait until tailscale0 carries the address Squid binds to.
+# This only reads the interface state: it never changes Tailscale and never
+# falls back to another address. On timeout it exits non-zero so that systemd
+# (Restart=on-failure) retries the unit.
+#
+# Usage: squid-wait-for-tailscale ADDRESS [TIMEOUT_SECONDS]
+set -eu
+PATH="/usr/sbin:/usr/bin:/sbin:/bin${PATH:+:$PATH}"
+
+addr="${1:-}"
+timeout_seconds="${2:-60}"
+
+case "$addr" in
+  ''|*[!0-9.]*)
+    echo "squid-wait-for-tailscale: invalid IPv4 address" >&2
+    exit 2
+    ;;
+esac
+case "$timeout_seconds" in
+  ''|*[!0-9]*)
+    echo "squid-wait-for-tailscale: invalid timeout" >&2
+    exit 2
+    ;;
+esac
+
+waited=0
+while :; do
+  if ip -o -4 addr show dev tailscale0 2>/dev/null | grep -qF " inet ${addr}/"; then
+    exit 0
+  fi
+  if [ "$waited" -ge "$timeout_seconds" ]; then
+    echo "squid-wait-for-tailscale: ${addr} did not appear on tailscale0 within ${timeout_seconds}s" >&2
+    exit 1
+  fi
+  sleep 1
+  waited=$((waited + 1))
+done
