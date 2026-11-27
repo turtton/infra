@@ -1,0 +1,11 @@
+---
+- name: Reload systemd for Squid forward proxy
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: not ansible_check_mode
+
+- name: Restart Squid forward proxy
+  ansible.builtin.systemd:
+    name: squid.service
+    state: restarted
+  when: not ansible_check_mode

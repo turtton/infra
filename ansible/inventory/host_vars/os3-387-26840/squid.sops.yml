@@ -1,0 +1,17 @@
+squid_forward_proxy_allowed_sources:
+    - ENC[AES256_GCM,data:2DXvyZwVIo+BlJz9HXbW0R8=,iv:SKTNBCIpvZQMKF0pGQKh6Rkn62nT3+eYMJZf5lHYP0Y=,tag:RODQ1jg1n0Z/6TgQAnzkYg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBNQkNRT3l5K2I0cE5tZ0Fz
+            NHBrV2pFSEhOSGRZNTVSVmdrL3VHRlhxa3lJCjVCRVZuZ2ZjWWRPMng1d09tQVNK
+            M2x3YVpDeTMxZ0kxcG8rM1VSekFzZDAKLS0tIEZnVFpyNTM4QURnQmNEQnd4L1lJ
+            L21uN2JreDJ6aEVZWlYyU1JwZXVXYVkK6elzI0zb/Bt1nnOl6S68QECWu/9Kc46/
+            k6FdkJKYsKLD1EykuNzcyUjvgmfurVCY6d6uY5alc1LzE7RHWpWQ7Q==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1zm9leyqvduytw07xpq3e53zp337wqslj5gx6aadwr7fxw0nv6pxqczcm55
+    lastmodified: "2026-11-27T17:33:26Z"
+    mac: ENC[AES256_GCM,data:Jwg1nJKrKQphhT/WHe4wLr2pIj9QC+ILODkAkH+Ywox3ZfoB1f4IhLa4LXdJebqGuQ7mc4qPnny0oTMEgFFEIVixqwUoM/xPeJoENe2oZ7+8+E9AqaRLYYAXwQ2sSusMaQ2334wCXExHQhCiK1lOVMJVJkGYTjHTxSat+mgCTwU=,iv:Lp+EWaXGqgQxw1NYI9SBh4gVsI4IyQCcXQ+Dgq8BgzY=,tag:du1Carny30CC9Oyntq7jTA==,type:str]
+    unencrypted_suffix: _unencrypted
+    version: 3.13.3

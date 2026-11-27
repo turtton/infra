@@ -21,6 +21,7 @@ on:
           - network-update.yml
           - vps.yml
           - vps-livekit.yml
+          - vps-squid.yml
           - vps-udp-probe.yml
 
 concurrency:
@@ -76,7 +77,7 @@ jobs:
         run: |
           case "$PLAYBOOK" in
             site.yml|network-update.yml) echo 'group=proxmox' >> "$GITHUB_OUTPUT" ;;
-            vps.yml|vps-livekit.yml|vps-udp-probe.yml) echo 'group=vps' >> "$GITHUB_OUTPUT" ;;
+            vps.yml|vps-livekit.yml|vps-squid.yml|vps-udp-probe.yml) echo 'group=vps' >> "$GITHUB_OUTPUT" ;;
             *) echo '::error::Unsupported playbook'; exit 1 ;;
           esac
           if [ "$MODE" = probe ] && [ "$PLAYBOOK" != vps-udp-probe.yml ]; then
@@ -109,12 +110,12 @@ jobs:
         run: |
           if [ "$MODE" = check ]; then
             if ! ansible-playbook "playbooks/$PLAYBOOK" --check --diff --limit "$TARGET_GROUP" > /tmp/ansible-run.log 2>&1; then
-              if [ "$PLAYBOOK" = vps-livekit.yml ]; then
+              if [ "$TARGET_GROUP" = vps ] && [ "$PLAYBOOK" != vps-udp-probe.yml ]; then
                 if grep -q 'UNREACHABLE!' /tmp/ansible-run.log; then
                   echo '::error::VPS was unreachable over SSH/Tailscale.'
                 else
                   failed_task=$(awk '/^TASK \[/{task=$0} /^fatal:/{print task; exit}' /tmp/ansible-run.log)
-                  echo "::error::VPS UDP check failed at ${failed_task:-an unknown task}."
+                  echo "::error::VPS $PLAYBOOK check failed at ${failed_task:-an unknown task}."
                 fi
               fi
               echo '::error::Ansible check failed. Detailed output is withheld from public Actions logs.'
@@ -123,12 +124,12 @@ jobs:
             echo 'Ansible check completed.'
           elif [ "$MODE" = apply ]; then
             if ! ansible-playbook "playbooks/$PLAYBOOK" --limit "$TARGET_GROUP" > /tmp/ansible-run.log 2>&1; then
-              if [ "$PLAYBOOK" = vps-livekit.yml ]; then
+              if [ "$TARGET_GROUP" = vps ] && [ "$PLAYBOOK" != vps-udp-probe.yml ]; then
                 if grep -q 'UNREACHABLE!' /tmp/ansible-run.log; then
                   echo '::error::VPS was unreachable over SSH/Tailscale.'
                 else
                   failed_task=$(awk '/^TASK \[/{task=$0} /^fatal:/{print task; exit}' /tmp/ansible-run.log)
-                  echo "::error::VPS UDP apply failed at ${failed_task:-an unknown task}."
+                  echo "::error::VPS $PLAYBOOK apply failed at ${failed_task:-an unknown task}."
                 fi
               fi
               echo '::error::Ansible apply failed. Detailed output is withheld from public Actions logs.'

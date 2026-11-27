@@ -1,0 +1,9 @@
+---
+- name: Configure VPS Squid forward proxy
+  hosts: vps
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: squid_forward_proxy
+      tags: [squid_forward_proxy]

@@ -23,6 +23,7 @@ Proxmox VEノードとVPS (os3-387) の構成管理。
 | `docker_host` | Docker CE + Compose pluginのインストール |
 | `nftables_vps` | nftablesファイアウォール (`/etc/nftables.conf` テンプレート管理) |
 | `haproxy_minecraft` | Minecraftプロキシ用HAProxy (Docker Compose + systemd、SNI的なドメイン振り分け) |
+| `squid_forward_proxy` | Iceshrimp の外部通信用 Squid (Tailscale IPv4 のみで待ち受け、cp-1 の /32 のみ許可、キャッシュ無効)。手順は [../docs/iceshrimp-egress-proxy.md](../docs/iceshrimp-egress-proxy.md) |
 
 ## Playbooks
 
@@ -32,6 +33,7 @@ Proxmox VEノードとVPS (os3-387) の構成管理。
 | `network-update.yml` | ネットワーク設定のみ更新 (`serial: 1` で1台ずつ) |
 | `bootstrap-vps.yml` | VPSの初期ブートストラップ (`--limit os3-387-26840` 必須) |
 | `vps.yml` | VPS (os3-387) の構成適用 |
+| `vps-squid.yml` | VPS の Squid (`squid_forward_proxy`) だけを適用 (nftables・Tailscale・SSH・他アプリのロールは再適用しない) |
 
 ## Usage
 
@@ -79,6 +81,9 @@ ansible-playbook playbooks/vps.yml
 
 # haproxy_minecraftのみ適用
 ansible-playbook playbooks/vps.yml --tags haproxy_minecraft
+
+# Squid forward proxy のみ適用 (通常は CI の ansible-apply.yml で vps-squid.yml を check → apply)
+ansible-playbook playbooks/vps-squid.yml --limit os3-387-26840 --tags squid_forward_proxy --check --diff
 ```
 
 初回セットアップの詳細は [../docs/vps-bootstrap.md](../docs/vps-bootstrap.md) を参照。

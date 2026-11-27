@@ -12,3 +12,5 @@
     - nftables_vps
     - livekit_udp_proxy
     - haproxy_minecraft
+    - role: squid_forward_proxy
+      tags: [squid_forward_proxy]

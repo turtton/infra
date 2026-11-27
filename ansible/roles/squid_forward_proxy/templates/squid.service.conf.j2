@@ -1,0 +1,18 @@
+# Managed by Ansible (squid_forward_proxy).
+# Debian の squid.service に追加する drop-in。パッケージの ExecStart/ExecStartPre は上書きしない。
+[Unit]
+Wants=network-online.target tailscaled.service
+After=network-online.target tailscaled.service
+# Tailscale のアドレス確定前に失敗しても start limit で永久停止しない。
+StartLimitIntervalSec=0
+
+[Service]
+# ExecStartPre は既存の設定へ追加される。指定アドレスが tailscale0 に現れるまで有限時間だけ待つ。
+ExecStartPre={{ squid_forward_proxy_wait_script }} {{ squid_forward_proxy_expected_tailscale_ipv4 }} {{ squid_forward_proxy_tailscale_wait_seconds }}
+Restart=on-failure
+RestartSec={{ squid_forward_proxy_restart_sec }}s
+TimeoutStartSec={{ squid_forward_proxy_start_timeout_sec }}s
+LimitNOFILE={{ squid_forward_proxy_max_filedescriptors }}
+MemoryAccounting=yes
+MemoryHigh={{ squid_forward_proxy_memory_high_mib }}M
+MemoryMax={{ squid_forward_proxy_memory_max_mib }}M

@@ -1,0 +1,32 @@
+---
+# false の間は Squid を導入しない。導入済みの場合は停止・無効化する。
+squid_forward_proxy_enabled: false
+
+squid_forward_proxy_port: 3128
+
+# Tailscale の IPv4 アドレスだけで待ち受ける。実行時の `tailscale ip -4` と一致しなければ失敗する。
+squid_forward_proxy_expected_tailscale_ipv4: 100.89.111.33
+
+# 外部へ出るときの送信元 (VPS の公開 IPv4)。
+squid_forward_proxy_public_ipv4: 133.167.115.94
+
+# 許可するクライアントの送信元。Tailscale の /32 だけを SOPS の host_vars で指定する。
+# 有効化時に空、または /32 以外が含まれる場合は失敗する。
+squid_forward_proxy_allowed_sources: []
+
+# 観測した外部 TCP 接続 (最大 127) に対する FD の余裕。接続容量の保証ではない。
+squid_forward_proxy_max_filedescriptors: 4096
+
+# cgroup のメモリ制限 (MiB)。cache_mem はプロセス全体の上限ではないため systemd 側で制限する。
+squid_forward_proxy_memory_high_mib: 128
+squid_forward_proxy_memory_max_mib: 160
+
+# 導入前に必要な MemAvailable (MiB)。下回る場合は導入を保留する。
+squid_forward_proxy_min_mem_available_mib: 192
+
+# tailscale0 に指定アドレスが現れるまで待つ秒数。超えたら非ゼロで終了し systemd が再試行する。
+squid_forward_proxy_tailscale_wait_seconds: 60
+squid_forward_proxy_restart_sec: 10
+squid_forward_proxy_start_timeout_sec: 120
+
+squid_forward_proxy_wait_script: /usr/local/sbin/squid-wait-for-tailscale
