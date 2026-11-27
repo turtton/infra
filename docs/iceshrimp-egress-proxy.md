@@ -8,8 +8,8 @@ kameuo の Iceshrimp Web Pod が行う外部 HTTP(S) 通信を、さくら VPS (
 | PR | 内容 | 状態 |
 |---|---|---|
 | PR1 基盤 | Tailscale grant/tests、Squid ロール、専用 playbook、CI の許可リスト、SOPS host vars、本書 | マージ・適用済み (#209、#210) |
-| PR2 経路変更 | Iceshrimp の ConfigMap (`proxy`・許可 `/32`)、Reloader annotation、Node の環境変数と `SUMMALY_ALLOW_PRIVATE_IP` (案 A。「PR2」を参照) | この PR |
-| PR3 egress 制限 | NetworkPolicy `iceshrimp-web-egress` | 未着手 (段階 4 の必須ゲート合格後) |
+| PR2 経路変更 | Iceshrimp の ConfigMap (`proxy`・許可 `/32`)、Reloader annotation、Node の環境変数と `SUMMALY_ALLOW_PRIVATE_IP` (案 A。「PR2」を参照) | マージ・反映済み (#211、main `4ffff510`) |
+| PR3 egress 制限 | NetworkPolicy `iceshrimp-web-egress` | この PR。段階 4 の必須ゲート合格後にマージ・反映する |
 
 PR2・PR3 の手順は、それぞれの PR で本書へ追記する。**各段階の必須ゲートを満たすまで次へ進まない。**
 
@@ -351,6 +351,12 @@ Iceshrimp の独自 agent (hpagent 0.1.2) とグローバル `fetch` は、http:
 8. Hubble を `--follow` で連続観測し、Squid 以外への外部直通が残っていないこと。
 9. Squid の資源 (FD、メモリ、`MemAvailable`、OOM、再起動) と、cp-1 ↔ VPS が direct 接続であること。
 
+#### PR2 反映後の観測 (NetworkPolicy 適用前)
+
+PR2 (#211) 反映後、Hubble を約 15 分間観測した (9877 flows)。Web Pod 起点の宛先は Valkey、DB、CoreDNS、`100.89.111.33:3128` のみで、world 宛ては 0 件だった。Squid の `access.log` は 153 行 (`TCP_TUNNEL/200` 148、内部宛て試験の `TCP_DENIED/403` 4、`TCP_MISS/200` 1)。Web Pod は同じ image digest で再作成され Ready、再起動 0 だった。
+
+ただし、ログインが必要なアプリ機能の確認と、大容量 R2 のアップロード・取得後ハッシュ照合は未確認である。実施主体・認証方法を合意し、段階 4 の残りの必須ゲートを完了するまで段階 5 (NetworkPolicy の反映) へ進まない。
+
 ### 反映手順 (マージ後)
 
 Flux が `apps` を反映すると、ConfigMap の変更を Reloader が検知して Pod を再作成する。
@@ -378,6 +384,91 @@ kubectl -n iceshrimp exec deploy/iceshrimp-web -- grep -E "^proxy:|100\\.89\\.11
 
 `rollout undo` だけでは ConfigMap が戻らない。**PR2 を revert して、ConfigMap と Deployment の両方を戻す。** Pod の再作成後、直通構成の正常性を確認する。
 **直通へ戻る前に Squid を止めない。**
+
+## 段階 5: NetworkPolicy (PR3 マージ後)
+
+段階 4 のログインが必要な確認と大容量 R2 のアップロード・取得後ハッシュ照合を含む必須ゲートがすべて合格し、結果を記録してから実施する。失敗・未確認の項目がある場合は反映せず、合意なしに NetworkPolicy で進行を強制しない。
+
+PR3 の NetworkPolicy は `app=iceshrimp-web` の Pod に Egress のみ適用する。許可するのは CoreDNS (namespace `kube-system` の `k8s-app=kube-dns` Pod、UDP/TCP 53)、DB (`cnpg.io/cluster=iceshrimp-db` Pod、TCP 5432)、Valkey (`app=iceshrimp-valkey` Pod、TCP 6379)、VPS Squid (`100.89.111.33/32`、TCP 3128) のみである。Ingress は定義しない。`wait-for-db` initContainer は CoreDNS と DB の許可を使う。`inject-db-password` initContainer は Secret を共有 volume に書き込むだけで、ネットワーク通信を行わない。
+
+マージ後、Flux 反映後に Web Pod を明示的に再作成する。
+
+```sh
+flux reconcile kustomization apps -n flux-system --with-source
+kubectl -n iceshrimp rollout restart deployment/iceshrimp-web
+kubectl -n iceshrimp rollout status deployment/iceshrimp-web --timeout=300s
+kubectl -n iceshrimp get pods -l app=iceshrimp-web --sort-by=.metadata.creationTimestamp
+kubectl -n iceshrimp get networkpolicy iceshrimp-web-egress -o yaml
+```
+
+新しい Web Pod が Ready であること、NetworkPolicy の対象・egress 許可が上記のとおりで Ingress がないことを確認する。再作成後は次を確認する。
+
+1. initContainer 完了、readiness/liveness が正常であること。Node の `net.connect()` で DB・Valkey・Squid の TCP ポートへ接続し、サービス名で接続する DB/Valkey では CoreDNS による名前解決も確認する。
+
+   ```sh
+   kubectl -n iceshrimp exec deploy/iceshrimp-web -- node -e '
+   const net = require("node:net");
+   const targets = [
+     ["db", "iceshrimp-db-rw", 5432],
+     ["valkey", "iceshrimp-valkey", 6379],
+     ["proxy", "100.89.111.33", 3128],
+   ];
+   Promise.all(targets.map(([name, host, port]) => new Promise((resolve, reject) => {
+     const socket = net.connect({ host, port });
+     socket.setTimeout(5000);
+     socket.once("connect", () => {
+       console.log(`${name} TCP OK`);
+       socket.end();
+       resolve();
+     });
+     socket.once("error", (error) => reject(new Error(`${name} TCP failed (${error.code})`)));
+     socket.once("timeout", () => {
+       socket.destroy();
+       reject(new Error(`${name} TCP timed out`));
+     });
+   }))).catch((error) => {
+     console.error(error.message);
+     process.exitCode = 1;
+   });
+   '
+   ```
+
+2. Node の `net.connect()` で、Squid を通さない外部 TCP/80・443 がどちらも接続失敗すること。次は直通確認用であり、`net.connect()` は `HTTP_PROXY` を使わない。いずれかが接続できた場合は失敗として切り戻す。
+
+   ```sh
+   kubectl -n iceshrimp exec deploy/iceshrimp-web -- node -e '
+   const net = require("node:net");
+   Promise.all([80, 443].map((port) => new Promise((resolve, reject) => {
+     const socket = net.connect({ host: "1.1.1.1", port });
+     socket.setTimeout(5000);
+     socket.once("connect", () => {
+       socket.destroy();
+       reject(new Error(`unexpected direct TCP connection on ${port}`));
+     });
+     socket.once("error", resolve);
+     socket.once("timeout", () => {
+       socket.destroy();
+       resolve();
+     });
+   }))).then(
+     () => console.log("direct egress blocked on TCP/80 and TCP/443"),
+     (error) => { console.error(error.message); process.exitCode = 1; },
+   );
+   '
+   ```
+
+3. 小さな外部 HTTP(S) のアプリ通信が Squid 経由で成功し、Squid の `access.log` に許可された通信が記録されること。試験目的で大容量転送を行わない。
+4. 上記の直通試験中は Hubble を `--follow` で先に開始し、対象 Web Pod から外部 TCP/80・443 への `DROPPED` flow を確認する。試験後も観測し、Web Pod 起点に許可リスト外への外部通信がないことを確認する。
+
+   ```sh
+   hubble observe --follow --namespace iceshrimp --pod "$POD" --verdict DROPPED
+   ```
+
+5. Squid の FD、メモリ、`MemAvailable`、OOM・再起動の有無、および cp-1 ↔ VPS の direct 接続を確認する。試験結果と未確認項目を記録する。
+
+### PR3 の切り戻し
+
+外部 HTTP(S) の失敗、DB/Valkey/DNS の障害、または許可外通信が観測された場合は、**PR3 を Git revert して Flux で反映し、NetworkPolicy を削除する**。削除を確認した後に Web Pod を再作成し、従来の PR2 構成で正常性を確認する。`rollout undo` だけに頼らず、Git 上の状態を戻す。PR2 の設定も戻す必要がある場合は PR2 を別途 revert して ConfigMap と Deployment を復元し、Pod を再作成する。直通へ戻る前に Squid を止めない。自宅 IP が再露出する期間を記録・報告する。
 
 ## 運用
 
