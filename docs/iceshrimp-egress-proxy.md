@@ -7,8 +7,8 @@ kameuo の Iceshrimp Web Pod が行う外部 HTTP(S) 通信を、さくら VPS (
 
 | PR | 内容 | 状態 |
 |---|---|---|
-| PR1 基盤 | Tailscale grant/tests、Squid ロール、専用 playbook、CI の許可リスト、SOPS host vars、本書 | この PR |
-| PR2 経路変更 | Iceshrimp の ConfigMap、Node の環境変数、Reloader annotation | 未着手 (段階 3 の合格後) |
+| PR1 基盤 | Tailscale grant/tests、Squid ロール、専用 playbook、CI の許可リスト、SOPS host vars、本書 | マージ・適用済み (#209、#210) |
+| PR2 経路変更 | Iceshrimp の ConfigMap (`proxy`・許可 `/32`)、Reloader annotation。Node の環境変数は **マージ前ゲート不合格のため含めない** (「PR2」を参照) | この PR |
 | PR3 egress 制限 | NetworkPolicy `iceshrimp-web-egress` | 未着手 (段階 4 の必須ゲート合格後) |
 
 PR2・PR3 の手順は、それぞれの PR で本書へ追記する。**各段階の必須ゲートを満たすまで次へ進まない。**
@@ -211,6 +211,97 @@ curl --fail --max-time 30 --proxy http://100.89.111.33:3128 https://<利用可�
   **合格は `size_upload` がファイルサイズと一致し、Squid の転送量と整合すること。** 認証エラーの応答だけでは成功としない。本体送信が途中で打ち切られた場合は「判定不能」とし、経路の合格にも不合格にもしない。
   判定不能でも MSS と他の経路確認を満たせば段階 4 へ進めるが、**段階 5 へは段階 4 の大容量 R2 試験の成功が必須。**
 
+## PR2: Iceshrimp の経路変更
+
+### マージ前ゲート (Node 単体試験) の結果
+
+cp-1 上の一時 Pod で、本番と同じ image (`iceshrimp.dev/iceshrimp/iceshrimp@sha256:f3b3d81b…`、Node v24.9.0、got 15.0.5、node-fetch 3.3.2、hpagent 0.1.2、`@iceshrimp/summaly` 2.7.3) を使い、`sleep` に command を上書きして試験した。
+DB/Valkey の資格情報、Secret、本番設定は渡していない (設定ファイルはダミーの `ICESHRIMP_CONFIG`)。ServiceAccount token は mount せず、`app=iceshrimp-web` は付けず、試験後に削除した。
+Iceshrimp 本体は起動していない。試験は `NODE_USE_ENV_PROXY=1` と `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY` を付けた新規 Node プロセスで行った (起動後の `process.env` 変更は使っていない)。
+経路は、返ってきた外部 IP と、VPS の Squid `access.log` (送信元は伏せて参照) で判定した。
+
+| 項目 | 結果 |
+|---|---|
+| 直通の対照 (環境変数なし) | http/https の 4 クライアントすべてが自宅 IP (値は伏せる) |
+| `http.get`/`https.get`、node-fetch、got | http/https とも `133.167.115.94`。環境変数だけでプロキシ経由になる |
+| グローバル `fetch` | https は `133.167.115.94`。**http:// は `CONNECT host:80` を送り、Squid が 403** (undici は http:// も CONNECT でトンネルする) |
+| Iceshrimp の独自 agent (`config.proxy` 相当、`getResponse`・`downloadUrl`・S3 `NodeHttpHandler`) | https は `133.167.115.94` で、トンネルは 1 本 (二重 CONNECT なし。`CONNECT 100.89.111.33:3128` の行もない)。`allowedPrivateNetworks` に `100.89.111.33/32` があれば `Blocked address` は出ない。無いと `Blocked address: 100.89.111.33` になる。**http:// は hpagent が `CONNECT host:80` を送り、Squid が 403** (環境変数の有無によらない) |
+| 独自 agent の bypass 用 `CheckedHttpAgent`/`CheckedHttpsAgent` | `NODE_USE_ENV_PROXY` を無視して直通 (自宅 IP)。`proxyBypassHosts` と `objectStorageUseProxy=false` のときだけ使われ、どちらも本構成では使わない |
+| プロキシ到達不能時 | `config.proxy` が不達でも、環境変数が不達でも、全クライアント (独自 agent・S3 を含む) が `ECONNREFUSED` で失敗し、直通へフォールバックしない |
+| `NO_PROXY` | `127.0.0.1`、`localhost`、Pod 名は直接接続 (Squid にログなし)。`NO_PROXY` に無い Pod IP はプロキシへ送られ 403 |
+| `@iceshrimp/summaly` | **不合格。** `summaly.default(url, {followRedirects: false, …})` は https の GET 自体は CONNECT 経由で成功するが、`Private IP rejected 100.89.111.33` で失敗する (下記) |
+
+#### summaly が失敗する理由
+
+summaly は内部の got (agent 指定なし) で取得し、応答の `response.ip` を `private-ip` で検査する。環境変数プロキシでは `response.ip` がプロキシの `100.89.111.33` になり、`100.64.0.0/10` は private 扱いのため拒否される。
+Iceshrimp の `allowedPrivateNetworks` は Iceshrimp 自身の agent の検査にしか効かず、summaly には効かない。
+回避は summaly の環境変数 `SUMMALY_ALLOW_PRIVATE_IP=true` (「テスト用」と書かれた検査の無効化) しかない。これを設定すると、https の GET、アイコン取得、`downloadUrl` による OG 画像 (41 KB) 取得がすべてプロキシ経由で成功した。
+検査を弱める設定なので、**ユーザーの判断なしには採用しない** (計画 §6.3)。Squid は名前解決後の宛先 IP を拒否するが、summaly 側の検査は弱まる。
+
+なお、本番の `url-preview.ts` は `followRedirects: false` で呼ぶため、summaly の redirect 追跡 (グローバル `fetch` の HEAD) は使われない。http:// の URL は直通でも 301 を追わずに失敗する (環境変数の有無によらない)。
+
+### この PR の内容と、環境変数を含めない理由
+
+常に入れるもの:
+
+- `configmap.yaml` の `default.yml` に `proxy: http://100.89.111.33:3128`。
+- `allowedPrivateNetworks` に `100.89.111.33/32` **だけ**を追加 (`100.64.0.0/10` 全体は許可しない。既存の許可は削除しない)。`proxyBypassHosts` に外部宛先は追加しない。`objectStorageUseProxy` と DB は変更しない。
+- `deployment.yaml` に Reloader の `configmap.reloader.stakater.com/reload: "iceshrimp-config"`。
+
+**Web コンテナの環境変数 (`NODE_USE_ENV_PROXY`、`HTTP_PROXY`、`HTTPS_PROXY`、`NO_PROXY`) は、ゲート不合格のため追加していない。** このため `config.proxy` を使わない次の経路は、この PR のマージ後も **直通のまま**である。
+
+| 直通のまま残る経路 | 理由・影響 |
+|---|---|
+| URL プレビュー (`@iceshrimp/summaly`) | got に agent 指定なし。プレビュー先に自宅 IP が見える。環境変数を入れるとプレビュー自体が失敗する |
+| 未キャッシュのリモートユーザーの followers/following 件数 (`person.ts` の node-fetch、agent なし) | プロキシ経由にならない。環境変数でなら経由する (試験済み) |
+| 管理画面の latest-version / release 確認 (グローバル `fetch`) | 環境変数でなら https は経由する (試験済み) |
+| Web Push (`web-push` のデフォルト agent) | 未試験。仕組みは `https.get` と同じなので環境変数で経由すると見られる |
+| SMTP (`nodemailer`) | HTTP プロキシの対象外。本計画の範囲外 |
+
+これらは **PR3 (NetworkPolicy) で遮断すると失敗する**。外部への直通許可は足さない (C-11)。ユーザー判断が要る選択肢:
+
+| 選択肢 | 内容 | 影響 |
+|---|---|---|
+| A. 環境変数を入れ、summaly の検査を無効化 | 環境変数 + `SUMMALY_ALLOW_PRIVATE_IP=true`。全 HTTP(S) 経路がプロキシ経由になる | summaly の private IP 検査が無効になる (SSRF 防御は Squid の宛先 ACL に一本化)。PR3 後も全機能が動く見込み |
+| B. 環境変数を入れず、URL プレビューを含む上記を直通のまま残す | この PR のまま | 自宅 IP が URL プレビュー先などに見える。PR3 の egress 制限を入れると該当機能が壊れる |
+| C. 環境変数を入れ、URL プレビューは諦める | summaly を使わない (外部の `summalyProxy` サービスは新規常設サービスになり本計画の範囲外) | URL プレビューが失敗する。その他は経由する |
+
+どれを採るかが決まるまで PR3 へは進まない。
+
+### 追加の注意: http:// 宛先の扱い
+
+Iceshrimp の独自 agent (hpagent 0.1.2) は、http:// の宛先にも `CONNECT host:80` を使う。Squid は CONNECT を 443 だけ許可する (C-05) ため、**`config.proxy` を設定すると、Iceshrimp の独自 agent では http:// (80 番) のリモートサーバーに接続できなくなる**。
+これは環境変数の有無に関係せず、この PR の `proxy` 設定だけで起こる。443 の https:// が主流であり、Squid の CONNECT:80 を許すと内部・外部の拒否設計に例外が増えるため、今回は許可しない。
+80 番だけで動くリモートや、配送の失敗が増えた場合は、`access.log` の `TCP_DENIED/403 CONNECT …:80` を確認する。
+
+### 反映手順 (マージ後)
+
+Flux が `apps` を反映すると、ConfigMap の変更を Reloader が検知して Pod を再作成する。
+
+```sh
+flux reconcile kustomization apps -n flux-system --with-source
+kubectl -n iceshrimp rollout status deployment/iceshrimp-web --timeout=300s
+```
+
+Pod が再作成されたか (作成時刻が新しいか) を確認する。されていなければ、ConfigMap の取り込み順序を確認してから明示的に再作成する。
+
+```sh
+kubectl -n iceshrimp rollout restart deployment/iceshrimp-web
+```
+
+Pod 内の設定は、DB パスワードを出力しないよう `proxy` と許可リストの行だけを確認する。
+
+```sh
+kubectl -n iceshrimp exec deploy/iceshrimp-web -- grep -E "^proxy:|100\\.89\\.111\\.33" /iceshrimp/.config/default.yml
+```
+
+1 replica・Recreate のため、再作成中は短時間停止する (許容)。反映後の機能確認 (検索、フォロー、連合、リモートメディア、通常・大容量の R2 アップロード、Hubble での直通観測) は段階 4 の項目で行う。
+
+### PR2 の切り戻し
+
+`rollout undo` だけでは ConfigMap が戻らない。**PR2 を revert して、ConfigMap と Deployment の両方を戻す。** Pod の再作成後、直通構成の正常性を確認する。
+**直通へ戻る前に Squid を止めない。**
+
 ## 運用
 
 ### 秘密情報
@@ -253,6 +344,13 @@ ansible-playbook playbooks/vps-squid.yml --limit os3-387-26840 --tags squid_forw
 5. 本書と関連する試験手順。
 
 実行中に IP が変わると、ロールは `tailscale ip -4` と期待値の不一致で失敗し、Squid を別アドレスで起動しない。
+
+### Ansible 検証の落とし穴
+
+- **`ss` などの実行結果を使う assert は、通常適用時にしか動かない。** check mode ではコマンドと assert を省くため、check の成功は、その検証が通ったことの証拠にならない。
+  実際に、listener 検証の `regex_replace` で `'\1'` を書いていたため Jinja2 が制御文字 `0x01` と解釈し、初回の適用が失敗した (#210 で `'\\1'` に修正。check では検出できなかった)。
+- ロールの Jinja2 式を変えたときは、check の成功だけで済ませず、期待どおりの入力で通ること、不正な入力 (例: `0.0.0.0` での listen) で失敗することを、ansible-core で式だけ評価して確認する。
+- 通常適用が失敗したら、Squid 自体の状態 (`systemctl is-active squid`、`ss -lntp`) を先に確認し、切り戻しが必要な障害か、検証タスクだけの失敗かを切り分ける。
 
 ### ログ
 

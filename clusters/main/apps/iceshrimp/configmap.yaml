@@ -30,9 +30,15 @@ data:
 
     maxLogLevel: info
 
+    # 外部 HTTP(S) 通信は VPS (Tailscale 経由) の Squid を通す。
+    # docs/iceshrimp-egress-proxy.md を参照
+    proxy: http://100.89.111.33:3128
+
     allowedPrivateNetworks: [
       '10.0.0.0/8',
       '172.16.0.0/12',
       '192.168.0.0/16',
-      '127.0.0.1/32'
+      '127.0.0.1/32',
+      # プロキシ自身への接続が "Blocked address" にならないよう /32 だけを許可する
+      '100.89.111.33/32'
     ]
