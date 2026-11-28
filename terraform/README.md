@@ -43,7 +43,7 @@ terraform/
 ### 全ノード共通 (common_patches)
 
 - **カーネルモジュール**: `iscsi_tcp`, `dm_thin_pool` (Longhorn用)
-- **DNS**: ゲートウェイ + 1.1.1.1 + 8.8.8.8 (静的IPのため明示指定)
+- **DNS**: Cloudflare の `1.1.1.1` のみ (静的IPのため明示指定。Google Public DNS の EDNS Client Subnet によるクライアントサブネットの漏洩を避ける)
 - **kubelet nodeIP**: `192.168.10.0/24` に制限 (Tailscale IP使用防止)
 - **Tailscale**: `ExtensionServiceConfig` でauthkeyを注入（30日ごとの`time_rotating`でローテーション。詳細は下記）
 
